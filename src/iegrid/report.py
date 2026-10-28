@@ -207,7 +207,8 @@ def _caveats(editions: dict[str, date]) -> list[str]:
         ("Waiting time runs from the earliest signed month printed for the project in any list "
          "since 2015, carried across relabelled refs (Rosspile: TG272, 2018)."),
         "The transmission total includes interconnectors; the county list leaves them out.",
-        "Republication terms of the source lists are not yet checked.",
+        ("Not for publication: ESB Networks' terms forbid republishing its lists without "
+         "written permission (PARKING.md)."),
     ]
 
 
@@ -336,8 +337,9 @@ def render(rep: dict, path: Path) -> Path:
     y -= 0.14
 
     wh = rep["where"]
-    head(f"Where · counties with most generation waiting ({wh['generation_placed_share']:.0%} of "
-         f"it placed)")
+    placed = wh["generation_placed_share"]  # None when nothing is placed yet
+    head("Where · counties with most generation waiting"
+         + (f" ({placed:.0%} of it placed)" if placed is not None else ""))
     text("  ·  ".join(f"{c['county']} {c['gw']:.1f} GW" for c in wh["counties"][:TOP]), x=0.08)
 
     head("Read with care")

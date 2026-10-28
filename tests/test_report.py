@@ -96,3 +96,12 @@ def test_a_page_that_would_overflow_is_an_error(tmp_path):
     long = {**REP, "caveats": ["A caveat that goes on. " * 6] * 40}
     with pytest.raises(ValueError, match="overflows"):
         report.render(long, tmp_path / "r.pdf")
+
+
+def test_a_page_with_nothing_placed_yet_still_draws(tmp_path):
+    # g7 review: _where gives a placed share of None when no generation MW is placed
+    import pdfplumber
+    none = {**REP, "where": {"generation_placed_share": None, "counties": []}}
+    pdf = report.render(none, tmp_path / "r.pdf")
+    with pdfplumber.open(pdf) as p:
+        assert "placed" not in p.pages[0].extract_text()

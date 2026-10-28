@@ -1,0 +1,372 @@
+{
+  "report_date": "2026-10-28",
+  "editions": {
+    "eirgrid.tso_contracted_nonwind": "2026-08-05",
+    "eirgrid.tso_contracted_wind": "2026-08-05",
+    "esb.dso_contracted_nonrenewable": "2026-07-01",
+    "esb.dso_contracted_renewable": "2026-07-01",
+    "esb.dso_energised_nonrenewable": "2026-07-01",
+    "esb.dso_energised_renewable": "2026-07-01"
+  },
+  "new": {
+    "first_report": true,
+    "lists": []
+  },
+  "warnings": [],
+  "queue": {
+    "transmission_gw": 14.694,
+    "transmission_projects": 158,
+    "interconnector_gw": 1.204,
+    "distribution_gw": 1.964,
+    "distribution_projects": 177
+  },
+  "moved": {
+    "transmission": {
+      "editions": [
+        "2025-09-17 to 2026-08-05"
+      ],
+      "joined_count": 29,
+      "joined_gw": 3.002,
+      "left_count": 2,
+      "left_gw": 0.069,
+      "all_confirmed": true,
+      "joined": [
+        {
+          "ref": "TG676",
+          "name": "Moor OCGT (2028/2029 T-4)",
+          "mw": 340.0
+        },
+        {
+          "ref": "TG645",
+          "name": "Delamain Solar Farm",
+          "mw": 210.0
+        },
+        {
+          "ref": "TG449",
+          "name": "Ballysumaghan BESS & SC",
+          "mw": 200.0
+        },
+        {
+          "ref": "TG653",
+          "name": "Ballivor Wind Farm",
+          "mw": 182.0
+        },
+        {
+          "ref": "TG485",
+          "name": "Kilmorna Energy Storage Facility",
+          "mw": 170.0
+        },
+        {
+          "ref": "TG644",
+          "name": "Rathcoursey Solar Farm",
+          "mw": 130.0
+        },
+        {
+          "ref": "TG593",
+          "name": "Seven Hills Wind Farm",
+          "mw": 122.4
+        },
+        {
+          "ref": "TG659",
+          "name": "Rath Solar PV (ECP2.4+2.5)",
+          "mw": 119.3
+        },
+        {
+          "ref": "TG671",
+          "name": "Ballinagree Wind Farm",
+          "mw": 112.0
+        },
+        {
+          "ref": "TG650",
+          "name": "Baunogephlure BESS and Solar",
+          "mw": 105.0
+        },
+        {
+          "ref": "TG324",
+          "name": "Flagford Battery Storage",
+          "mw": 100.0
+        },
+        {
+          "ref": "TG450",
+          "name": "Tarbert BESS",
+          "mw": 100.0
+        }
+      ],
+      "left": [
+        {
+          "ref": "TG280",
+          "name": "Shantallow Solar",
+          "mw": 35.0
+        },
+        {
+          "ref": "TG275",
+          "name": "Banemore Solar Farm",
+          "mw": 34.0
+        }
+      ]
+    },
+    "distribution": {
+      "editions": [
+        "2026-04-01 to 2026-07-01"
+      ],
+      "count": 7,
+      "mw": 29.773,
+      "projects": [
+        {
+          "list": "ESB energised renewable",
+          "ref": "DG1892",
+          "name": "The Dell PV",
+          "mw": 20.0,
+          "energised_on": "2026-05-14",
+          "note": null
+        },
+        {
+          "list": "ESB energised renewable",
+          "ref": "DG1403",
+          "name": "Creevy Solar",
+          "mw": 4.0,
+          "energised_on": "2026-04-24",
+          "note": null
+        },
+        {
+          "list": "ESB energised renewable",
+          "ref": "DG1664",
+          "name": "Dromsallagh Solar Farm",
+          "mw": 4.0,
+          "energised_on": "2026-06-29",
+          "note": null
+        }
+      ],
+      "newly_listed_count": 1,
+      "newly_listed": [
+        {
+          "list": "ESB energised renewable",
+          "ref": "DG929",
+          "name": "Silliot Hill LFG",
+          "mw": 1.255,
+          "energised_on": null,
+          "note": "pre 2005"
+        }
+      ]
+    }
+  },
+  "stuck": {
+    "as_of": "2026-08-05",
+    "large_mw": 50,
+    "at_years": 3,
+    "longest_waiting": [
+      {
+        "ref": "TG71",
+        "name": "Oweninny 3 (Formerly Oweninny 5)",
+        "mw": 50.0,
+        "route": "Gate 3",
+        "months": 175,
+        "years_part": 14,
+        "months_part": 7,
+        "first_signed": "2012-01-01"
+      },
+      {
+        "ref": "TG86",
+        "name": "Oriel Wind Farm (Split)",
+        "mw": 210.0,
+        "route": "Gate 3",
+        "months": 148,
+        "years_part": 12,
+        "months_part": 4,
+        "first_signed": "2014-04-01"
+      },
+      {
+        "ref": "TG483",
+        "name": "Rosspile Storage Facility",
+        "mw": 100.0,
+        "route": "ECP-2.2",
+        "months": 99,
+        "years_part": 8,
+        "months_part": 3,
+        "first_signed": "2018-05-01"
+      },
+      {
+        "ref": "TG334",
+        "name": "Shannonbridge ESS B",
+        "mw": 63.2,
+        "route": "T-3 capacity auction",
+        "months": 95,
+        "years_part": 7,
+        "months_part": 11,
+        "first_signed": "2018-09-01"
+      },
+      {
+        "ref": "TG282",
+        "name": "East Laois Solar Farm (formerly Loughteague)",
+        "mw": 55.0,
+        "route": "Non GPA",
+        "months": 95,
+        "years_part": 7,
+        "months_part": 11,
+        "first_signed": "2018-09-01"
+      },
+      {
+        "ref": "TG322",
+        "name": "Drombeg Solar Park",
+        "mw": 50.0,
+        "route": "Non GPA",
+        "months": 94,
+        "years_part": 7,
+        "months_part": 10,
+        "first_signed": "2018-10-01"
+      },
+      {
+        "ref": "TG299",
+        "name": "Ballinknockane Solar Farm",
+        "mw": 50.0,
+        "route": "Non GPA",
+        "months": 92,
+        "years_part": 7,
+        "months_part": 8,
+        "first_signed": "2018-12-01"
+      },
+      {
+        "ref": "TG288",
+        "name": "Greenlink Interconnector",
+        "mw": 504.0,
+        "route": "PCI",
+        "months": 81,
+        "years_part": 6,
+        "months_part": 9,
+        "first_signed": "2019-11-01"
+      },
+      {
+        "ref": "TG289",
+        "name": "Blackwater Bog Solar Farm 1",
+        "mw": 65.0,
+        "route": "ECP-1",
+        "months": 73,
+        "years_part": 6,
+        "months_part": 1,
+        "first_signed": "2020-07-01"
+      },
+      {
+        "ref": "TG328",
+        "name": "Gaskinstown Solar Farm",
+        "mw": 85.0,
+        "route": "ECP-1",
+        "months": 72,
+        "years_part": 6,
+        "months_part": 0,
+        "first_signed": "2020-08-01"
+      },
+      {
+        "ref": "TG315",
+        "name": "Clonfad Solar",
+        "mw": 100.0,
+        "route": "ECP-1",
+        "months": 70,
+        "years_part": 5,
+        "months_part": 10,
+        "first_signed": "2020-10-01"
+      },
+      {
+        "ref": "TG428",
+        "name": "Moanvane Wind Farm",
+        "mw": 56.4,
+        "route": "ECP-2.1",
+        "months": 60,
+        "years_part": 5,
+        "months_part": 0,
+        "first_signed": "2021-08-01"
+      }
+    ],
+    "burndown": [
+      {
+        "batch": "ECP-1",
+        "results": "Nov 2018",
+        "age_months": 92,
+        "share_now": 0.446,
+        "share_at": 0.095,
+        "projects": 45
+      },
+      {
+        "batch": "ECP-2.1",
+        "results": "Nov 2020",
+        "age_months": 68,
+        "share_now": 0.23,
+        "share_at": 0.011,
+        "projects": 33
+      },
+      {
+        "batch": "ECP-2.2",
+        "results": "Nov 2021",
+        "age_months": 56,
+        "share_now": 0.034,
+        "share_at": 0.0,
+        "projects": 24
+      },
+      {
+        "batch": "ECP-2.3",
+        "results": "Nov 2022",
+        "age_months": 44,
+        "share_now": 0.0,
+        "share_at": 0.0,
+        "projects": 18
+      },
+      {
+        "batch": "ECP-2.4",
+        "results": "Jan 2024",
+        "age_months": 30,
+        "share_now": 0.0,
+        "share_at": null,
+        "projects": 17
+      },
+      {
+        "batch": "ECP-2.5",
+        "results": "by Feb 2025",
+        "age_months": 17,
+        "share_now": 0.005,
+        "share_at": null,
+        "projects": 18
+      }
+    ],
+    "burndown_first": "ECP-1",
+    "burndown_first_at": 0.095,
+    "burndown_later_max_at": 0.011
+  },
+  "where": {
+    "generation_placed_share": 0.953,
+    "counties": [
+      {
+        "county": "Offaly",
+        "gw": 1.682
+      },
+      {
+        "county": "Kerry",
+        "gw": 1.304
+      },
+      {
+        "county": "Meath",
+        "gw": 1.158
+      },
+      {
+        "county": "Cork",
+        "gw": 1.09
+      },
+      {
+        "county": "Galway",
+        "gw": 0.995
+      },
+      {
+        "county": "Dublin",
+        "gw": 0.924
+      }
+    ]
+  },
+  "caveats": [
+    "Lists as of 5 Aug 2026 (transmission) and 1 Jul 2026 (distribution); ESB posts its lists about a month after their as-of date.",
+    "'Left' a list means connected, withdrawn or moved: the contracted lists don't say which.",
+    "Burn-down shares are of projects still on a list; withdrawn projects are on neither.",
+    "Distribution burn-down only: transmission energisations need EirGrid's connected lists.",
+    "Waiting time runs from the earliest signed month printed for the project in any list since 2015, carried across relabelled refs (Rosspile: TG272, 2018).",
+    "The transmission total includes interconnectors; the county list leaves them out.",
+    "Not for publication: ESB Networks' terms forbid republishing its lists without written permission (PARKING.md)."
+  ],
+  "generated_at": "2026-10-28T19:50:55.025897+00:00"
+}

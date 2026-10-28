@@ -1,0 +1,34 @@
+/* The only place colours are defined. Everything else uses var(--token).
+   Two equal modes, switched by the system setting. No toggle yet. */
+
+:root {
+  --bg: #FFFFFF;
+  --surface: #F5F7FA;
+  --border: #DCE3EC;
+  --text: #0B1F3A;
+  --text-muted: #5B6878;
+  --accent: #1F5FBF;
+  --state-hit: #16707A;
+  --state-miss: #B23A2C;
+  --state-frozen: #5E6B7D;
+  --state-stale: #8A5A00;
+  --series-1: #0F2A4A;
+  --series-3: #7D8996;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #07111F;
+    --surface: #0D1B2E;
+    --border: #1C2D45;
+    --text: #E6ECF5;
+    --text-muted: #8796AB;
+    --accent: #5AA2F0;
+    --state-hit: #4FB8C2;
+    --state-miss: #F07A63;
+    --state-frozen: #8A9BB4;
+    --state-stale: #E3B04B;
+    --series-1: #6FB1FF;
+    --series-3: #8D99A8;
+  }
+}
