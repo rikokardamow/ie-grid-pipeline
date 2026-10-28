@@ -50,10 +50,14 @@ class Check:
         return self.as_of == self.as_of_from_name
 
 
-def check_publications(con) -> list[Check]:
+def check_publications(con, archived: bool = False) -> list[Check]:
+    """Live editions by default. Archived ones (g3) are checked for their hash too, but
+    their file names often carry no date, or a quarter where the text gives a real day
+    ("q1-2023" against "Information correct: 20-Apr-23"), so as_of_ok is informative only."""
+    where = "is not null" if archived else "is null"
     rows = con.execute(
         "select source_id, url, sha256, raw_path, as_of, published_at, published_at_basis "
-        "from publication order by source_id, as_of"
+        f"from publication where fetched_from {where} order by source_id, as_of"
     ).fetchall()
     out = []
     for source_id, url, sha, raw_path, as_of, published_at, basis in rows:
@@ -182,8 +186,8 @@ def by_technology(con) -> str:
 
 
 def unparsed(con) -> list[tuple[str, date]]:
-    """Publications of a parsed list that have no parse at the current version:
-    a load that wasn't run, or failed."""
+    """Publications of a parsed list with no parse and no recorded failure at the
+    current version: a load that wasn't run, or crashed."""
     from iegrid import parse
 
     sources = list(parse.PARSERS)
@@ -193,7 +197,71 @@ def unparsed(con) -> list[tuple[str, date]]:
         where p.source_id in ({", ".join("?" * len(sources))})
           and not exists (select 1 from parse_result r where r.publication_id = p.publication_id
                           and r.parser_version = ?)
+          and not exists (select 1 from parse_failure f where f.publication_id = p.publication_id
+                          and f.parser_version = ?)
         order by 1, 2
         """,
-        [*sources, parse.PARSER_VERSION],
+        [*sources, parse.PARSER_VERSION, parse.PARSER_VERSION],
     ).fetchall()
+
+
+def latest_parsed(con) -> list[str]:
+    """Source ids whose newest edition has a parse at the current version."""
+    from iegrid import parse
+
+    return [r[0] for r in con.execute(f"""
+        with newest as (select source_id, max(as_of) as as_of from publication group by 1)
+        select distinct p.source_id from publication p
+        join newest n on n.source_id = p.source_id and n.as_of = p.as_of
+        join parse_result r on r.publication_id = p.publication_id
+        where r.parser_version = {int(parse.PARSER_VERSION)} order by 1
+    """).fetchall()]
+
+
+@dataclass(frozen=True)
+class Found:
+    source_id: str | None
+    outcome: str
+    editions: int
+
+
+def backfill_outcomes(con) -> list[Found]:
+    """g3 done-when: every archived edition found, by its latest outcome."""
+    rows = con.execute("""
+        select source_id, outcome, count(*) from (
+            select archive_digest, arg_max(source_id, found_id) as source_id,
+                   arg_max(outcome, found_id) as outcome
+            from backfill_found group by 1)
+        group by all order by 1 nulls last, 2
+    """).fetchall()
+    return [Found(*r) for r in rows]
+
+
+def unexplained_editions(con) -> int:
+    """Editions found with neither a stored publication nor a written reason."""
+    return con.execute("""
+        select count(*) from (
+            select archive_digest, arg_max(outcome, found_id) as outcome,
+                   arg_max(publication_id, found_id) as pid, arg_max(note, found_id) as note
+            from backfill_found group by 1)
+        where (outcome in ('stored', 'duplicate') and pid is null)
+           or (outcome not in ('stored', 'duplicate') and coalesce(note, '') = '')
+    """).fetchone()[0]
+
+
+EDITIONS_SQL = """
+    select p.source_id, count(*) as editions, min(p.as_of) as first, max(p.as_of) as last,
+           count(r.publication_id) as rows_parsed, count(f.publication_id) as layout_not_read,
+           count(t.publication_id) as printed_total
+    from publication p
+    left join parse_result r on r.publication_id = p.publication_id and r.parser_version = {v}
+    left join parse_failure f on f.publication_id = p.publication_id and f.parser_version = {v}
+    left join edition_total t on t.publication_id = p.publication_id
+    group by 1 order by 1
+"""
+
+
+def editions(con) -> str:
+    from iegrid import parse
+
+    return table(con, EDITIONS_SQL.format(v=int(parse.PARSER_VERSION)))

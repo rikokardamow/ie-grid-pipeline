@@ -221,3 +221,23 @@ def grid_scale_from_summary(content: bytes) -> tuple[int, Decimal]:
     if not m:
         raise ParseError("no Renewable Grid Scale row in the summary report")
     return int(m.group(2).replace(",", "")), mw(m.group(3))
+
+
+# g3: the total an EirGrid contracted list prints for itself, in every wording
+# used since 2015: "Total Contracted: 437.4", "Total TSO Contracted: 3226.4",
+# "Total TSO Contracted Wind: 1450.10 MW". Older lists print none.
+PRINTED_TOTAL = re.compile(
+    r"(Total (?:TSO )?Contracted(?: Wind)?):\s*([\d,]+(?:\.\d+)?)", re.IGNORECASE)
+TOTAL_SOURCES = ("eirgrid.tso_contracted_wind", "eirgrid.tso_contracted_nonwind")
+
+
+def printed_total(content: bytes) -> tuple[Decimal, str] | None:
+    from iegrid.asof import pdf_text
+
+    found = PRINTED_TOTAL.findall(pdf_text(content))
+    if not found:
+        return None
+    if len({mw(v) for _, v in found}) > 1:
+        raise ParseError(f"more than one printed total: {found}")
+    phrase, value = found[-1]
+    return mw(value), phrase

@@ -3,7 +3,9 @@
     uv run python -m iegrid.load
 
 Reads the raw PDF kept by g1, never the network. A publication whose parse
-fails stores nothing (all rows or none) and the run exits 1.
+fails stores nothing (all rows or none), gets a parse_failure row and the run
+exits 1. It is not retried until PARSER_VERSION goes up, so an old layout the
+parser can't read fails once, not every week.
 """
 
 from __future__ import annotations
@@ -35,9 +37,11 @@ def pending(con, version: int | None = None) -> list[tuple[int, str, str]]:
         where p.source_id in ({", ".join("?" * len(sources))})
           and not exists (select 1 from parse_result r
                           where r.publication_id = p.publication_id and r.parser_version = ?)
+          and not exists (select 1 from parse_failure f
+                          where f.publication_id = p.publication_id and f.parser_version = ?)
         order by p.publication_id
         """,
-        [*sources, version],
+        [*sources, version, version],
     ).fetchall()
 
 
@@ -73,15 +77,39 @@ def load_one(con, publication_id: int, source_id: str, content: bytes, now: date
     return f"{source_id} #{publication_id}: {len(result.rows)} rows, {total} MW ({printed})"
 
 
+def read_totals(con, now: datetime) -> list[str]:
+    """The printed total of every EirGrid contracted edition that has none stored yet,
+    whether or not its rows parse. Returns problems, if any."""
+    problems = []
+    todo = con.execute(
+        f"""select p.publication_id, p.raw_path from publication p
+        where p.source_id in ({", ".join("?" * len(parse.TOTAL_SOURCES))})
+          and not exists (select 1 from edition_total t where t.publication_id = p.publication_id)
+        """, list(parse.TOTAL_SOURCES)).fetchall()
+    for publication_id, raw_path in todo:
+        try:
+            got = parse.printed_total((store.ROOT / raw_path).read_bytes())
+        except Exception as exc:  # noqa: BLE001 - reported, the rest carry on
+            problems.append(f"total #{publication_id}: {exc}")
+            continue
+        if got is not None:
+            con.execute("insert into edition_total values (?, ?, ?, ?)",
+                        [publication_id, got[0], got[1], now])
+    return problems
+
+
 def run(con, now: datetime | None = None) -> Summary:
     now = now or datetime.now(UTC)
     summary = Summary()
+    summary.errors.extend(read_totals(con, now))
     for publication_id, source_id, raw_path in pending(con):
         try:
             content = (store.ROOT / raw_path).read_bytes()
             summary.parsed.append(load_one(con, publication_id, source_id, content, now))
         except Exception as exc:  # noqa: BLE001 - one bad publication must not stop the rest
             summary.errors.append(f"{source_id} #{publication_id}: {exc}")
+            con.execute("insert into parse_failure values (?, ?, ?, ?) on conflict do nothing",
+                        [publication_id, parse.PARSER_VERSION, str(exc)[:500], now])
     return summary
 
 

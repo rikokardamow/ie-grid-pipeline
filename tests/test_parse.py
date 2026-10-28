@@ -174,3 +174,19 @@ def test_real_row_fields(ref):
     (r,) = [r for r in parse.PARSERS[source_id](files[0].read_bytes()).rows if r.project_ref == ref]
     assert [r.name, r.technology, r.mec_mw, r.node, r.station_110kv, r.voltage,
             r.processing_type, r.energised_on] == want
+
+
+@pytest.mark.parametrize("line, mw", [
+    ("Total Contracted: 437.4", Decimal("437.4")),
+    ("Total TSO Contracted: 3226.4", Decimal("3226.4")),
+    ("Total TSO Contracted Wind: 1450.10 MW", Decimal("1450.10")),
+    ("Total TSO Contracted: 12640.9", Decimal("12640.9")),
+])
+def test_printed_total_wordings(line, mw):
+    from tests.conftest import make_pdf
+    assert parse.printed_total(make_pdf(["rows", line]))[0] == mw
+
+
+def test_no_printed_total():
+    from tests.conftest import make_pdf
+    assert parse.printed_total(make_pdf(["Installed Wind Capacity DSO TSO Total"])) is None

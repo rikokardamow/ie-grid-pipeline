@@ -26,6 +26,7 @@ def fake_parser(monkeypatch):
         return parse.Parsed(rows, total)
 
     monkeypatch.setitem(parse.PARSERS, PUB.source_id, fake)
+    monkeypatch.setattr(parse, "printed_total", lambda content: None)
     monkeypatch.setattr(parse, "refs_in_text", lambda content: {1: 2})
     return calls
 
@@ -97,7 +98,7 @@ def test_total_that_does_not_tie_stores_nothing(con, tmp_path, fake_parser):
     add_pub(con, tmp_path, b"off", "d" * 64)
     s = load.run(con, NOW)
     assert not s.ok and "prints 99" in s.errors[0] and counts(con) == [0, 0]
-    assert load.pending(con)  # so the next run tries again
+    assert con.execute("select count(*) from parse_failure").fetchone()[0] == 1  # the reason is kept
 
 
 def test_skipped_page_stores_nothing(con, tmp_path, fake_parser, monkeypatch):
@@ -123,3 +124,25 @@ def test_unexpected_error_is_reported_and_others_still_load(con, tmp_path, fake_
     monkeypatch.setattr(parse, "refs_in_text", flaky)
     s = load.run(con, NOW)
     assert len(s.errors) == 1 and "boom" in s.errors[0] and len(s.parsed) == 1
+
+
+def test_failed_parse_is_recorded_and_not_retried_until_version_bump(con, tmp_path, fake_parser,
+                                                                      monkeypatch):
+    add_pub(con, tmp_path, b"broken", "h" * 64)
+    assert not load.run(con, NOW).ok
+    assert con.execute("select parser_version, error from parse_failure").fetchall() == [
+        (1, "bad row")]
+    assert load.run(con, NOW).ok  # not retried at the same version
+    monkeypatch.setattr(parse, "PARSER_VERSION", 2)
+    assert not load.run(con, NOW).ok  # tried again under a new parser
+
+
+def test_printed_totals_read_even_when_rows_fail(con, tmp_path, fake_parser, monkeypatch):
+    monkeypatch.setattr(parse, "printed_total",
+                        lambda content: (parse.Decimal("1714.23"), "Total TSO Contracted Wind"))
+    add_pub(con, tmp_path, b"broken", "i" * 64)
+    load.run(con, NOW)
+    assert con.execute("select printed_mw, phrase from edition_total").fetchall() == [
+        (parse.Decimal("1714.23"), "Total TSO Contracted Wind")]
+    load.run(con, NOW)  # read once
+    assert con.execute("select count(*) from edition_total").fetchone()[0] == 1

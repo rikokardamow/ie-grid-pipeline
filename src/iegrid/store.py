@@ -65,6 +65,46 @@ create table if not exists project_row (
     primary key (publication_id, parser_version, row_order)
 );
 
+-- g3. Where a backfilled file came from: the archive capture it was read from,
+-- and when the archive first captured it (an upper bound on publication).
+alter table publication add column if not exists fetched_from text;
+alter table publication add column if not exists first_captured_at timestamptz;
+
+-- g3. Every archived edition found, and what became of it. Insert only: a later
+-- run that changes the outcome adds a row.
+create sequence if not exists backfill_seq;
+create table if not exists backfill_found (
+    found_id        bigint primary key default nextval('backfill_seq'),
+    source_id       text,
+    original_url    text not null,
+    capture_ts      text not null,
+    archive_digest  text not null,
+    outcome         text not null check (outcome in ('stored', 'duplicate', 'no-as-of',
+                        'download-failed', 'no-publish-time', 'not-a-list')),
+    publication_id  bigint references publication (publication_id),
+    note            text not null,
+    found_at        timestamptz not null
+);
+
+-- g3. A parse that failed, so the load doesn't retry it every run. It is tried
+-- again when PARSER_VERSION goes up.
+create table if not exists parse_failure (
+    publication_id  bigint not null references publication (publication_id),
+    parser_version  integer not null,
+    error           text not null,
+    failed_at       timestamptz not null,
+    primary key (publication_id, parser_version)
+);
+
+-- g3. The total MW a list prints for itself, read from its text even when its
+-- rows can't be parsed yet (older layouts). One row per publication.
+create table if not exists edition_total (
+    publication_id  bigint primary key references publication (publication_id),
+    printed_mw      decimal(14, 5) not null,
+    phrase          text not null,
+    read_at         timestamptz not null
+);
+
 -- What each parse found, with the totals it is checked against.
 create table if not exists parse_result (
     publication_id    bigint not null references publication (publication_id),
@@ -91,6 +131,8 @@ class Publication:
     vintage_quality: str
     raw_path: str
     ingested_at: datetime
+    fetched_from: str | None = None         # archive capture URL, for backfilled files
+    first_captured_at: datetime | None = None
 
 
 def connect(path: Path | str = DEFAULT_DB) -> duckdb.DuckDBPyConnection:
@@ -114,13 +156,15 @@ def insert(con: duckdb.DuckDBPyConnection, pub: Publication) -> int | None:
     row = con.execute(
         """
         insert into publication (source_id, url, sha256, size_bytes, as_of, published_at,
-            published_at_basis, vintage_quality, raw_path, ingested_at)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            published_at_basis, vintage_quality, raw_path, ingested_at, fetched_from,
+            first_captured_at)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         on conflict (source_id, sha256) do nothing
         returning publication_id
         """,
         [pub.source_id, pub.url, pub.sha256, pub.size_bytes, pub.as_of, pub.published_at,
-         pub.published_at_basis, pub.vintage_quality, pub.raw_path, pub.ingested_at],
+         pub.published_at_basis, pub.vintage_quality, pub.raw_path, pub.ingested_at,
+         pub.fetched_from, pub.first_captured_at],
     ).fetchone()
     return row[0] if row else None
 

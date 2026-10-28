@@ -36,3 +36,34 @@ def test_other_dates_are_not_as_of():
 def test_reads_from_a_pdf():
     pdf = make_pdf(["Contracted TSO (Wind) Generators", "Correct as of 05/08/2026"])
     assert as_of_from_pdf(pdf) == date(2026, 8, 5)
+
+
+@pytest.mark.parametrize("text, expected", [
+    ("Correct as of 01/May/2017", date(2017, 5, 1)),
+    ("Correct as of 18 January 2019", date(2019, 1, 18)),
+    ("Correct as of 01-Oct-2019", date(2019, 10, 1)),
+    ("it. Correct as of the 29th of Aug 2016", date(2016, 8, 29)),
+    ("it. Correct as of the 1th of Feb 2017", date(2017, 2, 1)),
+    ("Data Accurate as of 1st March 2017", date(2017, 3, 1)),
+    ("As of the 19/07/2010 715 744 1459", date(2010, 7, 19)),
+    ("As of the 31st Dec 2011 862.40 768.30 1630.70", date(2011, 12, 31)),
+    ("Updated 1st December 2016", date(2016, 12, 1)),
+    ("Information correct: 20-Apr-23 Rev. 0", date(2023, 4, 20)),
+    ("it. Correct as of 01/Mar/2017.", date(2017, 3, 1)),
+])
+def test_archived_wordings(text, expected):
+    assert as_of_from_text(text) == expected
+
+
+@pytest.mark.parametrize("text", [
+    "updated July 2016",                                      # no day
+    "It would not however be updated for a non-MEC related amendment",
+    "Correct as of 31/02/2017",                               # not a calendar date
+])
+def test_not_an_as_of(text):
+    assert as_of_from_text(text) is None
+
+
+def test_as_of_on_a_late_page():
+    pdf = make_pdf(["rows"], ["more rows"], ["more rows"], ["more rows"], ["As of the 19/07/2010"])
+    assert as_of_from_pdf(pdf) == date(2010, 7, 19)

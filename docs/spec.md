@@ -65,6 +65,17 @@ licence: eirgrid / esb site terms not checked yet. gate before anything goes pub
 | g7 | dashboard: next.js, record's tokens (site/styles/tokens.css), static export from the json | builds and deploys; same look as the record | - |
 | g8 | schedule: weekly job checks both pages for new files, ingests, regenerates report, run log row | 4 weekly runs logged, one with a new file | - |
 
+every stone ends in one exhibit in its notebook, as well as its checks: a chart whose title is the finding, computed from the data that stone added, drawn to the record's chart rules (docs/CHARTS.md in energy-forecasting). the checks say the data is right; the exhibit says what it means. a stone without one isn't done.
+
+| # | exhibit |
+|---|---|
+| g1 | how fresh the lists are: days from as-of to publication, per list |
+| g2 | what is waiting to connect: contracted GW by technology, transmission and distribution |
+| g3 | how the queue has grown: contracted and connected GW per edition since 2009 |
+| g4 | where it is stuck: contracted GW by county |
+| g5 | how long it takes: share of each ecp batch energised by months since the batch result |
+| g6 | the weekly page itself |
+
 g1 blocks all. g2 before g3. g4 ‖ g5 after g2. g6 after g5. g7 after g6. g8 last. "weekly" = the job checks weekly; a new list lands quarterly (dso) or irregularly (tso), so most weeks the report says "no new publication" and shows the age clock moving. that's honest, not a gap.
 
 ## notebook rules
