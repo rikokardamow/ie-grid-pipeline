@@ -273,6 +273,7 @@ def contracted_by_county(con):
     total = sum(r[3] for r in rows)
     placed = sum(r[3] for r in rows if r[0])
     inferred = sum(r[3] for r in rows if r[2] in ("node", "osm-node"))
+    cited = sum(r[3] for r in rows if r[2] == "cited")
     by: dict[str, list[Decimal]] = {}
     for county, transmission, _, mw in rows:
         if county:
@@ -302,9 +303,10 @@ def contracted_by_county(con):
     fig.subplots_adjust(left=0.13, right=0.97, top=0.85, bottom=0.11)
     _frame(fig, title,
            f"Newest contracted lists, {placed / 1000:.1f} of {total / 1000:.1f} GW placed in a county "
-           f"({placed / total:.0%}). {inferred / placed:.0%} of the placed MW is placed by its "
-           f"connection node (where the node's other projects are, or its substation in "
-           f"OpenStreetMap), the rest by name in an ECP results publication.",
+           f"({placed / total:.0%}). Placed by name in an ECP results publication, "
+           f"{cited / placed:.0%} from a cited planning or developer source, and "
+           f"{inferred / placed:.0%} by its connection node (where the node's other projects "
+           f"are, or its substation in OpenStreetMap).",
            f"Source: EirGrid and ESB Networks contracted lists; ECP batch results publications; "
            f"substations © OpenStreetMap contributors (ODbL) · {LICENCE}")
     return fig

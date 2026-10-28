@@ -149,7 +149,7 @@ create table if not exists project_county (
     project_ref     text not null,
     mec_mw          decimal(12, 5) not null,
     county          text,
-    basis           text not null check (basis in ('name', 'node', 'osm-node', 'none')),
+    basis           text not null check (basis in ('name', 'cited', 'node', 'osm-node', 'none')),
     evidence        text not null,
     primary key (build_id, publication_id, row_order)
 );

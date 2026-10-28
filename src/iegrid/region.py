@@ -10,6 +10,10 @@ Two ways, tried in order, and the way is kept with the answer:
            with a known county, and NODE_MIN_SHARE of them are in one county.
            The county is then where that node's projects mostly are, which is an
            inference about the project, labelled as one.
+    cited  the project is in data/cited_counties.csv, a short table of projects
+           no ECP publication names, each row with the source it was read from
+           (planning case, developer or EirGrid). Keyed on ref and checked against
+           the name, so a reused ref doesn't carry a county to another project.
     osm-node  still nothing, but OpenStreetMap has a substation of that name in
            exactly one county. The county of the substation, not of the project:
            an offshore wind farm gets the county where it lands.
@@ -21,10 +25,12 @@ The job that feeds this is iegrid.counties.
 
 from __future__ import annotations
 
+import csv
 import re
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from decimal import Decimal
+from pathlib import Path
 
 from iegrid.ecp import COUNTIES, EcpRow
 
@@ -158,12 +164,15 @@ def norm_substation(name: str) -> str:
 
 
 def by_osm(projects: list[Project], placed: set[str],
-           substations: list[tuple[str, str]]) -> dict[str, County]:
-    """substations: (node or substation name, county) from OpenStreetMap."""
+           substations: list[tuple[str, ...]]) -> dict[str, County]:
+    """substations: (node or substation name, county[, what was found]) from OpenStreetMap."""
     where: dict[str, set[str]] = defaultdict(set)
-    for name, county in substations:
+    found: dict[str, str] = {}
+    for name, county, *what in substations:
         if (n := norm_substation(name)):
             where[n].add(county)
+            if what:
+                found[n] = what[0]
     out = {}
     for p in projects:
         if p.project_ref in placed or not p.node:
@@ -171,19 +180,43 @@ def by_osm(projects: list[Project], placed: set[str],
         counties = where.get(norm_node(p.node), set())
         if len(counties) == 1:
             county = next(iter(counties))
+            what = found.get(norm_node(p.node), f"{p.node} substation")
             out[p.project_ref] = County(p.project_ref, p.source_id, county, "osm-node",
-                                        f"OpenStreetMap: {p.node} substation is in {county}")
+                                        f"OpenStreetMap, {what}")
+    return out
+
+
+CITED = Path(__file__).parent / "data" / "cited_counties.csv"
+
+
+def cited_table(path: Path = CITED) -> list[dict[str, str]]:
+    with path.open(newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def by_cited(projects: list[Project], table: list[dict[str, str]]) -> dict[str, County]:
+    rows = {r["project_ref"]: r for r in table}
+    out = {}
+    for p in projects:
+        r = rows.get(p.project_ref)
+        if r and key(r["name_in_list"]) == key(p.name):
+            out[p.project_ref] = County(p.project_ref, p.source_id, r["county"], "cited",
+                                        f"{r['source_says']} <{r['source_url']}>")
     return out
 
 
 def assign(projects: list[Project], ecp: list[EcpRow],
-           substations: list[tuple[str, str]] = ()) -> list[County]:
+           substations: list[tuple[str, str]] = (),
+           cited: list[dict[str, str]] | None = None) -> list[County]:
     named = by_name(projects, ecp)
-    noded = by_node(projects, named, ecp)
-    osm = by_osm(projects, set(named) | set(noded), substations)
+    sourced = by_cited(projects, cited_table() if cited is None else cited)
+    known = {**named, **{k: v for k, v in sourced.items() if k not in named}}
+    noded = by_node(projects, known, ecp)
+    osm = by_osm(projects, set(known) | set(noded), substations)
     out = []
     for p in projects:
-        got = named.get(p.project_ref) or noded.get(p.project_ref) or osm.get(p.project_ref)
+        got = (named.get(p.project_ref) or sourced.get(p.project_ref)
+               or noded.get(p.project_ref) or osm.get(p.project_ref))
         out.append(got or County(p.project_ref, p.source_id, None, "none",
                                  "no ECP name match, no settled node, no OSM substation"))
     return out
@@ -192,4 +225,5 @@ def assign(projects: list[Project], ecp: list[EcpRow],
 # Every constant the answer depends on. A build is keyed on it, so changing a rule
 # makes a new build rather than relabelling an old one.
 RULES = (f"mec_tolerance={MEC_TOLERANCE};node_min_projects={NODE_MIN_PROJECTS};"
-         f"node_min_share={NODE_MIN_SHARE};filler={len(FILLER)}")
+         f"node_min_share={NODE_MIN_SHARE};filler={len(FILLER)};"
+         f"cited={len(cited_table())}")

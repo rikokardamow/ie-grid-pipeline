@@ -32,7 +32,7 @@ def test_name_match_needs_close_mec_and_agreeing_counties():
                 P("TG3", "Kilmore Solar", "50")]             # two counties in ECP
     ecp = [E("Ballymoneen Solar", "Galway", "100"), E("Coole Wind Farm Extension", "Westmeath", "88"),
            E("Kilmore Solar Farm", "Wexford", "50"), E("Kilmore Solar", "Cork", "50")]
-    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp)}
+    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp, cited=[])}
     assert got == {"TG1": ("Galway", "name"), "TG2": (None, "none"), "TG3": (None, "none")}
 
 
@@ -43,7 +43,7 @@ def test_node_vote_needs_enough_projects_and_a_clear_majority():
     projects = [P("TG9", "Celtic Interconnector", "700", "Knockraha"),
                 P("TG8", "X", "100", "Tarbert"),     # one vote only
                 P("TG7", "Y", "100", "Border")]      # split 50/50
-    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp)}
+    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp, cited=[])}
     assert got == {"TG9": ("Cork", "node"), "TG8": (None, "none"), "TG7": (None, "none")}
 
 
@@ -51,7 +51,7 @@ def test_osm_only_when_one_county_has_that_substation():
     subs = [("Southbank 220kV Substation", "Dublin"), ("Ballybeg 38 kV Substation", "Wicklow"),
             ("Ballybeg Substation", "Meath")]
     projects = [P("TG5", "Poolbeg OCGT", "299", "Southbank"), P("TG6", "Z", "5", "Ballybeg")]
-    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, [], subs)}
+    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, [], subs, cited=[])}
     assert got == {"TG5": ("Dublin", "osm-node"), "TG6": (None, "none")}
 
 
@@ -62,3 +62,33 @@ def test_names_and_areas():
     assert osm_county("Fingal") == osm_county("Dún Laoghaire–Rathdown") == "Dublin"
     assert osm_county("Limerick City and County") == "Limerick"
     assert osm_county("Somewhere") is None
+
+
+ROW = {"project_ref": "TG560", "name_in_list": "Poolbeg OCGT", "node": "Southbank",
+       "county": "Dublin", "source_url": "https://www.pleanala.ie/x", "source_says": "Dublin 4",
+       "checked_on": "2026-10-28"}
+
+
+def test_cited_row_applies_only_to_the_same_project():
+    projects = [P("TG560", "Poolbeg OCGT", "299", "Southbank"),
+                P("TG86", "Oriel Wind Farm", "210", "Oriel")]
+    reused = {**ROW, "project_ref": "TG86"}  # a ref reused for another name: not applied
+    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, [], cited=[ROW, reused])}
+    assert got == {"TG560": ("Dublin", "cited"), "TG86": (None, "none")}
+
+
+def test_a_printed_county_beats_a_cited_one():
+    projects = [P("TG560", "Poolbeg OCGT", "299", "Southbank")]
+    ecp = [E("Poolbeg OCGT", "Meath", "299")]
+    (c,) = assign(projects, ecp, cited=[ROW])
+    assert (c.county, c.basis) == ("Meath", "name")
+
+
+def test_the_shipped_table_is_complete_and_sourced():
+    from iegrid.ecp import COUNTIES
+    from iegrid.region import cited_table
+    rows = cited_table()
+    assert rows and len({r["project_ref"] for r in rows}) == len(rows)
+    for r in rows:
+        assert r["county"] in COUNTIES and r["source_url"].startswith("https://")
+        assert r["source_says"] and r["checked_on"]

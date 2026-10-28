@@ -228,7 +228,7 @@ def build(con, now) -> str:
         return "build: unchanged"
     rows = [ecp.EcpRow(page, name, county, mec, node) for page, name, county, mec, node in
             con.execute("select page, name, county, mec_mw, node from ecp_row").fetchall()]
-    subs = con.execute("select node, county from osm_node").fetchall()
+    subs = con.execute("select node, county, display_name from osm_node").fetchall()
     got = region.assign([p for _, _, p in projects], rows, subs)
     con.execute("begin transaction")
     try:
