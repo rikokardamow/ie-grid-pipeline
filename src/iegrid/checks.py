@@ -13,6 +13,7 @@ import hashlib
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
+from decimal import Decimal
 
 from iegrid.sources import file_name
 from iegrid.store import ROOT
@@ -86,3 +87,93 @@ LAG_SQL = """
 def publication_lag(con) -> str:
     """How long after its as-of date each list went up (by Last-Modified)."""
     return table(con, LAG_SQL)
+
+
+# A list ties when its rows match the text count and its MW are within this of
+# the total it prints (or, for the energised renewable list, the summary report).
+TIE_MW = 1
+
+
+@dataclass(frozen=True)
+class Tie:
+    source_id: str
+    as_of: date
+    rows: int
+    text_refs: int
+    parsed_mw: Decimal
+    against: str
+    target_rows: int | None
+    target_mw: Decimal | None
+
+    @property
+    def ok(self) -> bool:
+        if self.rows != self.text_refs or self.target_mw is None:
+            return False
+        rows_ok = self.target_rows is None or self.rows == self.target_rows
+        return rows_ok and abs(self.parsed_mw - self.target_mw) <= TIE_MW
+
+
+def ties(con) -> list[Tie]:
+    """Every parse at the current parser version, against the total it should match."""
+    from iegrid import parse
+
+    found = con.execute(
+        """
+        select p.source_id, p.as_of, r.row_count, r.text_ref_count, r.parsed_total_mw,
+               r.printed_total_mw
+        from parse_result r join publication p using (publication_id)
+        where r.parser_version = ?
+        order by p.source_id, p.as_of
+        """,
+        [parse.PARSER_VERSION],
+    ).fetchall()
+    summaries = {
+        as_of: ROOT / raw_path for as_of, raw_path in con.execute(
+            "select as_of, raw_path from publication where source_id = 'esb.renewable_summary'"
+        ).fetchall()
+    }
+    out = []
+    for source_id, as_of, rows, text_refs, parsed_mw, printed in found:
+        if printed is not None:
+            out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw, "printed total",
+                           None, printed))
+        elif source_id == "esb.dso_energised_renewable" and as_of in summaries:
+            n, total = parse.grid_scale_from_summary(summaries[as_of].read_bytes())
+            out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw,
+                           "summary report, grid scale", n, total))
+        else:
+            out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw, "nothing to tie to",
+                           None, None))
+    return out
+
+
+HAND_COUNT_SQL = """
+    select p.source_id, r.page, count(*) as rows_on_page,
+           arg_min(r.project_ref, r.row_order) as first_ref,
+           arg_max(r.project_ref, r.row_order) as last_ref
+    from project_row r join publication p using (publication_id)
+    where r.parser_version = {version} and r.page in (
+        select distinct page from project_row q
+        where q.publication_id = r.publication_id and q.parser_version = r.parser_version
+        order by page limit 2)
+    group by all order by p.source_id, r.page
+"""
+
+
+def hand_count_pages(con) -> str:
+    """The first two pages with rows in each list: rows parsed, first and last ref,
+    so the PDF can be counted by eye against it."""
+    from iegrid import parse
+
+    return table(con, HAND_COUNT_SQL.format(version=int(parse.PARSER_VERSION)))
+
+
+def by_technology(con) -> str:
+    from iegrid import parse
+
+    return table(con, f"""
+        select p.source_id, r.technology, count(*) as projects, sum(r.mec_mw)::decimal(12,1) as mw
+        from project_row r join publication p using (publication_id)
+        where r.parser_version = {int(parse.PARSER_VERSION)}
+        group by all order by p.source_id, mw desc
+    """)

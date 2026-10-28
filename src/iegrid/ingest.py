@@ -124,6 +124,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     con = store.connect(args.db)
     summary = run(con, Path(args.raw))
+    con.close()
+    print(f"snapshot: {store.snapshot(args.db).name}")
     for label in ("stored", "unchanged", "unknown_links", "missing_sources", "errors"):
         items = getattr(summary, label)
         print(f"{label}: {len(items)}")

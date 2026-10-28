@@ -41,6 +41,41 @@ create table if not exists publication (
     ingested_at         timestamptz not null,
     unique (source_id, sha256)
 );
+
+-- g2. One row per project per publication per parser version. A project that
+-- changes shows up as a different row under a later publication.
+create table if not exists project_row (
+    publication_id   bigint not null references publication (publication_id),
+    parser_version   integer not null,
+    row_order        integer not null,
+    page             integer not null,
+    project_ref      text not null,
+    name             text not null,
+    technology       text not null,
+    mec_mw           decimal(12, 5) not null,
+    node             text not null,
+    station_110kv    text not null,
+    voltage          text not null,
+    processing_type  text not null,
+    status           text not null,
+    signed_month     date,
+    energised_on     date,
+    energised_note   text not null,
+    raw              text not null,
+    primary key (publication_id, parser_version, row_order)
+);
+
+-- What each parse found, with the totals it is checked against.
+create table if not exists parse_result (
+    publication_id    bigint not null references publication (publication_id),
+    parser_version    integer not null,
+    row_count         integer not null,
+    text_ref_count    integer not null,
+    parsed_total_mw   decimal(14, 5) not null,
+    printed_total_mw  decimal(14, 5),
+    parsed_at         timestamptz not null,
+    primary key (publication_id, parser_version)
+);
 """
 
 
@@ -90,8 +125,41 @@ def insert(con: duckdb.DuckDBPyConnection, pub: Publication) -> int | None:
     return row[0] if row else None
 
 
-def connect_read_only(path: Path | str = DEFAULT_DB) -> duckdb.DuckDBPyConnection:
-    """For notebooks: they read, never write."""
-    con = duckdb.connect(str(path), read_only=True)
+SNAPSHOTS = ROOT / "data" / "snapshots"
+
+
+def snapshot(path: Path | str = DEFAULT_DB, out_dir: Path | None = None,
+             now: datetime | None = None) -> Path:
+    """Copy the store to snapshots/<UTC timestamp>.duckdb beside it, for notebooks.
+
+    DuckDB lets no process write while another has the file open, even read-only,
+    so a notebook left open on the live store would block the weekly job.
+    Notebooks read a snapshot instead; jobs call this after they write."""
+    import shutil
+    from datetime import UTC
+
+    now = now or datetime.now(UTC)
+    out_dir = out_dir or Path(path).parent / "snapshots"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out = out_dir / f"{now:%Y-%m-%dT%H%M%SZ}.duckdb"
+    con = duckdb.connect(str(path))
+    try:
+        con.execute("checkpoint")  # flush the WAL so the copy is complete on its own
+    finally:
+        con.close()
+    shutil.copyfile(path, out)
+    return out
+
+
+def latest_snapshot(out_dir: Path = SNAPSHOTS) -> Path:
+    snaps = sorted(out_dir.glob("*.duckdb"))
+    if not snaps:
+        raise FileNotFoundError(f"no snapshot in {out_dir}; run a job first")
+    return snaps[-1]
+
+
+def connect_read_only(path: Path | str | None = None) -> duckdb.DuckDBPyConnection:
+    """For notebooks: the latest snapshot, read only. They read, never write."""
+    con = duckdb.connect(str(path or latest_snapshot()), read_only=True)
     con.execute("set timezone = 'UTC'")
     return con
