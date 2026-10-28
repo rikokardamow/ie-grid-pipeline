@@ -1,4 +1,8 @@
 import { BarChart } from "@/components/BarChart";
+import { Figure } from "@/components/Figure";
+import { GridMap } from "@/components/GridMap";
+import { LineChart } from "@/components/LineChart";
+import { SplitBars } from "@/components/SplitBars";
 import { Stat } from "@/components/Stat";
 import { TableScroll } from "@/components/TableScroll";
 import { LIST_NAMES, gw, mw, pct, waited } from "@/lib/format";
@@ -13,14 +17,26 @@ const OSM = "substations © OpenStreetMap contributors, ODbL";
 
 const span = (editions: string[]) => (editions.length > 0 ? `, ${editions.join("; ")}` : "");
 
+// "5" or "31-36": the range of a few numbers, as the g1 exhibit writes it
+const range = (xs: number[]) => {
+  if (xs.length === 0) return "";
+  const lo = Math.min(...xs);
+  const hi = Math.max(...xs);
+  return lo === hi ? `${lo}` : `${lo}–${hi}`;
+};
+
+const TSO_IDS = ["eirgrid.tso_contracted_wind", "eirgrid.tso_contracted_nonwind"];
+const DSO_CONTRACTED = ["esb.dso_contracted_renewable", "esb.dso_contracted_nonrenewable"];
+
 // "As of" for a chart: the editions its data comes from, never the report date
 function asOf(editions: Record<string, string>, ids: string[]) {
   const dates = [...new Set(ids.map((id) => editions[id]).filter(Boolean))].sort();
   return dates.length > 0 ? ` · As of ${dates.join(" and ")}` : "";
 }
 
-function ProjectTable({ label, rows, extra }: {
+function ProjectTable({ label, rows, extra, noRef }: {
   label: string;
+  noRef?: boolean;
   rows: (Project & Record<string, unknown>)[];
   extra?: { heading: string; cell: (r: Project & Record<string, unknown>) => string };
 }) {
@@ -29,8 +45,8 @@ function ProjectTable({ label, rows, extra }: {
       <table className="score-table wrap">
         <thead>
           <tr>
-            <th scope="col">Ref</th>
-            <th scope="col">Project</th>
+            {!noRef && <th scope="col">Ref</th>}
+            <th scope="col">{noRef ? "Substation" : "Project"}</th>
             <th scope="col" className="num">MEC</th>
             {extra && <th scope="col">{extra.heading}</th>}
           </tr>
@@ -38,9 +54,11 @@ function ProjectTable({ label, rows, extra }: {
         <tbody>
           {part.map((r) => (
             <tr key={`${r.ref}-${r.name}`}>
-              <td>
-                <code>{r.ref}</code>
-              </td>
+              {!noRef && (
+                <td>
+                  <code>{r.ref}</code>
+                </td>
+              )}
               <td>{r.name}</td>
               <td className="num">{mw(r.mw)}</td>
               {extra && <td>{extra.cell(r)}</td>}
@@ -95,6 +113,14 @@ export function Dashboard({ report }: { report: Report }) {
   const tso = moved.transmission;
   const dso = moved.distribution;
   const top = where.counties[0];
+  const tech = queue.by_technology;
+  const hist = queue.history;
+  const lastTso = [...TSO_IDS.map((id) => report.editions[id] ?? "")].sort().pop() ?? "";
+  const years = moved.by_year;
+  const full = years.filter((y) => String(y.year) < lastTso.slice(0, 4));
+  const shown = full[full.length - 1] ?? years[years.length - 1];
+  const fresh = report.freshness;
+  const grid = report.grid;
 
   return (
     <>
@@ -132,10 +158,99 @@ export function Dashboard({ report }: { report: Report }) {
             detail={`${queue.distribution_projects} projects`}
           />
         </div>
+        {fresh.length > 0 && (
+          <BarChart
+            id="fig-freshness"
+            title={`EirGrid's lists go up ${range(fresh.filter((f) => f.list.startsWith("EirGrid")).map((f) => f.days))} days after their as-of date; ESB's take ${range(fresh.filter((f) => f.list.startsWith("ESB")).map((f) => f.days))}`}
+            subtitle="Days from each list's as-of date to its publication (the server's Last-Modified time), so the distribution side of this page runs about a month behind"
+            footer={`Source: ${EIRGRID}; ${ESB}`}
+            valueHeading="Days to publication"
+            bars={fresh.map((f) => ({ label: f.list, value: f.days, text: `${f.days} days · as of ${f.as_of}, up ${f.published}` }))}
+          />
+        )}
+      </section>
+
+      <section aria-labelledby="waiting">
+        <h2 id="waiting">What is waiting</h2>
+        {tech.groups.length > 0 && (
+          <Figure
+            id="fig-technology"
+            title={`${gw(tech.total_gw)} has signed to connect${tech.top_share === null ? "" : `; ${tech.groups[0].group.toLowerCase()} is ${pct(tech.top_share)} of it`}`}
+            subtitle="Contracted GW not yet energised, by technology: transmission (EirGrid) and distribution (ESB Networks)"
+            footer={`Source: ${EIRGRID}; ${ESB}${asOf(report.editions, [...TSO_IDS, ...DSO_CONTRACTED])}`}
+            table={{
+              headings: ["Technology", "Transmission", "Distribution"],
+              rows: tech.groups.map((g) => [g.group, gw(g.transmission_gw), gw(g.distribution_gw)]),
+            }}
+          >
+            <SplitBars
+              mode="stacked"
+              names={["transmission", "distribution"]}
+              rows={tech.groups.map((g) => ({
+                label: g.group,
+                a: g.transmission_gw,
+                b: g.distribution_gw,
+                text: `${gw(g.transmission_gw + g.distribution_gw)} (${g.transmission_gw.toFixed(2)} + ${g.distribution_gw.toFixed(2)})`,
+              }))}
+            />
+          </Figure>
+        )}
+        {hist.nonwind.length > 0 && (
+          <Figure
+            id="fig-history"
+            title={`Non-wind waiting on transmission: ${gw(hist.nonwind[0].gw)} in ${hist.nonwind[0].as_of.slice(0, 4)}, ${gw(hist.nonwind[hist.nonwind.length - 1].gw)} now`}
+            subtitle="GW printed on every EirGrid contracted list since the first one read; dashed rules mark each connection batch's results"
+            footer={`Source: ${EIRGRID}, from the Internet Archive and eirgrid.ie${asOf(report.editions, TSO_IDS)}`}
+            table={{
+              headings: ["Edition", "Non-wind", "Wind"],
+              rows: hist.nonwind.map((p) => [
+                p.as_of,
+                gw(p.gw),
+                (() => {
+                  const w = hist.wind.find((q) => q.as_of === p.as_of);
+                  return w ? gw(w.gw) : "";
+                })(),
+              ]),
+            }}
+          >
+            <LineChart
+              unit="GW contracted on transmission"
+              format={(v) => v.toFixed(1)}
+              rules={hist.batches.map((b) => ({ date: b.results, label: b.batch }))}
+              series={[
+                { name: "non-wind", tone: "main", points: hist.nonwind.map((p) => ({ date: p.as_of, value: p.gw })) },
+                { name: "wind", tone: "second", points: hist.wind.map((p) => ({ date: p.as_of, value: p.gw })) },
+              ]}
+            />
+          </Figure>
+        )}
       </section>
 
       <section aria-labelledby="moved">
         <h2 id="moved">What moved</h2>
+        {shown && (
+          <Figure
+            id="fig-flows"
+            title={`${shown.year}: ${gw(shown.joined_gw)} joined the transmission lists, ${gw(shown.left_gw)} left`}
+            subtitle="GW joining and leaving the EirGrid contracted lists each year, edition by edition; relabelled refs are not counted as either"
+            footer={`Source: ${EIRGRID}${asOf(report.editions, TSO_IDS)}`}
+            table={{
+              headings: ["Year", "Joined", "Left"],
+              rows: years.map((y) => [String(y.year), gw(y.joined_gw), gw(y.left_gw)]),
+            }}
+          >
+            <SplitBars
+              mode="paired"
+              names={["joined", "left (connected, withdrawn or moved)"]}
+              rows={years.map((y) => ({
+                label: String(y.year),
+                a: y.joined_gw,
+                b: y.left_gw,
+                text: `▲ ${y.joined_gw.toFixed(2)} · ▼ ${y.left_gw.toFixed(2)} GW`,
+              }))}
+            />
+          </Figure>
+        )}
         <div className="card">
           <h3>Transmission{span(tso.editions)}</h3>
           {tso.joined.length + tso.left.length === 0 ? (
@@ -179,6 +294,7 @@ export function Dashboard({ report }: { report: Report }) {
       <section aria-labelledby="stuck">
         <h2 id="stuck">What&apos;s stuck</h2>
         <BarChart
+          id="fig-burndown"
           title={burndownTitle(report)}
           subtitle={`Share of each ECP batch's distribution projects energised ${stuck.at_years} years after its results, by MW`}
           footer={`Source: ${ESB}; ECP batch results${asOf(report.editions, ["esb.dso_energised_renewable", "esb.dso_energised_nonrenewable"])}`}
@@ -208,6 +324,7 @@ export function Dashboard({ report }: { report: Report }) {
       <section aria-labelledby="where">
         <h2 id="where">Where</h2>
         <BarChart
+          id="fig-counties"
           title={top ? `${top.county} has the most contracted generation waiting: ${gw(top.gw)}` : "No project placed in a county yet"}
           subtitle={`Contracted GW by county, transmission and distribution, interconnectors left out${
             where.generation_placed_share === null ? "" : `; ${pct(where.generation_placed_share)} of generation MW placed`
@@ -221,6 +338,55 @@ export function Dashboard({ report }: { report: Report }) {
           valueHeading="Contracted GW"
           bars={where.counties.map((c) => ({ label: c.county, value: c.gw, text: gw(c.gw) }))}
         />
+        {grid === null ? (
+          <p className="muted">No grid map yet: run <code>uv run python -m iegrid.grid</code>, then the report.</p>
+        ) : (
+          <>
+            <Figure
+              id="fig-map"
+              title={`${gw(grid.far_gw)} waits at ${grid.far_nodes} substations more than ${grid.far_km} km from the ${grid.backbone_kv.join("/")} kV network`}
+              subtitle={`Contracted MW by connection substation (circle area) on OpenStreetMap's lines; ${gw(grid.placed_gw)}${grid.placed_share === null ? "" : ` (${pct(grid.placed_share)})`} of the queue is at a substation on the map. Distance is from the substation, not the project's site`}
+              footer={`Source: ${EIRGRID}; ${ESB}; lines and ${OSM}, fetched ${grid.osm_fetched_at.slice(0, 10)}; coast Natural Earth${asOf(report.editions, [...TSO_IDS, ...DSO_CONTRACTED])}`}
+              table={{
+                headings: ["Substation", "kV", "Contracted", "Projects", `To ${grid.backbone_kv.join("/")} kV`],
+                rows: grid.nodes.map((n) => [n.node, String(n.kv), mw(n.mw), String(n.projects), n.km_backbone === null ? "" : `${n.km_backbone} km`]),
+              }}
+            >
+              <div className="map-layout">
+                <div>
+                  <p className="key map-key">
+                    <span className="line-swatch kv400" aria-hidden="true" /> {grid.backbone_kv[grid.backbone_kv.length - 1]} kV
+                    <span className="line-swatch kv220" aria-hidden="true" /> {grid.backbone_kv[0]} kV
+                    <span className="line-swatch" aria-hidden="true" /> lower
+                    <span className="dot-swatch" aria-hidden="true" /> contracted MW
+                  </p>
+                  <GridMap
+                    grid={grid}
+                    format={(n) => `${n.node}: ${mw(n.mw)}, ${n.projects} projects${n.km_backbone === null ? "" : `, ${n.km_backbone} km to ${grid.backbone_kv.join("/")} kV`}`}
+                  />
+                </div>
+                <BarChart
+                  title={grid.bands[0] ? `${gw(grid.bands[0].gw)} is at substations ${grid.bands[0].label} from the backbone` : "No substation on the map yet"}
+                  subtitle={`Contracted GW at mapped substations, by distance to the nearest ${grid.backbone_kv.join("/")} kV line`}
+                  footer={`Source: as the map`}
+                  valueHeading="Contracted GW"
+                  bars={grid.bands.map((b) => ({ label: b.label, value: b.gw, text: `${gw(b.gw)} at ${b.nodes} substations` }))}
+                />
+              </div>
+            </Figure>
+            {grid.unplaced.length > 0 && (
+              <div className="card">
+                <h3>Not on the map: substations OpenStreetMap doesn&apos;t name yet</h3>
+                <p className="muted">Mostly new stations. Their MW is counted above, not drawn.</p>
+                <ProjectTable
+                  label="Substations not on the map"
+                  noRef
+                  rows={grid.unplaced.map((u) => ({ ref: "", name: u.node, mw: u.mw }))}
+                />
+              </div>
+            )}
+          </>
+        )}
       </section>
 
       <section aria-labelledby="editions">

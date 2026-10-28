@@ -28,6 +28,9 @@ function perturb(x: unknown, k: number): unknown {
   return x;
 }
 
+// The page's own layout: the zero of a chart's y axis (report.LAYOUT_NUMBERS does the same)
+const LAYOUT_NUMBERS = new Set(["0"]);
+
 const READ_ATTRS = /\b(?:title|aria-label|alt|content)="([^"]*)"/g;
 
 export function pageText(html: string): string {
@@ -52,7 +55,7 @@ const numbers = (report: Report, extra?: React.ReactNode) =>
 function numbersNotFromReport(report: Report, extra?: React.ReactNode): string[] {
   const base = numbers(report, extra);
   const moved = [1, 2].map((k) => new Set(numbers(perturb(report, k) as Report, extra)));
-  return [...new Set(base.filter((n) => moved.every((m) => m.has(n))))];
+  return [...new Set(base.filter((n) => !LAYOUT_NUMBERS.has(n) && moved.every((m) => m.has(n))))];
 }
 
 // The branches the fixture doesn't take

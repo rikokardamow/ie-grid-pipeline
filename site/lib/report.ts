@@ -6,6 +6,33 @@ import { join } from "node:path";
 
 export type Project = { ref: string; name: string; mw: number };
 
+export type Grid = {
+  osm_fetched_at: string;
+  backbone_kv: number[];
+  far_km: number;
+  placed_share: number | null;
+  placed_gw: number;
+  far_gw: number;
+  far_nodes: number;
+  bands: { label: string; gw: number; nodes: number }[];
+  nodes: {
+    node: string;
+    kv: number;
+    lon: number;
+    lat: number;
+    mw: number;
+    projects: number;
+    tso_mw: number;
+    match: string;
+    km_backbone: number | null;
+  }[];
+  unplaced: { node: string; mw: number }[];
+  lines: { kv: number; path: number[][] }[];
+  outline: number[][][];
+};
+
+export type Point = { as_of: string; gw: number };
+
 export type Report = {
   report_date: string;
   generated_at?: string;
@@ -18,6 +45,14 @@ export type Report = {
     interconnector_gw: number;
     distribution_gw: number;
     distribution_projects: number;
+    by_technology: {
+      transmission_as_of: string;
+      distribution_as_of: string;
+      total_gw: number;
+      top_share: number | null;
+      groups: { group: string; transmission_gw: number; distribution_gw: number }[];
+    };
+    history: { nonwind: Point[]; wind: Point[]; batches: { batch: string; results: string; label: string }[] };
   };
   moved: {
     transmission: {
@@ -37,6 +72,7 @@ export type Report = {
       projects: (Project & { list: string; energised_on: string | null; note: string | null })[];
       newly_listed_count: number;
     };
+    by_year: { year: number; joined_gw: number; left_gw: number }[];
   };
   stuck: {
     as_of: string;
@@ -62,6 +98,8 @@ export type Report = {
     burndown_later_max_at: number | null;
   };
   where: { generation_placed_share: number | null; counties: { county: string; gw: number }[] };
+  grid: Grid | null;
+  freshness: { list: string; as_of: string; published: string; days: number }[];
   caveats: string[];
 };
 
@@ -77,6 +115,10 @@ const REQUIRED: [string, (r: Report) => unknown][] = [
   ["queue.interconnector_gw", (r) => r.queue?.interconnector_gw],
   ["stuck.at_years", (r) => r.stuck?.at_years],
   ["where.generation_placed_share", (r) => r.where?.generation_placed_share],
+  ["queue.history", (r) => r.queue?.history],
+  ["moved.by_year", (r) => r.moved?.by_year],
+  ["grid", (r) => r.grid],
+  ["freshness", (r) => r.freshness],
 ];
 
 function reportFiles(dir: string): string[] {

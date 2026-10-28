@@ -5,7 +5,8 @@ export type Bar = { label: string; value: number | null; text: string; note?: st
 // Horizontal bars, one colour, the value written at the end of each bar (CHARTS.md:
 // direct labels, title states the finding, footer names the source). A bar with no
 // value prints its note instead. The same rows are underneath as a table.
-export function BarChart({ title, subtitle, footer, bars, valueHeading, scaleMax }: {
+export function BarChart({ id, title, subtitle, footer, bars, valueHeading, scaleMax }: {
+  id?: string;
   title: string;
   subtitle: string;
   footer: string;
@@ -15,7 +16,7 @@ export function BarChart({ title, subtitle, footer, bars, valueHeading, scaleMax
 }) {
   const max = scaleMax ?? (Math.max(...bars.map((b) => b.value ?? 0)) || 1);
   return (
-    <figure className="card chart bar-chart">
+    <figure className="card chart bar-chart" id={id}>
       <figcaption>
         <h3>{title}</h3>
         <p className="muted">{subtitle}</p>

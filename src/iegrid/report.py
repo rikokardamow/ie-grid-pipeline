@@ -212,6 +212,68 @@ def _caveats(editions: dict[str, date]) -> list[str]:
     ]
 
 
+# --- g7b: the earlier stones' exhibits, as data for the dashboard ---------------------
+
+def _freshness(con) -> list[dict]:
+    """g1: days from each live list's as-of date to its publication."""
+    from iegrid import exhibits
+
+    return [{"list": LIST_NAMES[s], "as_of": str(a), "published": str(p), "days": d}
+            for s, a, p, d in exhibits.publication_lags(con) if s in LIST_NAMES]
+
+
+def _by_technology(con) -> dict:
+    """g2: contracted GW by technology group, transmission and distribution."""
+    from iegrid import exhibits
+
+    order, groups, as_of = exhibits.technology_groups(con)
+    total = sum(sum(v) for v in groups.values())
+    return {"transmission_as_of": str(as_of[True]), "distribution_as_of": str(as_of[False]),
+            "total_gw": _f(total / 1000),
+            "top_share": _f(sum(groups[order[0]]) / total) if total else None,
+            "groups": [{"group": g, "transmission_gw": _f(groups[g][0] / 1000),
+                        "distribution_gw": _f(groups[g][1] / 1000)} for g in order]}
+
+
+def _history(con) -> dict:
+    """g3: GW printed on every EirGrid contracted edition, and when each batch's results
+    came out."""
+    from iegrid import exhibits, metrics
+
+    series = exhibits.queue_series(con)
+    return {
+        "nonwind": [{"as_of": str(d), "gw": _f(gw)} for d, gw in
+                    series["eirgrid.tso_contracted_nonwind"]],
+        "wind": [{"as_of": str(d), "gw": _f(gw)} for d, gw in
+                 series["eirgrid.tso_contracted_wind"]],
+        "batches": [{"batch": b, "results": str(d.when), "label": d.label()}
+                    for b, d in metrics.batch_dates(con).items() if b.startswith("ECP-2")],
+    }
+
+
+def _by_year(con) -> list[dict]:
+    """g3b: GW joining and leaving the transmission lists each year."""
+    from iegrid import flows
+
+    return [{"year": y, "joined_gw": _f(v["joined"] / 1000), "left_gw": _f(v["left"] / 1000)}
+            for y, v in flows.by_year(con).items()]
+
+
+OUTLINE = Path(__file__).parent / "data" / "ireland_outline.json"
+
+
+def _grid(con) -> dict | None:
+    """g7b: contracted MW at each substation, the lines, and the coast. None until the
+    OpenStreetMap grid is fetched (`python -m iegrid.grid`)."""
+    from iegrid import grid
+
+    if not grid.CACHE.exists():
+        return None
+    out = grid.nodes(con)
+    out["outline"] = json.loads(OUTLINE.read_text())["rings"]
+    return out
+
+
 def warnings(con) -> list[str]:
     """A list whose newest edition the load refused: the page shows the edition before."""
     from iegrid import load
@@ -227,10 +289,14 @@ def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
         "editions": {s: str(d) for s, d in editions.items()},
         "new": _new(editions, last),
         "warnings": warnings(con),
-        "queue": _queue(con),
-        "moved": {"transmission": _tso_moved(con), "distribution": _dso_energised_since(con)},
+        "queue": {**_queue(con), "by_technology": _by_technology(con),
+                  "history": _history(con)},
+        "moved": {"transmission": _tso_moved(con), "distribution": _dso_energised_since(con),
+                  "by_year": _by_year(con)},
         "stuck": _stuck(con),
         "where": _where(con),
+        "grid": _grid(con),
+        "freshness": _freshness(con),
         "caveats": _caveats(editions),
     }
 
