@@ -319,3 +319,85 @@ def contracted_by_county(con):
            f"Source: EirGrid and ESB Networks contracted lists; ECP batch results publications; "
            f"substations © OpenStreetMap contributors (ODbL) · {LICENCE}")
     return fig
+
+
+# --- g3b: who joins and who leaves -------------------------------------------------
+
+QUEUE_FLOWS_SQL = """
+    with ed as (
+        select p.publication_id, p.as_of from publication p join parse_result r using (publication_id)
+        where r.parser_version = {v}
+          and p.source_id in ('eirgrid.tso_contracted_wind', 'eirgrid.tso_contracted_nonwind')),
+    dates as (select distinct as_of from ed),
+    seen as (
+        select r.project_ref as ref, e.as_of, r.mec_mw as mw
+        from project_row r join ed e using (publication_id) where r.parser_version = {v}),
+    life as (
+        select ref, min(as_of) as first, max(as_of) as last,
+               arg_min(mw, as_of) as mw_in, arg_max(mw, as_of) as mw_out
+        from seen group by ref),
+    bounds as (select min(as_of) as a0, max(as_of) as a1 from dates)
+    select 'joined' as flow, year(l.first) as y, count(*) as n, sum(l.mw_in) as mw
+    from life l, bounds b where l.first > b.a0 group by all
+    union all
+    select 'left', year((select min(d.as_of) from dates d where d.as_of > l.last)), count(*), sum(l.mw_out)
+    from life l, bounds b where l.last < b.a1 group by all
+    order by 2, 1
+"""
+
+
+def queue_flows(con):
+    """Projects joining and leaving the EirGrid contracted lists, by year, from the
+    lists themselves (a project 'leaves' when an edition no longer lists it: connected,
+    withdrawn or moved; the connected lists that would tell these apart are parked)."""
+    rows = con.execute(QUEUE_FLOWS_SQL.format(v=int(parse.PARSER_VERSION))).fetchall()
+    last_date = con.execute("""
+        select max(p.as_of) from publication p join parse_result r using (publication_id)
+        where r.parser_version = ? and p.source_id like 'eirgrid.tso_contracted%'
+    """, [parse.PARSER_VERSION]).fetchone()[0]
+    years = sorted({r[1] for r in rows})
+    joined = {r[1]: (r[2], float(r[3]) / 1000) for r in rows if r[0] == "joined"}
+    left = {r[1]: (r[2], float(r[3]) / 1000) for r in rows if r[0] == "left"}
+    full = [y for y in years if y < last_date.year]
+    y = full[-1]
+    title = (f"{y}: {joined.get(y, (0, 0))[1]:.1f} GW joined the transmission queue, "
+             f"{left.get(y, (0, 0))[1]:.1f} GW left it")
+    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
+    _style(fig, ax)
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
+    xs = list(range(len(years)))
+    w = 0.38
+    jv = [joined.get(yr, (0, 0))[1] for yr in years]
+    lv = [left.get(yr, (0, 0))[1] for yr in years]
+    ax.bar([x - w / 2 - 0.01 for x in xs], jv, width=w, color=TOKENS["series1"])
+    ax.bar([x + w / 2 + 0.01 for x in xs], lv, width=w, color=TOKENS["series3"])
+    for x, a, b in zip(xs, jv, lv, strict=True):
+        if a:
+            ax.text(x - w / 2, a + 0.06, f"{a:.1f}", ha="center", fontsize=8, color=TOKENS["text"])
+        if b:
+            ax.text(x + w / 2, b + 0.06, f"{b:.1f}", ha="center", fontsize=8, color=TOKENS["muted"])
+    labels = [f"{yr}\nto {last_date:%b}" if yr == last_date.year else str(yr) for yr in years]
+    ax.set_xticks(xs, labels)
+    ax.set_ylabel("GW (maximum export capacity)", color=TOKENS["muted"], fontsize=9.5)
+    ax.spines["left"].set_visible(False)
+    top = max(jv + lv)
+    ax.set_ylim(0, top * 1.18)
+    ax.text(xs[0] - w / 2, top * 1.1, "joined", color=TOKENS["series1"], fontsize=9)
+    ax.text(xs[0] + 0.6, top * 1.1, "left the list", color=TOKENS["muted"], fontsize=9)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.76, bottom=0.14)
+    n_dates, n_ed = con.execute("""
+        select count(distinct p.as_of), count(*) from publication p
+        join parse_result r using (publication_id)
+        where r.parser_version = ? and p.source_id like 'eirgrid.tso_contracted%'
+    """, [parse.PARSER_VERSION]).fetchone()
+    _frame(fig, title,
+           f"Projects on EirGrid's contracted wind and non-wind lists, tracked by ref across "
+           f"{n_ed} editions ({n_dates} publication dates) since {years[0]}. Joined: first listed "
+           f"that year. Left: the first "
+           f"edition that no longer lists it (connected, withdrawn or moved; the lists don't "
+           f"say which). Editions are irregular, so a year collects whatever changed since the "
+           f"one before.",
+           f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
+           f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(last_date)}")
+    return fig

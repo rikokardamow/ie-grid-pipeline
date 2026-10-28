@@ -59,6 +59,7 @@ licence: eirgrid / esb site terms not checked yet. gate before anything goes pub
 | g1 | fetch + store: download every current pdf, hash, publication row, raw kept | re-run = 0 new rows; as_of read from the pdf == date in the file name for all 8 files (2 tso + 6 esb incl. summary) (approved 2026-10-28; esb name date inferred as the day after the quarter) | 00 |
 | g2 | parse: pdfplumber -> project_row for tso wind, tso non-wind, dso contracted x2, dso energised x2 | rows == refs counted in the page text; MW within 1 of the list's printed total, or for the esb energised renewable list (none printed) the summary report's grid-scale line; owner hand-counts 2 pages each (approved 2026-10-28) | 10 |
 | g3 | backfill: wayback + cms older editions, same parser, vintage_quality marked | every edition found has a publication row or a written reason it doesn't | - |
+| g3b | older layouts: the 2015-2025 TSO contracted lists read row by row (no row lines before Aug 2022, a two-row header after), and ESB's 2024-2025 lists | every TSO contracted edition parsed, MW within 1 MW of its printed total and its set of refs equal to the page text's (added 2026-10-28, before g5) | 16 |
 | g4 | region: county per project from ecp batch pdfs, node->county table for the rest | >= 95% of contracted MW has a county (placed, approved 2026-10-28; MW contested by its node listed, not subtracted); the rest listed by name | 20 |
 | g5 | metrics: transitions, age, batch burn-down, region x year | transitions between the 2 tso editions checked by hand on 10 projects | 30 |
 | g6 | report: 1-page weekly status (what moved / what's stuck / batch burn-down / region) as pdf + json | page reads in 2 minutes; every number on it comes from a query in a module | 40 |
@@ -72,6 +73,7 @@ every stone ends in one exhibit in its notebook, as well as its checks: a chart 
 | g1 | how fresh the lists are: days from as-of to publication, per list |
 | g2 | what is waiting to connect: contracted GW by technology, transmission and distribution |
 | g3 | how the queue has grown: contracted GW on transmission per edition since 2015, from each list's printed total (connected GW and 2008-2014 wait for the layout parsers, PARKING.md) |
+| g3b | who joins and who leaves: GW joining and leaving the TSO contracted lists each year |
 | g4 | where it is stuck: contracted GW by county |
 | g5 | how long it takes: share of each ecp batch energised by months since the batch result |
 | g6 | the weekly page itself |

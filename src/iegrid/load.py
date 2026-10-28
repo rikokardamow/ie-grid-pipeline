@@ -52,21 +52,32 @@ def load_one(con, publication_id: int, source_id: str, content: bytes, now: date
         raise
     except Exception as exc:  # the parser choking on a layout is a parse failure too
         raise parse.ParseError(f"{type(exc).__name__}: {exc}") from exc
-    text_refs = sum(parse.refs_in_text(content).values())
     total = sum((r.mec_mw for r in result.rows), start=parse.Decimal(0))
     # The tie gates the store: a parse that skipped a page or misread a MEC stores nothing.
-    if len(result.rows) != text_refs:
-        raise parse.ParseError(f"{len(result.rows)} rows parsed but {text_refs} refs in the text")
+    if result.ref_check == "set":
+        text = parse.text_ref_set(content)
+        parsed = {r.project_ref for r in result.rows}
+        text_refs = len(text)
+        if parsed != text:
+            raise parse.ParseError(f"refs differ from the text: parsed only {sorted(parsed - text)[:5]}, "
+                                   f"text only {sorted(text - parsed)[:5]}")
+    else:
+        text_refs = sum(parse.refs_in_text(content).values())
+        if len(result.rows) != text_refs:
+            raise parse.ParseError(f"{len(result.rows)} rows parsed but {text_refs} refs in the text")
     printed = result.printed_total_mw
     if printed is not None and abs(total - printed) > parse.TIE_MW:
         raise parse.ParseError(f"parsed {total} MW, the list prints {printed}")
     con.execute("begin transaction")
     try:
         con.executemany(
-            "insert into project_row values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            "insert into project_row (publication_id, parser_version, row_order, page, "
+            "project_ref, name, technology, mec_mw, node, station_110kv, voltage, "
+            "processing_type, status, signed_month, energised_on, energised_note, raw, "
+            "target_month) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             [[publication_id, parse.PARSER_VERSION, r.row_order, r.page, r.project_ref, r.name,
               r.technology, r.mec_mw, r.node, r.station_110kv, r.voltage, r.processing_type,
-              r.status, r.signed_month, r.energised_on, r.energised_note, r.raw]
+              r.status, r.signed_month, r.energised_on, r.energised_note, r.raw, r.target_month]
              for r in result.rows],
         )
         con.execute(

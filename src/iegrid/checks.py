@@ -109,10 +109,14 @@ class Tie:
     against: str
     target_rows: int | None
     target_mw: Decimal | None
+    distinct_refs: int | None = None
 
     @property
     def ok(self) -> bool:
-        if self.rows != self.text_refs or self.target_mw is None:
+        # EirGrid lists: one ref can carry two rows (a project and its extension, TG44),
+        # so the refs are compared as a set, as the load's gate does
+        rows = self.distinct_refs if self.source_id.startswith("eirgrid") else self.rows
+        if rows != self.text_refs or self.target_mw is None:
             return False
         rows_ok = self.target_rows is None or self.rows == self.target_rows
         from iegrid.parse import TIE_MW
@@ -127,7 +131,9 @@ def ties(con) -> list[Tie]:
     found = con.execute(
         """
         select p.source_id, p.as_of, r.row_count, r.text_ref_count, r.parsed_total_mw,
-               r.printed_total_mw
+               r.printed_total_mw,
+               (select count(distinct q.project_ref) from project_row q
+                where q.publication_id = r.publication_id and q.parser_version = r.parser_version)
         from parse_result r join publication p using (publication_id)
         where r.parser_version = ?
         order by p.source_id, p.as_of
@@ -140,17 +146,17 @@ def ties(con) -> list[Tie]:
         ).fetchall()
     }
     out = []
-    for source_id, as_of, rows, text_refs, parsed_mw, printed in found:
+    for source_id, as_of, rows, text_refs, parsed_mw, printed, distinct in found:
         if printed is not None:
             out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw, "printed total",
-                           None, printed))
+                           None, printed, distinct))
         elif source_id == "esb.dso_energised_renewable" and as_of in summaries:
             n, total = parse.grid_scale_from_summary(summaries[as_of].read_bytes())
             out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw,
-                           "summary report, grid scale", n, total))
+                           "summary report, grid scale", n, total, distinct))
         else:
             out.append(Tie(source_id, as_of, rows, text_refs, parsed_mw, "nothing to tie to",
-                           None, None))
+                           None, None, distinct))
     return out
 
 
@@ -418,3 +424,17 @@ def name_vs_node(con, min_share: float = 0.75, min_projects: int = 2) -> list[tu
         if top != county and total >= min_projects and n / total >= min_share:
             out.append((ref, name, float(mw), county, node, f"{n} of {total} at {node} in {top}"))
     return out
+
+
+def tso_history_ties(con) -> list[tuple]:
+    """g3b done-when: every EirGrid contracted edition parsed at the current version,
+    with its MW against the total it prints. An edition not parsed shows as None."""
+    from iegrid import parse
+
+    return con.execute("""
+        select p.source_id, p.as_of, r.row_count, r.parsed_total_mw, r.printed_total_mw
+        from publication p
+        left join parse_result r on r.publication_id = p.publication_id and r.parser_version = ?
+        where p.source_id in ('eirgrid.tso_contracted_wind', 'eirgrid.tso_contracted_nonwind')
+        order by p.source_id, p.as_of
+    """, [parse.PARSER_VERSION]).fetchall()

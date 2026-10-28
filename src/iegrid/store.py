@@ -157,6 +157,9 @@ create table if not exists project_county (
     primary key (build_id, publication_id, row_order)
 );
 
+-- g3b: the target connection month the 2015-2016 TSO lists give.
+alter table project_row add column if not exists target_month date;
+
 -- What each parse found, with the totals it is checked against.
 create table if not exists parse_result (
     publication_id    bigint not null references publication (publication_id),

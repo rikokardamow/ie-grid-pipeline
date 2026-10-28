@@ -21,7 +21,10 @@ def test_which_files_are_results():
 def add_contracted(con, rows):
     pid = store.insert(con, PUB)
     for i, (ref, name, mec, node) in enumerate(rows, start=1):
-        con.execute("insert into project_row values (?, ?, ?, 1, ?, ?, 'Solar', ?, ?, '', '110 kV', "
+        con.execute("insert into project_row (publication_id, parser_version, row_order, page, "
+                    "project_ref, name, technology, mec_mw, node, station_110kv, voltage, "
+                    "processing_type, status, signed_month, energised_on, energised_note, raw) "
+                    "values (?, ?, ?, 1, ?, ?, 'Solar', ?, ?, '', '110 kV', "
                     "'ECP-2.1', 'Contracted', null, null, '', '[]')",
                     [pid, parse.PARSER_VERSION, i, ref, name, Decimal(mec), node])
     return pid

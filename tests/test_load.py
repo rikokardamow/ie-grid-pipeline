@@ -60,10 +60,11 @@ def test_failed_parse_stores_nothing(con, tmp_path, fake_parser):
 def test_new_parser_version_adds_rows_keeps_old(con, tmp_path, fake_parser, monkeypatch):
     add_pub(con, tmp_path, b"ok", "a" * 64)
     load.run(con, NOW)
-    monkeypatch.setattr(parse, "PARSER_VERSION", 2)
+    v = parse.PARSER_VERSION
+    monkeypatch.setattr(parse, "PARSER_VERSION", v + 1)
     assert len(load.run(con, NOW).parsed) == 1
     got = con.execute("select parser_version, count(*) from project_row group by 1 order by 1")
-    assert got.fetchall() == [(1, 2), (2, 2)]
+    assert got.fetchall() == [(v, 2), (v + 1, 2)]
 
 
 def test_sources_without_a_parser_are_left_alone(con, tmp_path, fake_parser):
@@ -131,10 +132,10 @@ def test_failed_parse_is_recorded_and_not_retried_until_version_bump(con, tmp_pa
     add_pub(con, tmp_path, b"broken", "h" * 64)
     assert not load.run(con, NOW).ok
     assert con.execute("select parser_version, error from parse_failure").fetchall() == [
-        (1, "bad row")]
+        (parse.PARSER_VERSION, "bad row")]
     load.run(con, NOW)
     assert len(fake_parser) == 1  # not retried at the same version
-    monkeypatch.setattr(parse, "PARSER_VERSION", 2)
+    monkeypatch.setattr(parse, "PARSER_VERSION", parse.PARSER_VERSION + 1)
     load.run(con, NOW)
     assert len(fake_parser) == 2  # tried again under a new parser
 
