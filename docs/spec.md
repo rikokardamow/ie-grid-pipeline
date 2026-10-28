@@ -56,7 +56,7 @@ licence: eirgrid / esb site terms not checked yet. gate before anything goes pub
 
 | # | stone | done when | nb |
 |---|---|---|---|
-| g1 | fetch + store: download every current pdf, hash, publication row, raw kept | re-run = 0 new rows; as_of read from the pdf == date in the file name for all 8 files (2 tso + 6 esb incl. summary) | 00 |
+| g1 | fetch + store: download every current pdf, hash, publication row, raw kept | re-run = 0 new rows; as_of read from the pdf == date in the file name for all 8 files (2 tso + 6 esb incl. summary) (approved 2026-10-28; esb name date inferred as the day after the quarter) | 00 |
 | g2 | parse: pdfplumber -> project_row for tso wind, tso non-wind, dso contracted x2, dso energised x2 | row counts tie to the pdf (hand count 2 pages each); MW totals tie to the esb summary report within 1 MW | 10 |
 | g3 | backfill: wayback + cms older editions, same parser, vintage_quality marked | every edition found has a publication row or a written reason it doesn't | - |
 | g4 | region: county per project from ecp batch pdfs, node->county table for the rest | >= 95% of contracted MW has a county; the rest listed by name | 20 |
