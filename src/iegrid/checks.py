@@ -367,10 +367,14 @@ def county_coverage(con) -> Coverage:
 
 def unplaced(con) -> str:
     """The rest, listed by name (g4 done-when)."""
-    return table(con, """
+    from iegrid.store import build_parser_version
+
+    pv = build_parser_version(con)
+    return table(con, f"""
         select c.project_ref, r.name, c.mec_mw, r.node, r.station_110kv
         from project_county c
         join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+         and r.parser_version = {pv}
         where c.build_id = (select max(build_id) from region_build) and c.basis = 'none'
         order by c.mec_mw desc
     """)
@@ -378,10 +382,14 @@ def unplaced(con) -> str:
 
 def county_sample(con, n: int = 12) -> str:
     """A sample of placed projects with the evidence, largest first, for a hand check."""
+    from iegrid.store import build_parser_version
+
+    pv = build_parser_version(con)
     return table(con, f"""
         select c.project_ref, r.name, c.mec_mw, c.county, c.basis, c.evidence
         from project_county c
         join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+         and r.parser_version = {pv}
         where c.build_id = (select max(build_id) from region_build) and c.basis <> 'none'
         order by c.mec_mw desc limit {int(n)}
     """)
@@ -407,11 +415,15 @@ def name_vs_node(con, min_share: float = 0.75, min_projects: int = 2) -> list[tu
                 seen.add(ident)
                 votes.setdefault(ident[0], Counter())[r.county] += 1
     build = con.execute("select max(build_id) from region_build").fetchone()[0]
-    placed = con.execute("""
+    from iegrid.store import build_parser_version
+
+    pv = build_parser_version(con, build)
+    placed = con.execute(f"""
         select c.project_ref, r.name, c.mec_mw, coalesce(nullif(r.node, ''), r.station_110kv),
                c.county
         from project_county c
         join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+         and r.parser_version = {pv}
         where c.build_id = ? and c.basis = 'name' order by c.mec_mw desc
     """, [build]).fetchall()
     out = []
@@ -437,4 +449,27 @@ def tso_history_ties(con) -> list[tuple]:
         left join parse_result r on r.publication_id = p.publication_id and r.parser_version = ?
         where p.source_id in ('eirgrid.tso_contracted_wind', 'eirgrid.tso_contracted_nonwind')
         order by p.source_id, p.as_of
+    """, [parse.PARSER_VERSION]).fetchall()
+
+
+# A lost column leaves every row of an edition without its signed month (Feb-Mar 2022
+# before the g3b review fix). A few blanks are the PDF's own: five rows in 2021-2022
+# print no date at all (Celtic Interconnector, Moanvane, Firlough ...).
+MAX_BLANK_SIGNED_SHARE = 0.10
+
+
+def tso_rows_missing_signed(con) -> list[tuple]:
+    """EirGrid contracted editions with rows that have no signed month:
+    (source, as_of, rows without, rows, refs without)."""
+    from iegrid import parse
+
+    return con.execute("""
+        select p.source_id, p.as_of, count(*) filter (where r.signed_month is null),
+               count(*), list(r.project_ref) filter (where r.signed_month is null)
+        from project_row r join publication p using (publication_id)
+        where r.parser_version = ?
+          and p.source_id in ('eirgrid.tso_contracted_wind', 'eirgrid.tso_contracted_nonwind')
+        group by p.source_id, p.as_of, p.publication_id
+        having count(*) filter (where r.signed_month is null) > 0
+        order by 1, 2
     """, [parse.PARSER_VERSION]).fetchall()

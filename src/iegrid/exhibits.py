@@ -267,11 +267,13 @@ def contracted_by_county(con):
     Interconnectors are left out of the bars: they are links, not generation waiting
     to connect, and one (Celtic, 700 MW) alone would decide which county leads."""
     build = con.execute("select max(build_id) from region_build").fetchone()[0]
-    rows = con.execute("""
+    pv = store.build_parser_version(con, build)
+    rows = con.execute(f"""
         select c.county, p.source_id like 'eirgrid%' as transmission, c.basis,
                r.technology = 'Interconnector' as link, sum(c.mec_mw)
         from project_county c join publication p using (publication_id)
         join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+         and r.parser_version = {pv}
         where c.build_id = ? group by all
     """, [build]).fetchall()
     links = sum(r[4] for r in rows if r[3])
@@ -323,41 +325,20 @@ def contracted_by_county(con):
 
 # --- g3b: who joins and who leaves -------------------------------------------------
 
-QUEUE_FLOWS_SQL = """
-    with ed as (
-        select p.publication_id, p.as_of from publication p join parse_result r using (publication_id)
-        where r.parser_version = {v}
-          and p.source_id in ('eirgrid.tso_contracted_wind', 'eirgrid.tso_contracted_nonwind')),
-    dates as (select distinct as_of from ed),
-    seen as (
-        select r.project_ref as ref, e.as_of, r.mec_mw as mw
-        from project_row r join ed e using (publication_id) where r.parser_version = {v}),
-    life as (
-        select ref, min(as_of) as first, max(as_of) as last,
-               arg_min(mw, as_of) as mw_in, arg_max(mw, as_of) as mw_out
-        from seen group by ref),
-    bounds as (select min(as_of) as a0, max(as_of) as a1 from dates)
-    select 'joined' as flow, year(l.first) as y, count(*) as n, sum(l.mw_in) as mw
-    from life l, bounds b where l.first > b.a0 group by all
-    union all
-    select 'left', year((select min(d.as_of) from dates d where d.as_of > l.last)), count(*), sum(l.mw_out)
-    from life l, bounds b where l.last < b.a1 group by all
-    order by 2, 1
-"""
-
-
 def queue_flows(con):
     """Projects joining and leaving the EirGrid contracted lists, by year, from the
     lists themselves (a project 'leaves' when an edition no longer lists it: connected,
     withdrawn or moved; the connected lists that would tell these apart are parked)."""
-    rows = con.execute(QUEUE_FLOWS_SQL.format(v=int(parse.PARSER_VERSION))).fetchall()
+    from iegrid import flows
+
     last_date = con.execute("""
         select max(p.as_of) from publication p join parse_result r using (publication_id)
         where r.parser_version = ? and p.source_id like 'eirgrid.tso_contracted%'
     """, [parse.PARSER_VERSION]).fetchone()[0]
-    years = sorted({r[1] for r in rows})
-    joined = {r[1]: (r[2], float(r[3]) / 1000) for r in rows if r[0] == "joined"}
-    left = {r[1]: (r[2], float(r[3]) / 1000) for r in rows if r[0] == "left"}
+    per_year = flows.by_year(con)
+    years = sorted(per_year)
+    joined = {y: (0, float(v["joined"]) / 1000) for y, v in per_year.items()}
+    left = {y: (0, float(v["left"]) / 1000) for y, v in per_year.items()}
     full = [y for y in years if y < last_date.year]
     y = full[-1]
     title = (f"{y}: {joined.get(y, (0, 0))[1]:.1f} GW joined the transmission queue, "
@@ -392,12 +373,11 @@ def queue_flows(con):
         where r.parser_version = ? and p.source_id like 'eirgrid.tso_contracted%'
     """, [parse.PARSER_VERSION]).fetchone()
     _frame(fig, title,
-           f"Projects on EirGrid's contracted wind and non-wind lists, tracked by ref across "
-           f"{n_ed} editions ({n_dates} publication dates) since {years[0]}. Joined: first listed "
-           f"that year. Left: the first "
-           f"edition that no longer lists it (connected, withdrawn or moved; the lists don't "
-           f"say which). Editions are irregular, so a year collects whatever changed since the "
-           f"one before.",
+           f"Each EirGrid contracted list ({n_ed} editions on {n_dates} dates since {years[0]}) "
+           f"against its previous edition. Joined: newly listed. Left: no longer listed "
+           f"(connected, withdrawn or moved; the lists don't say which). A ref relabelled for the "
+           f"same project (D74 to D40d) is neither. Editions are irregular, so a year collects "
+           f"whatever changed since the one before.",
            f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
            f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(last_date)}")
     return fig

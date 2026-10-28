@@ -109,3 +109,26 @@ def test_a_place_of_the_same_name_is_not_a_substation(con, tmp_path, monkeypatch
     counties.lookup_nodes(con, ["Barnakyle"], NOW, tmp_path,
                           lambda q: [] if "substation" in q else [townland])
     assert con.execute("select count(*) from osm_node").fetchone()[0] == 0
+
+
+def test_a_second_parser_version_does_not_double_the_county_figures(con, monkeypatch):
+    """g3b review: each parser version stores its own copy of the rows; joins from a
+    build to its rows must use the version the build read."""
+    from iegrid import checks, exhibits
+
+    pid = add_contracted(con, [("TG1", "Ballymoneen Solar Park", "100", "Cashla"),
+                               ("TG2", "Nowhere Solar", "5", "Atlantis")])
+    monkeypatch.setattr(counties.ecp, "parse_ecp", lambda content: [
+        counties.ecp.EcpRow(4, "Ballymoneen Solar", "Galway", Decimal(100), "Cashla")])
+    counties.read_ecp_files(con, NOW, rows_for=lambda p: [], live=["https://x/ecp.pdf"],
+                            download=lambda url: Download(url, b"%PDF ecp", None))
+    counties.build(con, NOW)
+    # the same rows again under the next parser version
+    con.execute("insert into project_row select publication_id, parser_version + 1, row_order, "
+                "page, project_ref, name, technology, mec_mw, node, station_110kv, voltage, "
+                "processing_type, status, signed_month, energised_on, energised_note, raw, "
+                "target_month from project_row where publication_id = ?", [pid])
+    assert "Nowhere Solar" in checks.unplaced(con)
+    assert checks.unplaced(con).count("Nowhere Solar") == 1
+    fig = exhibits.contracted_by_county(con)
+    assert "0.1 GW" in fig.texts[0].get_text()  # Galway 100 MW, not 200

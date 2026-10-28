@@ -133,12 +133,18 @@ def parse_tso(content: bytes) -> Parsed:
     tries = [Parsed(g.rows, g.printed_total_mw if g.printed_total_mw is not None else total,
                     g.layout, "set") for g in tries]
     text = text_ref_set(content)
+    tying = []
     for got in tries:
         mw_sum = sum((r.mec_mw for r in got.rows), start=Decimal(0))
         if (got.rows and got.printed_total_mw is not None
                 and abs(mw_sum - got.printed_total_mw) <= TIE_MW
                 and {r.project_ref for r in got.rows} == text):
-            return got
+            tying.append(got)
+    if tying:
+        # Both tie: the one that read more of each row wins. The table finder can lose
+        # a column the PDF drew as a separate table ("Signed Date*", Feb-Mar 2022) and
+        # still tie on MW and refs (g3b review).
+        return max(tying, key=lambda g: sum(r.signed_month is not None for r in g.rows))
     with_rows = [g for g in tries if g.rows]
     if with_rows:
         return with_rows[0]
@@ -297,17 +303,6 @@ def text_ref_set(content: bytes) -> set[str]:
         for page in pdf.pages:
             text = re.sub(r"\([^)\n]*\)", " ", page.extract_text() or "")
             out |= {r.rstrip(".") for r in TEXT_REF_ANY.findall(text.replace("\n", " \n") + " ")}
-    return out
-
-
-def refs_in_text_any(content: bytes) -> dict[int, int]:
-    out = {}
-    with pdfplumber.open(io.BytesIO(content)) as pdf:
-        for page_no, page in enumerate(pdf.pages, start=1):
-            # brackets within a line only: "(formerly" on one line and ")" on the next
-            # must not swallow the ref between them
-            text = re.sub(r"\([^)\n]*\)", " ", page.extract_text() or "")
-            out[page_no] = len(TEXT_REF_ANY.findall(text.replace("\n", " \n") + " "))
     return out
 
 

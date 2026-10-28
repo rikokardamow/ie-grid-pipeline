@@ -54,3 +54,32 @@ def test_a_line_without_a_ref_is_not_a_row():
 
 def test_no_mec_is_an_error_not_a_guess():
     assert "error" in parse_line("Athlone 110 kV TG495 Reciprocating")
+
+
+def test_wrapped_names_join_only_an_unfinished_name(tmp_path):
+    from iegrid import parse_tso_words as w
+
+    def read(lines):
+        rows = []
+        for line in lines:
+            got = w.parse_line(line)
+            if got is not None:
+                got["page"] = 1
+                rows.append(got)
+            elif rows:
+                if w.OPEN_NAME.search(rows[-1]["name"]):
+                    rows[-1]["name"] = f"{rows[-1]['name']} {line}"
+        return rows
+
+    rows = read(["Beenanaspock and TG319a 17.50 Gate 2 Athea 110kV Apr 2018",
+                 "Tobertooreen Wind Farm",
+                 "Oweninney Power (2) TG26 83.00 Gate 3 Oweninny 110kV Aug 2014",
+                 "Capacity Release: The list of Capacity Release TSO Applications is available here"])
+    assert rows[0]["name"] == "Beenanaspock and Tobertooreen Wind Farm"
+    assert rows[1]["name"] == "Oweninney Power (2)"   # a footer is not a name
+
+
+def test_phase_with_a_letter_is_stripped():
+    from iegrid.parse_tso_words import parse_line
+    assert parse_line("Ratrussan (1b) 1b P38-2 22.00 Pre-Gate Ratrussan 110kV Sep 2002")["name"] \
+        == "Ratrussan (1b)"

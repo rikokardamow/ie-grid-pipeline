@@ -1,8 +1,9 @@
 """g3b: EirGrid contracted lists the table finder can't read, parsed line by line.
 
-Editions before Aug 2022 draw no lines between rows, and the Aug 2022 - Sep 2025
-editions split their header over two rows, so pdfplumber's table finder reads
-no rows from them. Every row is one line of text holding the project's ref, in
+Most editions before 2026 can't be read by pdfplumber's table finder: those
+before Aug 2022 draw no lines between rows, and many after split the header or
+draw "Signed Date*" as a separate table. parse.parse_tso tries both readers and
+keeps the one that ties and reads more of each row. Every row is one line of text holding the project's ref, in
 one of two shapes:
 
     node first   Cahernagh 110kV TG166 Cahernagh Mid Merit OCGT 101.0 Oct 2013
@@ -17,8 +18,9 @@ is never read as the MEC. A name wrapped onto the next line, which then has no
 ref and no number, is joined to the row above. The 2015-2016 lists give a
 target connection month after the signed month, kept as target_month.
 
-The caller gates every edition as g2 does: rows equal the refs in the page text,
-MW within parse.TIE_MW of the total the list prints.
+The caller gates every edition: its set of refs equals the set in the page text,
+and its MW is within parse.TIE_MW of the total the list prints. Names, processing
+and technology aren't gated; a wrapped cell or footer sentence is kept in raw.
 """
 
 from __future__ import annotations
@@ -44,14 +46,18 @@ MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], start=1)}
 # How the lists write the processing route, longest first
 PROCESSING = re.compile(
-    r"(ECP-[\d.]+(?:\s+Non-Batch)?|post Gate \d|Pre-Gate \d|Pre-Gate|Gate \d|Non GPA|"
-    r"T-\d\s+\d{4}/\d{4}|Demand|Zero Mec|Non-Batch|DS3)\s*$")
+    r"(ECP-[\d.]+(?:\s+(?:Non-Batch|Fold In))?|post Gate \d|Pre-Gate \d|Pre-Gate|Gate \d|"
+    r"Non GPA|T-\d\s+\d{4}/\d{2,4}|LCIS \d{4}|PCI|Demand|Zero Mec|Non-Batch|DS3|"
+    r"Autoproducer)\s*$")
 TECHNOLOGIES = (
     "Battery + Synchronous Condenser", "Gas Fired Reciprocating Engines", "Synchronous Condenser",
+    "Battery & Inverter System", "Battery & Inverter", "Hybrid",
     "Rotating Stabiliser", "Solar + Battery", "Wind + Battery", "Wind + Solar", "Pumped Storage",
     "Interconnector", "Autoproducer", "Battery", "Solar", "Wind", "OCGT", "CCGT", "Gas", "CHP",
     "Hydro", "Biomass", "Diesel", "Distillate", "Peat", "Coal", "Waste", "Oil", "DSU",
 )
+# A name that runs on to the next line: ends in a joining word or an open bracket
+OPEN_NAME = re.compile(r"(\b(and|&|of|the|formerly|prev\.?|previously|-)|\([^)]*)$", re.IGNORECASE)
 SKIP = re.compile(r"^(Total|Note|Page \d|Disclaimer|\*|Correct as of|Contracted|TSO )", re.IGNORECASE)
 
 
@@ -119,8 +125,8 @@ def parse_line(line: str) -> dict | None:
         rest_text = " ".join(rest)
         pm = re.match(r"((?:post |Pre-)?Gate \d|Pre-Gate|Non GPA|ECP-[\d.]+)\s*(.*)$", rest_text)
         processing, node_text = (pm.group(1), pm.group(2)) if pm else ("", rest_text)
-        if before and re.fullmatch(r"\d", before[-1]):
-            before = before[:-1]  # the phase number
+        if before and re.fullmatch(r"\d+[a-z]?", before[-1]):
+            before = before[:-1]  # the phase: "3", "1b"
         name, technology = " ".join(before), "Wind"
     vm = re.search(r"(\d+)\s*kV", node_text, re.IGNORECASE)
     node = re.sub(r"\s*\d*\s*kV\b", "", node_text, flags=re.IGNORECASE).strip(" -")
@@ -146,9 +152,14 @@ def read(content: bytes) -> list[dict]:
                 if got is not None:
                     got["page"] = page_no
                     rows.append(got)
-                elif rows and rows[-1]["page"] == page_no and not re.search(r"\d", line) \
-                        and "error" not in rows[-1] and len(line) < 60:
-                    rows[-1]["name"] = f"{rows[-1]['name']} {line}".strip()  # a wrapped name
+                elif rows and rows[-1]["page"] == page_no and "error" not in rows[-1]:
+                    # A line with no ref continues the row above, but it is only the
+                    # name's if the name is visibly unfinished ("Beenanaspock and",
+                    # "Carrigdangan (formerly"). Otherwise it is a wrapped node or type
+                    # cell, or a footer sentence: kept in raw, never put in the name.
+                    if OPEN_NAME.search(rows[-1]["name"]) and len(line) < 60:
+                        rows[-1]["name"] = f"{rows[-1]['name']} {line}".strip()
+                    rows[-1]["line"] = f"{rows[-1]['line']} / {line}"
     return rows
 
 

@@ -231,6 +231,20 @@ LATEST_LIVE = """
     from publication where fetched_from is null group by source_id
 """
 
+def build_parser_version(con, build_id: int | None = None) -> int:
+    """The parser version a region build read its project rows at (in its rules key,
+    "parser=N"; builds before g3b read version 1). Joins from project_county to
+    project_row must use it: each parser version stores its own copy of the rows."""
+    import re
+
+    if build_id is None:
+        build_id = con.execute("select max(build_id) from region_build").fetchone()[0]
+    rules = con.execute("select rules from region_build where build_id = ?",
+                        [build_id]).fetchone()[0]
+    m = re.search(r"parser=(\d+)", rules)
+    return int(m.group(1)) if m else 1
+
+
 SNAPSHOTS = DEFAULT_DB.parent / "snapshots"
 KEEP_SNAPSHOTS = 5
 
