@@ -483,3 +483,51 @@ def transitions_table(con, n: int | None = None) -> list[tuple]:
     rows = [(t.source_id.split(".")[1], f"{t.before} -> {t.after}", t.kind, t.ref, t.name[:40],
              float(t.mw), t.by_ref, t.by_name) for t in metrics.transitions(con)]
     return rows[:n] if n else rows
+
+
+def untraced_numbers(pdf_path, rep: dict) -> list[str]:
+    """g6 done-when: numbers printed on the page that no value in the report dict gives
+    (allowing for rounding, percentages and GW/MW). Dates and the page's fixed wording
+    ("3 years", "100") are left out. An empty list means every number traces."""
+    import io
+    import json as _json
+    import re as _re
+
+    import pdfplumber
+
+    values: list[float] = []
+
+    def walk(x):
+        if isinstance(x, bool):
+            return
+        if isinstance(x, (int, float)):
+            values.append(float(x))
+        elif isinstance(x, str):
+            values.extend(float(v) for v in _re.findall(r"\d+(?:\.\d+)?", x))
+        elif isinstance(x, dict):
+            for v in x.values():
+                walk(v)
+        elif isinstance(x, list):
+            for v in x:
+                walk(v)
+
+    walk(_json.loads(_json.dumps(rep, default=str)))
+    with pdfplumber.open(io.BytesIO(open(pdf_path, "rb").read())) as pdf:
+        text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+    text = _re.sub(r"\d{4}-\d{2}(-\d{2})?", " ", text)  # dates come from strings
+    fixed = {"3", "0", "20", "40", "60", "80", "100", "1", "2", "4", "5", "6"}  # axis, wording
+
+    def traces(n: float) -> bool:
+        for v in values:
+            if abs(v - n) < 0.051 or abs(v * 100 - n) < 0.51 or abs(v / 1000 - n) < 0.051 \
+                    or abs(round(v) - n) < 0.5:
+                return True
+        return False
+
+    out = []
+    for tok in _re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])", text):
+        if tok in fixed:
+            continue
+        if not traces(float(tok)):
+            out.append(tok)
+    return out
