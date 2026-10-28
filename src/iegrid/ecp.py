@@ -27,7 +27,7 @@ import pdfplumber
 
 # Bump when the reader changes what it reads. Rows are stored per reader version,
 # so a fixed reader adds rows for files already read instead of being skipped.
-READER_VERSION = 2
+READER_VERSION = 3
 
 COUNTIES = (
     "Carlow", "Cavan", "Clare", "Cork", "Donegal", "Dublin", "Galway", "Kerry", "Kildare",
@@ -41,7 +41,7 @@ COLUMN_SLACK = 40
 # Header words that start a column, by field.
 HEADERS = {
     "name": ("name", "facility", "project"),
-    "applicant": ("applicant",),
+    "applicant": ("applicant", "application"),   # "Application (Legal Entity)" in ECP-1/2.1
     "county": ("county",),
     "coords": ("co-ordinates", "coordinates", "easting", "eastings", "eastings:", "easting:"),
     "type": ("gen", "generator", "generation", "technology"),
@@ -124,11 +124,67 @@ def _county_anchors(words, centre: float, y_top: float, y_bottom: float) -> list
     return sorted(out, key=lambda a: a["top"])
 
 
+def _join_split_letters(text: str) -> str:
+    """'D errymany' -> 'Derrymany': a capital the PDF set apart from the rest of its word."""
+    return re.sub(r"\b([A-Z]) (?=[a-z]{3,})", r"\1", text)
+
+
+def _mec(tokens: list[str]) -> Decimal | None:
+    """The MEC in its cell. The PDF sometimes splits a number ('4.9 9', '1. 6'), so the
+    numeric pieces are joined before reading it."""
+    joined = "".join(t for t in tokens if re.fullmatch(r"[\d.]+", t))
+    m = re.match(r"\d+(?:\.\d+)?", joined)
+    if not m:
+        return None
+    try:
+        return Decimal(m.group(0))
+    except InvalidOperation:
+        return None
+
+
+def _row_bounds(a: dict, rules: list[float], prev: dict | None, nxt: dict | None,
+                y_top: float, y_bottom: float) -> tuple[float, float]:
+    """The row's top and bottom: the table's own rules either side of the county when the
+    PDF draws them (every ECP publication does), else halfway to the neighbouring rows."""
+    mid = (a["top"] + a["bottom"]) / 2
+    above = [r for r in rules if y_top - 2 <= r <= a["top"] + 1]
+    below = [r for r in rules if a["bottom"] - 1 <= r <= y_bottom + 2]
+    lo = max(above) if above else None
+    hi = min(below) if below else None
+    # a rule only bounds this row if no other county sits between it and the anchor
+    if lo is not None and prev is not None and prev["top"] > lo:
+        lo = None
+    if hi is not None and nxt is not None and nxt["bottom"] < hi:
+        hi = None
+    if lo is None:
+        lo = (((prev["top"] + prev["bottom"]) / 2 + mid) / 2) if prev else y_top
+    if hi is None:
+        hi = ((mid + (nxt["top"] + nxt["bottom"]) / 2) / 2) if nxt else y_bottom
+    return lo, hi
+
+
+def _realign(layout: Layout, words, y_top: float, y_bottom: float) -> Layout:
+    """A table carried onto a page whose columns sit a little left or right of the page
+    with the header: shift the whole layout by the county column's median offset."""
+    near = [((w["x0"] + w["x1"]) / 2) - layout.centre for w in words
+            if w["text"].lower() in _COUNTY and y_top < w["top"] < y_bottom
+            and abs((w["x0"] + w["x1"]) / 2 - layout.centre) <= 3 * COLUMN_SLACK]
+    if len(near) < 2:
+        return layout
+    near.sort()
+    dx = near[len(near) // 2]
+    if abs(dx) < 4:
+        return layout
+    return Layout({k: v + dx for k, v in layout.cols.items()}, layout.centre + dx)
+
+
 def _rows_in_region(words, page_no: int, layout: Layout, y_top: float,
-                    y_bottom: float) -> list[EcpRow]:
+                    y_bottom: float, rules=()) -> list[EcpRow]:
     cols, centre = layout.cols, layout.centre
     anchors = _county_anchors(words, centre, y_top, y_bottom)
     order = sorted(cols.values())
+    # only the rules that cross the county column bound its rows
+    rules = sorted(top for top, x0, x1 in rules if x0 - 2 <= centre <= x1 + 2)
 
     def span(field: str) -> tuple[float, float] | None:
         if field not in cols:
@@ -139,42 +195,67 @@ def _rows_in_region(words, page_no: int, layout: Layout, y_top: float,
 
     out = []
     for j, a in enumerate(anchors):
-        mid = (a["top"] + a["bottom"]) / 2
         prev = anchors[j - 1] if j else None
         nxt = anchors[j + 1] if j + 1 < len(anchors) else None
-        y_lo = (((prev["top"] + prev["bottom"]) / 2 + mid) / 2) if prev else y_top
-        y_hi = ((mid + (nxt["top"] + nxt["bottom"]) / 2) / 2) if nxt else y_bottom
+        y_lo, y_hi = _row_bounds(a, rules, prev, nxt, y_top, y_bottom)
         name_span = span("name")
         name = " ".join(_between(words, *name_span, y_lo, y_hi)) if name_span else ""
         name = re.sub(r"\s*Page \d+ of \d+\s*", " ", name).strip()  # a footer in the span
-        mec = None
-        if (s := span("mec")) is not None:
-            nums = [t for t in _between(words, *s, y_lo, y_hi) if NUMBER.match(t)]
-            if nums:
-                try:
-                    mec = Decimal(nums[0])
-                except InvalidOperation:
-                    mec = None
+        name = _join_split_letters(name)
+        mec = _mec(_between(words, *span("mec"), y_lo, y_hi)) if span("mec") else None
         node = " ".join(_between(words, *span("node"), y_lo, y_hi)) if span("node") else ""
+        node = re.sub(r"(?<=[a-z])\s(?=[a-z]{1,2}\b)", "", node)  # 'Tawnaghmor e' -> 'Tawnaghmore'
         out.append(EcpRow(page_no, name, a["county"], mec, node))
     return out
 
 
-def rows_on_page(words, page_no: int, page_bottom: float,
-                 carry: Layout | None = None) -> tuple[list[EcpRow], Layout | None]:
-    """Rows on one page, and the layout to carry onto the next page."""
+# Every word a header line may hold. A line counts as header only if all its words are
+# here, so a data row in the band ("Generation B Limited") is never taken for one.
+HEADER_WORDS = {
+    "name", "of", "facility", "project", "applicant", "application", "(legal", "legal",
+    "entity)", "entity", "county", "co-ordinates", "coordinates", "easting", "eastings",
+    "easting:", "eastings:", "northing", "northings", "northing:", "northings:", "gen",
+    "generator", "generation", "technology", "type", "mec", "(mw)", "mw", "assumed", "node",
+    "node*", "node**", "pp", "planning", "reference", "ref", "ref.", "offer", "quarter", "**",
+    "*", "status", "date", "voltage", "connection", "no.", "number",
+}
+
+
+def _header_bottom(words, head: dict) -> float:
+    """The bottom of the header: the County line and the lines next to it made only of
+    header words (g4 review 2: a data row in the band must not be swallowed)."""
+    lines: dict[int, list[dict]] = {}
+    for w in words:
+        if -HEADER_BAND / 2 <= w["top"] - head["top"] <= HEADER_BAND:
+            lines.setdefault(round(w["top"]), []).append(w)
+    bottom = head["bottom"]
+    for top, ws in sorted(lines.items()):
+        if top <= head["top"] + 1:
+            bottom = max(bottom, max(w["bottom"] for w in ws if w["top"] <= head["top"] + 1))
+            continue
+        if all(w["text"].lower() in HEADER_WORDS for w in ws):
+            bottom = max(bottom, max(w["bottom"] for w in ws))
+        else:
+            break  # the first line that isn't header ends it
+    return bottom
+
+
+def rows_on_page(words, page_no: int, page_bottom: float, carry: Layout | None = None,
+                 rules=()) -> tuple[list[EcpRow], Layout | None]:
+    """Rows on one page, and the layout to carry onto the next page. rules: (top, x0, x1)
+    of each horizontal line on the page; those crossing the County column bound rows."""
     headers = sorted((w for w in words if w["text"] == "County"), key=lambda w: w["top"])
     out: list[EcpRow] = []
     first_top = headers[0]["top"] if headers else page_bottom
     if carry is not None:  # the table from the page before runs on above any new header
-        out.extend(_rows_in_region(words, page_no, carry, 0, first_top - 1))
+        carried = _realign(carry, words, 0, first_top - 1)
+        out.extend(_rows_in_region(words, page_no, carried, 0, first_top - 1, rules))
+        carry = carried
     for i, head in enumerate(headers):
         region_bottom = headers[i + 1]["top"] - 1 if i + 1 < len(headers) else page_bottom
         layout = Layout(_columns(words, head), (head["x0"] + head["x1"]) / 2)
-        header_bottom = max(w["bottom"] for w in words
-                            if abs(w["top"] - head["top"]) <= HEADER_BAND
-                            and _field_of(w["text"]))
-        out.extend(_rows_in_region(words, page_no, layout, header_bottom, region_bottom))
+        out.extend(_rows_in_region(words, page_no, layout, _header_bottom(words, head),
+                                   region_bottom, rules))
         carry = layout
     return out, carry
 
@@ -185,6 +266,8 @@ def parse_ecp(content: bytes) -> list[EcpRow]:
     with pdfplumber.open(io.BytesIO(content)) as pdf:
         for page_no, page in enumerate(pdf.pages, start=1):
             words = page.extract_words(keep_blank_chars=False, x_tolerance=1.5)
-            got, carry = rows_on_page(words, page_no, page.height, carry)
+            rules = [(e["top"], e["x0"], e["x1"]) for e in page.edges
+                     if e["orientation"] == "h" and e["x1"] - e["x0"] > 30]
+            got, carry = rows_on_page(words, page_no, page.height, carry, rules)
             rows.extend(got)
     return rows

@@ -35,7 +35,7 @@ from pathlib import Path
 from iegrid.ecp import COUNTIES, EcpRow
 
 MEC_TOLERANCE = Decimal("0.10")  # 10%, or MEC_FLOOR, whichever is larger
-MEC_FLOOR = Decimal("0.5")
+MEC_FLOOR = Decimal("0.25")
 NODE_MIN_PROJECTS = 2            # distinct ECP projects at the node, each voting once
 NODE_MIN_SHARE = 0.75
 
@@ -45,10 +45,11 @@ FILLER = {
     "battery", "bess", "facility", "project", "limited", "ltd", "the", "and", "plus", "of",
     "power", "plant", "station", "renewable", "renewables", "hybrid", "system", "systems",
     "phase", "ph", "extension", "ext", "repowering", "development", "array",
-    # generic words that alone would match unrelated projects (g4 review)
-    "north", "south", "east", "west", "upper", "lower", "esb", "turbine", "turbines",
-    "community", "single", "co", "ireland", "irish",
+    "esb", "turbine", "turbines", "community", "single", "co", "ireland", "irish",
 }
+# Words that tell twins apart ("Timahoe North" / "Timahoe South") but never name a
+# project on their own: a key made only of these matches nothing.
+GENERIC = {"north", "south", "east", "west", "upper", "lower", "new", "old", "big", "little"}
 
 
 @dataclass(frozen=True)
@@ -57,7 +58,7 @@ class Project:
     source_id: str
     name: str
     mec_mw: Decimal
-    node: str          # TSO node; DSO designed 110 kV station
+    node: str          # TSO node; DSO feeding station, else the designed 110 kV station
 
 
 @dataclass(frozen=True)
@@ -73,11 +74,15 @@ def key(name: str) -> tuple[str, ...]:
     """'Ballyroe Solar Extension (prev. X)' -> ('ballyroe', 'x'): the distinctive words,
     numbers kept ('Ballymoneen Phase 2' and 'Ballymoneen' stay apart)."""
     s = name.lower().replace("&", " and ")
-    s = re.sub(r"\([^)]*\)", " ", s)  # "(prev. X)", "(ECP2.4+2.5)", "(Split)"
+    s = re.sub(r"\([^)]*\)?", " ", s)  # "(prev. X)", "(ECP2.4+2.5)", an unclosed "(prev. X"
+    s = re.sub(r"\b[td]g\d+[a-z]?\b", " ", s)  # a ref read into the name: "TG279 Timahoe South"
     s = re.sub(r"\b(prev|previously|formerly|fka)\b\.?", " ", s)
     words = re.findall(r"[a-z]+|\d+", s)
     # single letters ("P" of "P2") carry nothing; numbers stay, so phases stay apart
-    return tuple(sorted({w for w in words if w not in FILLER and (len(w) > 1 or w.isdigit())}))
+    k = {w for w in words if w not in FILLER and (len(w) > 1 or w.isdigit())}
+    if {w for w in k if not w.isdigit()} <= GENERIC:
+        return ()  # "Upper Solar Farm", "North 2", "2": nothing distinctive to match on
+    return tuple(sorted(k))
 
 
 def norm_node(node: str) -> str:
@@ -130,25 +135,26 @@ def by_name(projects: list[Project], ecp: list[EcpRow]) -> dict[str, County]:
 def by_node(projects: list[Project], known: dict[str, County],
             ecp: list[EcpRow] = ()) -> dict[str, County]:
     """Counties for the rest, from where the other projects at the same node are.
-    Each distinct ECP project naming the node votes once (the same project in five
-    editions is one vote; a project also placed by name doesn't vote again), and the
-    cited projects vote for their sourced county."""
-    votes: dict[str, Counter] = defaultdict(Counter)
-    seen = set()
+
+    One vote per distinct ECP project naming the node: the same project in five
+    editions, or read two ways ("Blackwater Bog Solar 1" / "Blackwater Bog Bord"), is
+    one vote, taken as the same county and MEC at the node. The project being placed
+    never votes for itself (a row with its words or its MEC). Cited rows don't vote:
+    their source may put the project away from its node (Upperchurch at Killonan)."""
+    voters: dict[str, dict[tuple, tuple[str, frozenset]]] = defaultdict(dict)
     for r in ecp:
-        k = (key(r.name), norm_node(r.node))
-        if r.node and k[0] and k not in seen:
-            seen.add(k)
-            votes[norm_node(r.node)][r.county] += 1
-    for p in projects:
-        c = known.get(p.project_ref)
-        if c is not None and c.basis == "cited" and p.node:
-            votes[norm_node(p.node)][c.county] += 1
+        if r.node and r.mec_mw is not None and key(r.name):
+            ident = (r.county, round(float(r.mec_mw), 1))
+            voters[norm_node(r.node)].setdefault(ident, (r.county, frozenset(key(r.name))))
     out = {}
     for p in projects:
         if p.project_ref in known or not p.node:
             continue
-        tally = votes.get(norm_node(p.node))
+        own = set(key(p.name))
+        tally = Counter(
+            county for (_, mec), (county, words) in voters.get(norm_node(p.node), {}).items()
+            if not (words == own or _subset_ok(own, set(words))
+                    or mec_close(Decimal(str(mec)), p.mec_mw)))
         if not tally:
             continue
         county, n = tally.most_common(1)[0]
@@ -242,9 +248,11 @@ def rules() -> str:
     a cited county makes a new build rather than leaving an old one in place."""
     import hashlib
 
+    from iegrid import counties, parse
     from iegrid import ecp as reader
 
     h = hashlib.sha256()
-    for path in (Path(__file__), Path(reader.__file__), CITED):
+    for path in (Path(__file__), Path(reader.__file__), Path(counties.__file__), CITED):
         h.update(path.read_bytes())
-    return f"reader={reader.READER_VERSION};code+table={h.hexdigest()[:16]}"
+    return (f"reader={reader.READER_VERSION};parser={parse.PARSER_VERSION};"
+            f"code+table={h.hexdigest()[:16]}")

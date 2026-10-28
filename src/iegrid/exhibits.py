@@ -287,7 +287,7 @@ def contracted_by_county(con):
     order = sorted(by, key=lambda c: -sum(by[c]))
     top3 = sum(sum(by[c]) for c in order[:3]) / placed
     title = (f"{order[0]} has the most generation waiting to connect, "
-             f"{sum(by[order[0]]) / 1000:.1f} GW; three counties hold {top3:.0%}")
+             f"{sum(by[order[0]]) / 1000:.1f} GW; three counties hold {top3:.0%} of it placed")
     fig, ax = plt.subplots(figsize=(11, 8.4), dpi=150)
     _style(fig, ax)
     y = list(range(len(order)))
@@ -309,7 +309,8 @@ def contracted_by_county(con):
     fig.subplots_adjust(left=0.13, right=0.97, top=0.82, bottom=0.11)
     _frame(fig, title,
            f"Newest contracted lists: {gen_total / 1000:.1f} GW of generation and storage, of "
-           f"which {placed / 1000:.2f} GW ({float(placed / gen_total):.1%}) is placed in a county; "
+           f"which {placed / 1000:.2f} GW ({float(placed / gen_total):.1%}) is placed in a county "
+           f"(the three-county share is of this); "
            f"{links / 1000:.1f} GW of interconnectors left out. Placed by name in an ECP results "
            f"publication {float(share['name']):.0%}, from a cited planning or developer source "
            f"{float(share['cited']):.0%}, by where the connection node's other projects are "

@@ -345,6 +345,10 @@ class Coverage:
         return float(self.placed_mw / self.total_mw)
 
 
+def contested_mw(con) -> Decimal:
+    return sum((Decimal(str(r[2])) for r in name_vs_node(con)), start=Decimal(0))
+
+
 def county_coverage(con) -> Coverage:
     """g4 done-when: the share of the newest contracted MW that has a county."""
     build = con.execute("select max(build_id) from region_build").fetchone()[0]
@@ -377,10 +381,13 @@ def county_sample(con, n: int = 12) -> str:
     """)
 
 
-def name_vs_node(con, min_share: float = 0.75, min_projects: int = 3) -> list[tuple]:
-    """Name placements whose connection node clearly votes for another county: a
-    misread ECP row, a name shared by two projects, or a project far from its node.
-    Each is listed for a hand check; none is changed automatically."""
+def name_vs_node(con, min_share: float = 0.75, min_projects: int = 2) -> list[tuple]:
+    """Name placements whose listed connection node clearly votes for another county
+    (2+ distinct ECP projects at that node, 75% in one county): a misread ECP row, two
+    projects sharing a name, or a project that moved its connection (Kilmorna, printed
+    in Kerry, listed at Kinnegad in Westmeath). A different node *name* alone is no
+    signal: ECP prints the applicant's assumed node, the list the one agreed.
+    Nothing is changed automatically; county_coverage's caller reports their MW."""
     from collections import Counter
 
     from iegrid import counties, region
@@ -388,12 +395,13 @@ def name_vs_node(con, min_share: float = 0.75, min_projects: int = 3) -> list[tu
     votes: dict[str, Counter] = {}
     seen = set()
     for r in counties.ecp_rows(con):
-        k = (region.key(r.name), region.norm_node(r.node))
-        if r.node and k[0] and k not in seen:
-            seen.add(k)
-            votes.setdefault(k[1], Counter())[r.county] += 1
+        if r.node and r.mec_mw is not None and region.key(r.name):
+            ident = (region.norm_node(r.node), r.county, round(float(r.mec_mw), 1))
+            if ident not in seen:
+                seen.add(ident)
+                votes.setdefault(ident[0], Counter())[r.county] += 1
     build = con.execute("select max(build_id) from region_build").fetchone()[0]
-    rows = con.execute("""
+    placed = con.execute("""
         select c.project_ref, r.name, c.mec_mw, coalesce(nullif(r.node, ''), r.station_110kv),
                c.county
         from project_county c
@@ -401,12 +409,12 @@ def name_vs_node(con, min_share: float = 0.75, min_projects: int = 3) -> list[tu
         where c.build_id = ? and c.basis = 'name' order by c.mec_mw desc
     """, [build]).fetchall()
     out = []
-    for ref, name, mw, node, county in rows:
+    for ref, name, mw, node, county in placed:
         tally = votes.get(region.norm_node(node or ""))
         if not tally:
             continue
         top, n = tally.most_common(1)[0]
         total = sum(tally.values())
         if top != county and total >= min_projects and n / total >= min_share:
-            out.append((ref, name, float(mw), county, node, f"{n} of {total} in {top}"))
+            out.append((ref, name, float(mw), county, node, f"{n} of {total} at {node} in {top}"))
     return out

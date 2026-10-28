@@ -204,8 +204,9 @@ def build(con, now) -> str:
     # the inputs count too: a new ECP file or new substations make a new build
     n_ecp = con.execute("select count(*) from ecp_file where reader_version = ?",
                         [ecp.READER_VERSION]).fetchone()[0]
-    n_osm = con.execute("select count(*) from osm_node").fetchone()[0]
-    rules = f"{region.rules()};ecp_files={n_ecp};osm_nodes={n_osm}"
+    osm = con.execute("select node, county, osm_id from osm_node order by node").fetchall()
+    osm_hash = hashlib.sha256(repr(osm).encode()).hexdigest()[:12]
+    rules = f"{region.rules()};ecp_files={n_ecp};osm={osm_hash}"
     if con.execute("select 1 from region_build where publications = ? and rules = ?",
                    [pubs, rules]).fetchone():
         return "build: unchanged"

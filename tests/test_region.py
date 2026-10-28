@@ -110,7 +110,7 @@ def test_one_shared_word_is_not_a_match():
     got = {c.project_ref: c.basis for c in assign(projects, REVIEW_ECP, cited=[])}
     assert got["T1"] == "none"   # "upper" alone is not a name
     assert got["T2"] == "none"   # a phase number never matches the unnumbered project
-    assert got["T3"] == "name"   # same distinctive word, "north" is filler: still the same name
+    assert got["T3"] == "none"   # "north" tells twins apart: Rossmore North is not Rossmore
     assert got["T4"] == "name"
 
 
@@ -142,3 +142,26 @@ def test_rules_change_with_the_cited_table(tmp_path, monkeypatch):
     copy.write_text(region.CITED.read_text().replace(",Dublin,", ",Meath,"))
     monkeypatch.setattr(region, "CITED", copy)
     assert region.rules() != before
+
+
+def test_twins_stay_apart_and_refs_in_names_are_ignored():
+    ecp = [E("TG279 Timahoe South", "Kildare", "81"), E("Timahoe North Solar", "Kildare", "70")]
+    projects = [P("TG279", "Timahoe South Solar", "81"), P("TG280", "Timahoe North", "81")]
+    got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp, cited=[])}
+    assert got == {"TG279": ("Kildare", "name"), "TG280": (None, "none")}  # MEC 81 vs 70
+
+
+def test_generic_words_alone_name_nothing():
+    assert key("Upper Solar Farm") == key("North 2") == ()
+
+
+def test_a_project_misread_twice_is_one_vote_and_never_votes_for_itself():
+    ecp = [E("Blackwater Bog Solar 1", "Offaly", "65", "Shannonbridge"),
+           E("Blackwater Bog Bord", "Offaly", "65", "Shannonbridge"),  # the same project
+           E("Shannonbridge ESS", "Offaly", "63.2", "Shannonbridge")]
+    projects = [P("TG557", "Shannonbridge TEG2", "260", "Shannonbridge"),
+                P("TG289", "Blackwater Bog Solar Farm 1", "65", "Shannonbridge")]
+    got = {c.project_ref: c for c in assign(projects, ecp, cited=[])}
+    assert got["TG557"].evidence == "2 of 2 projects at Shannonbridge are in Offaly"
+    # Blackwater Bog itself: its own rows don't vote, which leaves one project, not enough
+    assert got["TG289"].basis in ("name", "none")
