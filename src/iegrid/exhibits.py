@@ -258,3 +258,53 @@ def queue_growth(con):
            f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
            f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(n1[0])}")
     return fig
+
+
+# --- g4: where it is stuck --------------------------------------------------------
+
+def contracted_by_county(con):
+    """Contracted MW by county from the newest region build, transmission and distribution."""
+    build = con.execute("select max(build_id) from region_build").fetchone()[0]
+    rows = con.execute("""
+        select c.county, p.source_id like 'eirgrid%' as transmission, c.basis, sum(c.mec_mw)
+        from project_county c join publication p using (publication_id)
+        where c.build_id = ? group by all
+    """, [build]).fetchall()
+    total = sum(r[3] for r in rows)
+    placed = sum(r[3] for r in rows if r[0])
+    inferred = sum(r[3] for r in rows if r[2] in ("node", "osm-node"))
+    by: dict[str, list[Decimal]] = {}
+    for county, transmission, _, mw in rows:
+        if county:
+            by.setdefault(county, [Decimal(0), Decimal(0)])[0 if transmission else 1] += mw
+    order = sorted(by, key=lambda c: -sum(by[c]))
+    top3 = sum(sum(by[c]) for c in order[:3]) / placed
+    title = (f"{order[0]} has the most capacity waiting to connect, {sum(by[order[0]]) / 1000:.1f} GW; "
+             f"three counties hold {top3:.0%}")
+    fig, ax = plt.subplots(figsize=(11, 8.2), dpi=150)
+    _style(fig, ax)
+    y = list(range(len(order)))
+    tso = [float(by[c][0]) / 1000 for c in order]
+    dso = [float(by[c][1]) / 1000 for c in order]
+    ax.barh(y, tso, height=0.66, color=TOKENS["series1"])
+    ax.barh(y, dso, left=tso, height=0.66, color=TOKENS["series3"],
+            edgecolor=TOKENS["bg"], linewidth=2)
+    for yi, t, d in zip(y, tso, dso, strict=True):
+        ax.text(t + d + 0.03, yi, f"{t + d:.2f}", va="center", fontsize=8.5, color=TOKENS["text"])
+    ax.set_yticks(y, order, fontsize=9)
+    ax.invert_yaxis()
+    ax.set_xlim(0, max(t + d for t, d in zip(tso, dso, strict=True)) * 1.2)
+    ax.set_xlabel("GW contracted, not yet connected", color=TOKENS["muted"], fontsize=9.5)
+    ax.text(tso[0] / 2, -0.75, "transmission", ha="center", fontsize=9, color=TOKENS["series1"])
+    if dso[0] > 0.05:
+        ax.text(tso[0] + dso[0] / 2, -0.75, "distribution", ha="center", fontsize=9,
+                color=TOKENS["muted"])
+    fig.subplots_adjust(left=0.13, right=0.97, top=0.85, bottom=0.11)
+    _frame(fig, title,
+           f"Newest contracted lists, {placed / 1000:.1f} of {total / 1000:.1f} GW placed in a county "
+           f"({placed / total:.0%}). {inferred / placed:.0%} of the placed MW is placed by its "
+           f"connection node (where the node's other projects are, or its substation in "
+           f"OpenStreetMap), the rest by name in an ECP results publication.",
+           f"Source: EirGrid and ESB Networks contracted lists; ECP batch results publications; "
+           f"substations © OpenStreetMap contributors (ODbL) · {LICENCE}")
+    return fig

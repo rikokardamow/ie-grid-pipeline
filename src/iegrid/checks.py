@@ -331,3 +331,47 @@ def reupload_lag(con) -> str:
         where fetched_from is not null and date_diff('day', as_of, published_at::date) > 365
         group by 1 order by 1
     """)
+
+
+@dataclass(frozen=True)
+class Coverage:
+    build_id: int
+    total_mw: Decimal
+    placed_mw: Decimal
+    by_basis: dict[str, Decimal]
+
+    @property
+    def share(self) -> float:
+        return float(self.placed_mw / self.total_mw)
+
+
+def county_coverage(con) -> Coverage:
+    """g4 done-when: the share of the newest contracted MW that has a county."""
+    build = con.execute("select max(build_id) from region_build").fetchone()[0]
+    rows = con.execute("select basis, sum(mec_mw) from project_county where build_id = ? "
+                       "group by 1", [build]).fetchall()
+    by = {b: mw for b, mw in rows}
+    total = sum(by.values())
+    return Coverage(build, total, total - by.get("none", Decimal(0)), by)
+
+
+def unplaced(con) -> str:
+    """The rest, listed by name (g4 done-when)."""
+    return table(con, """
+        select c.project_ref, r.name, c.mec_mw, r.node, r.station_110kv
+        from project_county c
+        join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+        where c.build_id = (select max(build_id) from region_build) and c.basis = 'none'
+        order by c.mec_mw desc
+    """)
+
+
+def county_sample(con, n: int = 12) -> str:
+    """A sample of placed projects with the evidence, largest first, for a hand check."""
+    return table(con, f"""
+        select c.project_ref, r.name, c.mec_mw, c.county, c.basis, c.evidence
+        from project_county c
+        join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
+        where c.build_id = (select max(build_id) from region_build) and c.basis <> 'none'
+        order by c.mec_mw desc limit {int(n)}
+    """)

@@ -105,6 +105,55 @@ create table if not exists edition_total (
     read_at         timestamptz not null
 );
 
+-- g4. ECP batch results publications (no TG/DG refs; counties and nodes), the
+-- rows read from them, named substations from OpenStreetMap, and the county
+-- given to each project, with how it was found. All insert only.
+create table if not exists ecp_file (
+    archive_digest  text primary key,
+    original_url    text not null,
+    capture_ts      text not null,
+    file_name       text not null,
+    row_count       integer not null,
+    read_at         timestamptz not null
+);
+create table if not exists ecp_row (
+    archive_digest  text not null references ecp_file (archive_digest),
+    row_order       integer not null,
+    page            integer not null,
+    name            text not null,
+    county          text not null,
+    mec_mw          decimal(12, 5),
+    node            text not null,
+    primary key (archive_digest, row_order)
+);
+-- A connection node looked up in OpenStreetMap (Nominatim): the substation found,
+-- and its county. No row when the lookup found nothing, or found it in two counties.
+create table if not exists osm_node (
+    node            text primary key,       -- normalised node name, as region.norm_node
+    county          text not null,
+    osm_id          text not null,
+    display_name    text not null,
+    fetched_at      timestamptz not null
+);
+create sequence if not exists region_build_seq;
+create table if not exists region_build (
+    build_id        bigint primary key default nextval('region_build_seq'),
+    publications    text not null,    -- the contracted editions it covers, by id
+    rules           text not null,    -- region.RULES, so a changed rule is a new build
+    built_at        timestamptz not null
+);
+create table if not exists project_county (
+    build_id        bigint not null references region_build (build_id),
+    publication_id  bigint not null references publication (publication_id),
+    row_order       integer not null,
+    project_ref     text not null,
+    mec_mw          decimal(12, 5) not null,
+    county          text,
+    basis           text not null check (basis in ('name', 'node', 'osm-node', 'none')),
+    evidence        text not null,
+    primary key (build_id, publication_id, row_order)
+);
+
 -- What each parse found, with the totals it is checked against.
 create table if not exists parse_result (
     publication_id    bigint not null references publication (publication_id),
