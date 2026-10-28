@@ -44,7 +44,7 @@ def test_build_once_per_editions_and_rules(con, monkeypatch):
                                    live=["https://x/ecp-2.4-results.pdf"],
                                    download=lambda url: Download(url, b"%PDF ecp", None)) == []
     assert counties.build(con, NOW) == "build: unchanged"
-    monkeypatch.setattr(counties.region, "RULES", "changed")
+    monkeypatch.setattr(counties.region, "rules", lambda: "changed")
     assert counties.build(con, NOW).startswith("build 2")
     con.execute("insert into osm_node values ('cashla', 'Galway', 'node/1', 'Cashla', ?)", [NOW])
     assert counties.build(con, NOW).startswith("build 3")  # new input, new build
@@ -76,17 +76,17 @@ def test_two_counties_is_no_answer():
     assert counties.substation_county("knockraha", KNOCKRAHA + [other]) is None
 
 
-def test_lookups_cached_and_stored(con, tmp_path):
+def test_lookups_cached_and_stored(con, tmp_path, monkeypatch):
     asked = []
 
     def search(q):
         asked.append(q)
         return KNOCKRAHA if q.startswith("knockraha") else []
 
-    counties.NOMINATIM_PAUSE_S = 0
+    monkeypatch.setattr(counties, "NOMINATIM_PAUSE_S", 0)
     assert counties.lookup_nodes(con, ["Knockraha", "Atlantis"], NOW, tmp_path, search) == []
     assert counties.lookup_nodes(con, ["Knockraha"], NOW, tmp_path, search) == []
-    assert asked == ["atlantis substation", "atlantis", "knockraha substation", "knockraha"]
+    assert asked == ["atlantis substation", "knockraha substation"]  # each asked once
     assert con.execute("select node, county from osm_node").fetchall() == [("knockraha", "Cork")]
 
 
@@ -97,19 +97,12 @@ def test_killonan_gis_substation_matches():
     assert counties.substation_county("killonan", [r])[0] == "Limerick"
 
 
-def test_place_fallback_only_when_one_county():
-    def place(county, i):
-        return {"osm_type": "node", "osm_id": i, "type": "village", "name": "Doon",
-                "display_name": f"Doon, County {county}", "address": {"county": f"County {county}"}}
-    assert counties.place_county("doon", [place("Limerick", 1)])[0] == "Limerick"
-    assert counties.place_county("doon", [place("Limerick", 1), place("Offaly", 2)]) is None
-
-
-def test_a_namesake_anywhere_else_makes_the_place_ambiguous():
-    townland = {"osm_type": "relation", "osm_id": 1, "type": "administrative", "name": "Oaklands",
-                "display_name": "Oaklands, New Ross, County Wexford",
-                "address": {"county": "County Wexford"}}
-    estate = {"osm_type": "way", "osm_id": 2, "type": "residential", "name": "Oaklands",
-              "display_name": "Oaklands, Cork, County Cork", "address": {"county": "County Cork"}}
-    assert counties.place_county("oaklands", [townland]) == ("Wexford", townland)
-    assert counties.place_county("oaklands", [townland, estate]) is None
+def test_a_place_of_the_same_name_is_not_a_substation(con, tmp_path, monkeypatch):
+    """Barnakyle townland is in Limerick; the Barnakyle 110 kV node is in Dublin."""
+    townland = {"osm_type": "relation", "osm_id": 1, "type": "administrative", "name": "Barnakyle",
+                "display_name": "Barnakyle, Patrickswell, County Limerick",
+                "address": {"county": "County Limerick"}}
+    monkeypatch.setattr(counties, "NOMINATIM_PAUSE_S", 0)
+    counties.lookup_nodes(con, ["Barnakyle"], NOW, tmp_path,
+                          lambda q: [] if "substation" in q else [townland])
+    assert con.execute("select count(*) from osm_node").fetchone()[0] == 0

@@ -25,6 +25,10 @@ from decimal import Decimal, InvalidOperation
 
 import pdfplumber
 
+# Bump when the reader changes what it reads. Rows are stored per reader version,
+# so a fixed reader adds rows for files already read instead of being skipped.
+READER_VERSION = 2
+
 COUNTIES = (
     "Carlow", "Cavan", "Clare", "Cork", "Donegal", "Dublin", "Galway", "Kerry", "Kildare",
     "Kilkenny", "Laois", "Leitrim", "Limerick", "Longford", "Louth", "Mayo", "Meath",
@@ -46,6 +50,7 @@ HEADERS = {
     "pp": ("pp", "planning"),
 }
 HEADER_BAND = 30  # header words of one table sit within this many points of "County"
+WRAP_GAP = 16     # a county split over two lines ("Roscommo" / "n") is this close
 NUMBER = re.compile(r"^\d+(?:\.\d+)?$")
 
 
@@ -91,14 +96,38 @@ class Layout:
     centre: float
 
 
+def _county_anchors(words, centre: float, y_top: float, y_bottom: float) -> list[dict]:
+    """County names in the County column, including ones the PDF split: two words on
+    a line ("West Meath") or one word wrapped onto the next ("Roscommo" / "n").
+    A joined anchor spans both pieces and carries the county's proper name."""
+    col = sorted((w for w in words if abs((w["x0"] + w["x1"]) / 2 - centre) <= COLUMN_SLACK
+                  and y_top < w["top"] < y_bottom), key=lambda w: (w["top"], w["x0"]))
+    out, used = [], set()
+    for i, w in enumerate(col):
+        if i in used:
+            continue
+        if w["text"].lower() in _COUNTY:
+            out.append({**w, "county": _COUNTY[w["text"].lower()]})
+            continue
+        for j, nxt in enumerate(col):
+            if j == i or j in used:
+                continue
+            same_line = abs(nxt["top"] - w["top"]) < 3 and nxt["x0"] > w["x0"]
+            wrapped = 0 < nxt["top"] - w["top"] <= WRAP_GAP and abs(nxt["x0"] - w["x0"]) <= 6
+            joined = (w["text"] + nxt["text"]).lower()
+            if (same_line or wrapped) and joined in _COUNTY:
+                used.add(j)
+                out.append({"text": joined, "county": _COUNTY[joined], "x0": w["x0"],
+                            "x1": max(w["x1"], nxt["x1"]), "top": w["top"],
+                            "bottom": nxt["bottom"]})
+                break
+    return sorted(out, key=lambda a: a["top"])
+
+
 def _rows_in_region(words, page_no: int, layout: Layout, y_top: float,
                     y_bottom: float) -> list[EcpRow]:
     cols, centre = layout.cols, layout.centre
-    anchors = sorted(
-        (w for w in words if w["text"].lower() in _COUNTY
-         and abs((w["x0"] + w["x1"]) / 2 - centre) <= COLUMN_SLACK
-         and y_top < w["top"] < y_bottom),
-        key=lambda w: w["top"])
+    anchors = _county_anchors(words, centre, y_top, y_bottom)
     order = sorted(cols.values())
 
     def span(field: str) -> tuple[float, float] | None:
@@ -117,6 +146,7 @@ def _rows_in_region(words, page_no: int, layout: Layout, y_top: float,
         y_hi = ((mid + (nxt["top"] + nxt["bottom"]) / 2) / 2) if nxt else y_bottom
         name_span = span("name")
         name = " ".join(_between(words, *name_span, y_lo, y_hi)) if name_span else ""
+        name = re.sub(r"\s*Page \d+ of \d+\s*", " ", name).strip()  # a footer in the span
         mec = None
         if (s := span("mec")) is not None:
             nums = [t for t in _between(words, *s, y_lo, y_hi) if NUMBER.match(t)]
@@ -126,7 +156,7 @@ def _rows_in_region(words, page_no: int, layout: Layout, y_top: float,
                 except InvalidOperation:
                     mec = None
         node = " ".join(_between(words, *span("node"), y_lo, y_hi)) if span("node") else ""
-        out.append(EcpRow(page_no, name, _COUNTY[a["text"].lower()], mec, node))
+        out.append(EcpRow(page_no, name, a["county"], mec, node))
     return out
 
 

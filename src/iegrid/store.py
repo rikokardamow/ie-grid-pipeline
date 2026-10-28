@@ -109,22 +109,25 @@ create table if not exists edition_total (
 -- rows read from them, named substations from OpenStreetMap, and the county
 -- given to each project, with how it was found. All insert only.
 create table if not exists ecp_file (
-    archive_digest  text primary key,
+    archive_digest  text not null,
+    reader_version  integer not null,
     original_url    text not null,
     capture_ts      text not null,
     file_name       text not null,
     row_count       integer not null,
-    read_at         timestamptz not null
+    read_at         timestamptz not null,
+    primary key (archive_digest, reader_version)
 );
 create table if not exists ecp_row (
-    archive_digest  text not null references ecp_file (archive_digest),
+    archive_digest  text not null,
+    reader_version  integer not null,
     row_order       integer not null,
     page            integer not null,
     name            text not null,
     county          text not null,
     mec_mw          decimal(12, 5),
     node            text not null,
-    primary key (archive_digest, row_order)
+    primary key (archive_digest, reader_version, row_order)
 );
 -- A connection node looked up in OpenStreetMap (Nominatim): the substation found,
 -- and its county. No row when the lookup found nothing, or found it in two counties.
@@ -139,7 +142,7 @@ create sequence if not exists region_build_seq;
 create table if not exists region_build (
     build_id        bigint primary key default nextval('region_build_seq'),
     publications    text not null,    -- the contracted editions it covers, by id
-    rules           text not null,    -- region.RULES, so a changed rule is a new build
+    rules           text not null,    -- region.rules() + inputs, so a change is a new build
     built_at        timestamptz not null
 );
 create table if not exists project_county (

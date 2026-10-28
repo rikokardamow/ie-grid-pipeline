@@ -37,14 +37,17 @@ def test_name_match_needs_close_mec_and_agreeing_counties():
 
 
 def test_node_vote_needs_enough_projects_and_a_clear_majority():
-    ecp = [E("A", "Cork", "10", "Knockraha"), E("B", "Cork", "20", "Knockraha 220 kV"),
-           E("C", "Cork", "30", "Knockraha"), E("D", "Kerry", "5", "Tarbert"),
-           E("E", "Laois", "5", "Border"), E("F", "Offaly", "5", "Border")]
+    ecp = [E("Ballyvatta Solar", "Cork", "10", "Knockraha"),
+           E("Carrigtwohill Solar", "Cork", "20", "Knockraha 220 kV"),
+           E("Glounthaune Battery", "Cork", "30", "Knockraha"),
+           E("Tarbert Battery", "Kerry", "5", "Tarbert"), E("Moneen Solar", "Kerry", "6", "Tarbert"),
+           E("Abbeyleix Solar", "Laois", "5", "Border"), E("Ballyfin Solar", "Laois", "6", "Border"),
+           E("Cloghan Solar", "Offaly", "5", "Border")]
     projects = [P("TG9", "Celtic Interconnector", "700", "Knockraha"),
-                P("TG8", "X", "100", "Tarbert"),     # one vote only
-                P("TG7", "Y", "100", "Border")]      # split 50/50
+                P("TG8", "X", "100", "Tarbert"),     # two distinct projects: enough
+                P("TG7", "Y", "100", "Border")]      # 2 of 3, under 75%
     got = {c.project_ref: (c.county, c.basis) for c in assign(projects, ecp, cited=[])}
-    assert got == {"TG9": ("Cork", "node"), "TG8": (None, "none"), "TG7": (None, "none")}
+    assert got == {"TG9": ("Cork", "node"), "TG8": ("Kerry", "node"), "TG7": (None, "none")}
 
 
 def test_osm_only_when_one_county_has_that_substation():
@@ -92,3 +95,50 @@ def test_the_shipped_table_is_complete_and_sourced():
     for r in rows:
         assert r["county"] in COUNTIES and r["source_url"].startswith("https://")
         assert r["source_says"] and r["checked_on"]
+
+
+# The g4 review's made-up names, and the real mismatches it found
+REVIEW_ECP = [E("Knockmore Upper Solar Farm", "Cork", "10"), E("Garrane Wind Farm", "Cork", "12"),
+              E("Rossmore Solar", "Wexford", "8"), E("Ballyduff Solar", "Wexford", "9"),
+              E("Coolcarrigan Solar P2", "Meath", "180"), E("Lisbrien 2", "Cork", "5"),
+              E("Liss Wind Farm", "Kilkenny", "2.35")]
+
+
+def test_one_shared_word_is_not_a_match():
+    projects = [P("T1", "Upper Solar Farm", "10"), P("T2", "Garrane Wind Farm Phase 2", "12"),
+                P("T3", "Rossmore North Solar", "8"), P("T4", "Ballyduff ESB Solar Park", "9")]
+    got = {c.project_ref: c.basis for c in assign(projects, REVIEW_ECP, cited=[])}
+    assert got["T1"] == "none"   # "upper" alone is not a name
+    assert got["T2"] == "none"   # a phase number never matches the unnumbered project
+    assert got["T3"] == "name"   # same distinctive word, "north" is filler: still the same name
+    assert got["T4"] == "name"
+
+
+def test_phase_number_keeps_projects_apart():
+    projects = [P("T5", "Coolcarrigan Solar", "180"), P("T6", "Lisbrien", "5")]
+    got = {c.project_ref: c.basis for c in assign(projects, REVIEW_ECP, cited=[])}
+    assert got == {"T5": "none", "T6": "none"}
+
+
+def test_small_projects_need_a_close_mec():
+    # Liss Wind Farm 1.8 MW against a 2.35 MW row: over the 0.5 MW floor
+    (c,) = assign([P("DG2159", "Liss Wind Farm", "1.8")], REVIEW_ECP, cited=[])
+    assert c.basis == "none"
+
+
+def test_a_project_votes_once_at_its_node():
+    """One ECP project in five editions, placed by name too, is still one vote."""
+    ecp = [E("Coolnabacky Solar", "Laois", "50", "Coolnabacky")] * 5
+    projects = [P("T7", "Coolnabacky Solar", "50", "Coolnabacky"),
+                P("T8", "Other Battery", "20", "Coolnabacky")]
+    got = {c.project_ref: c.basis for c in assign(projects, ecp, cited=[])}
+    assert got == {"T7": "name", "T8": "none"}
+
+
+def test_rules_change_with_the_cited_table(tmp_path, monkeypatch):
+    from iegrid import region
+    before = region.rules()
+    copy = tmp_path / "cited.csv"
+    copy.write_text(region.CITED.read_text().replace(",Dublin,", ",Meath,"))
+    monkeypatch.setattr(region, "CITED", copy)
+    assert region.rules() != before

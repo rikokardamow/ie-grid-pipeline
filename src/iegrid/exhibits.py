@@ -263,26 +263,32 @@ def queue_growth(con):
 # --- g4: where it is stuck --------------------------------------------------------
 
 def contracted_by_county(con):
-    """Contracted MW by county from the newest region build, transmission and distribution."""
+    """Contracted MW by county from the newest region build, transmission and distribution.
+    Interconnectors are left out of the bars: they are links, not generation waiting
+    to connect, and one (Celtic, 700 MW) alone would decide which county leads."""
     build = con.execute("select max(build_id) from region_build").fetchone()[0]
     rows = con.execute("""
-        select c.county, p.source_id like 'eirgrid%' as transmission, c.basis, sum(c.mec_mw)
+        select c.county, p.source_id like 'eirgrid%' as transmission, c.basis,
+               r.technology = 'Interconnector' as link, sum(c.mec_mw)
         from project_county c join publication p using (publication_id)
+        join project_row r on r.publication_id = c.publication_id and r.row_order = c.row_order
         where c.build_id = ? group by all
     """, [build]).fetchall()
-    total = sum(r[3] for r in rows)
-    placed = sum(r[3] for r in rows if r[0])
-    inferred = sum(r[3] for r in rows if r[2] in ("node", "osm-node"))
-    cited = sum(r[3] for r in rows if r[2] == "cited")
+    links = sum(r[4] for r in rows if r[3])
+    gen = [r for r in rows if not r[3]]
+    gen_total = sum(r[4] for r in gen)
+    placed = sum(r[4] for r in gen if r[0])
+    share = {b: sum(r[4] for r in gen if r[2] == b) / placed
+             for b in ("name", "cited", "node", "osm-node")}
     by: dict[str, list[Decimal]] = {}
-    for county, transmission, _, mw in rows:
+    for county, transmission, _, _, mw in gen:
         if county:
             by.setdefault(county, [Decimal(0), Decimal(0)])[0 if transmission else 1] += mw
     order = sorted(by, key=lambda c: -sum(by[c]))
     top3 = sum(sum(by[c]) for c in order[:3]) / placed
-    title = (f"{order[0]} has the most capacity waiting to connect, {sum(by[order[0]]) / 1000:.1f} GW; "
-             f"three counties hold {top3:.0%}")
-    fig, ax = plt.subplots(figsize=(11, 8.2), dpi=150)
+    title = (f"{order[0]} has the most generation waiting to connect, "
+             f"{sum(by[order[0]]) / 1000:.1f} GW; three counties hold {top3:.0%}")
+    fig, ax = plt.subplots(figsize=(11, 8.4), dpi=150)
     _style(fig, ax)
     y = list(range(len(order)))
     tso = [float(by[c][0]) / 1000 for c in order]
@@ -300,13 +306,15 @@ def contracted_by_county(con):
     if dso[0] > 0.05:
         ax.text(tso[0] + dso[0] / 2, -0.75, "distribution", ha="center", fontsize=9,
                 color=TOKENS["muted"])
-    fig.subplots_adjust(left=0.13, right=0.97, top=0.85, bottom=0.11)
+    fig.subplots_adjust(left=0.13, right=0.97, top=0.82, bottom=0.11)
     _frame(fig, title,
-           f"Newest contracted lists, {placed / 1000:.1f} of {total / 1000:.1f} GW placed in a county "
-           f"({placed / total:.0%}). Placed by name in an ECP results publication, "
-           f"{cited / placed:.0%} from a cited planning or developer source, and "
-           f"{inferred / placed:.0%} by its connection node (where the node's other projects "
-           f"are, or its substation in OpenStreetMap).",
+           f"Newest contracted lists: {gen_total / 1000:.1f} GW of generation and storage, of "
+           f"which {placed / 1000:.2f} GW ({float(placed / gen_total):.1%}) is placed in a county; "
+           f"{links / 1000:.1f} GW of interconnectors left out. Placed by name in an ECP results "
+           f"publication {float(share['name']):.0%}, from a cited planning or developer source "
+           f"{float(share['cited']):.0%}, by where the connection node's other projects are "
+           f"{float(share['node']):.0%}, by the node's substation in OpenStreetMap "
+           f"{float(share['osm-node']):.0%} (the substation's county).",
            f"Source: EirGrid and ESB Networks contracted lists; ECP batch results publications; "
            f"substations © OpenStreetMap contributors (ODbL) · {LICENCE}")
     return fig

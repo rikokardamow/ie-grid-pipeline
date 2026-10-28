@@ -65,3 +65,19 @@ def test_real_ecp_2_5_has_its_seventy_projects():
     assert len(rows) == 70
     assert ("Ballivor Wind Farm", "Westmeath", Decimal(182)) in {
         (r.name, r.county, r.mec_mw) for r in rows}
+
+
+def test_a_county_split_over_two_lines_is_one_row():
+    words = HEADER + [
+        w("Leam", 40, 320), w("Windfarm", 70, 320), w("Roscommo", 320, 320), w("8.7", 510, 320),
+        w("n", 320, 333), w("Carrick", 560, 320),
+        w("Clondardis", 40, 347), w("Solar", 100, 347), w("Westmeath", 320, 347),
+        w("11.4", 510, 347), w("Mullingar", 560, 347),
+        w("Tullynally", 40, 375), w("Estate", 100, 375), w("West", 320, 375), w("Meath", 350, 375),
+        w("4", 510, 375)]
+    rows, _ = rows_on_page(words, 7, 800)
+    assert [(r.name, r.county, r.mec_mw) for r in rows] == [
+        ("Leam Windfarm", "Roscommon", Decimal("8.7")),
+        ("Clondardis Solar", "Westmeath", Decimal("11.4")),
+        ("Tullynally Estate", "Westmeath", Decimal(4)),
+    ]

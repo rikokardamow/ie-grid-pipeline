@@ -34,8 +34,9 @@ from pathlib import Path
 
 from iegrid.ecp import COUNTIES, EcpRow
 
-MEC_TOLERANCE = Decimal("0.10")  # 10%, or 1 MW, whichever is larger
-NODE_MIN_PROJECTS = 2
+MEC_TOLERANCE = Decimal("0.10")  # 10%, or MEC_FLOOR, whichever is larger
+MEC_FLOOR = Decimal("0.5")
+NODE_MIN_PROJECTS = 2            # distinct ECP projects at the node, each voting once
 NODE_MIN_SHARE = 0.75
 
 # Words that differ between a list and a batch publication for the same project.
@@ -44,6 +45,9 @@ FILLER = {
     "battery", "bess", "facility", "project", "limited", "ltd", "the", "and", "plus", "of",
     "power", "plant", "station", "renewable", "renewables", "hybrid", "system", "systems",
     "phase", "ph", "extension", "ext", "repowering", "development", "array",
+    # generic words that alone would match unrelated projects (g4 review)
+    "north", "south", "east", "west", "upper", "lower", "esb", "turbine", "turbines",
+    "community", "single", "co", "ireland", "irish",
 }
 
 
@@ -61,7 +65,7 @@ class County:
     project_ref: str
     source_id: str
     county: str | None
-    basis: str         # 'name', 'node', 'osm-node' or 'none'
+    basis: str         # 'name', 'cited', 'node', 'osm-node' or 'none'
     evidence: str
 
 
@@ -72,7 +76,8 @@ def key(name: str) -> tuple[str, ...]:
     s = re.sub(r"\([^)]*\)", " ", s)  # "(prev. X)", "(ECP2.4+2.5)", "(Split)"
     s = re.sub(r"\b(prev|previously|formerly|fka)\b\.?", " ", s)
     words = re.findall(r"[a-z]+|\d+", s)
-    return tuple(sorted({w for w in words if w not in FILLER}))
+    # single letters ("P" of "P2") carry nothing; numbers stay, so phases stay apart
+    return tuple(sorted({w for w in words if w not in FILLER and (len(w) > 1 or w.isdigit())}))
 
 
 def norm_node(node: str) -> str:
@@ -82,12 +87,19 @@ def norm_node(node: str) -> str:
 def mec_close(a: Decimal | None, b: Decimal) -> bool:
     if a is None:
         return False
-    return abs(a - b) <= max(Decimal(1), MEC_TOLERANCE * b)
+    return abs(a - b) <= max(MEC_FLOOR, MEC_TOLERANCE * b)
+
+
+def _subset_ok(a: set[str], b: set[str]) -> bool:
+    """One name's words inside the other's: only when the smaller has two or more
+    distinctive words and the extra words carry no number (a phase stays apart)."""
+    small, big = (a, b) if len(a) <= len(b) else (b, a)
+    return len(small) >= 2 and small <= big and not any(w.isdigit() for w in big - small)
 
 
 def _hits(p: Project, index: dict[tuple[str, ...], list[EcpRow]]) -> list[EcpRow]:
     """Rows with the same distinctive words, else rows whose words contain the
-    project's (or the other way round), always with a close MEC."""
+    project's (or the other way round, see _subset_ok), always with a close MEC."""
     k = key(p.name)
     if not k:
         return []
@@ -95,8 +107,7 @@ def _hits(p: Project, index: dict[tuple[str, ...], list[EcpRow]]) -> list[EcpRow
     if same:
         return same
     ks = set(k)
-    return [r for other, rows in index.items()
-            if (ks <= set(other) or set(other) <= ks) and len(min(ks, set(other), key=len)) >= 1
+    return [r for other, rows in index.items() if _subset_ok(ks, set(other))
             for r in rows if mec_close(r.mec_mw, p.mec_mw)]
 
 
@@ -118,18 +129,21 @@ def by_name(projects: list[Project], ecp: list[EcpRow]) -> dict[str, County]:
 
 def by_node(projects: list[Project], known: dict[str, County],
             ecp: list[EcpRow] = ()) -> dict[str, County]:
-    """Counties for the rest, from where the other projects at the same node are:
-    every ECP row that names its node, and every project already placed by name."""
+    """Counties for the rest, from where the other projects at the same node are.
+    Each distinct ECP project naming the node votes once (the same project in five
+    editions is one vote; a project also placed by name doesn't vote again), and the
+    cited projects vote for their sourced county."""
     votes: dict[str, Counter] = defaultdict(Counter)
     seen = set()
     for r in ecp:
-        k = (key(r.name), r.county, norm_node(r.node))
-        if r.node and k not in seen:  # a project repeated across editions votes once
+        k = (key(r.name), norm_node(r.node))
+        if r.node and k[0] and k not in seen:
             seen.add(k)
             votes[norm_node(r.node)][r.county] += 1
     for p in projects:
-        if p.project_ref in known and p.node:
-            votes[norm_node(p.node)][known[p.project_ref].county] += 1
+        c = known.get(p.project_ref)
+        if c is not None and c.basis == "cited" and p.node:
+            votes[norm_node(p.node)][c.county] += 1
     out = {}
     for p in projects:
         if p.project_ref in known or not p.node:
@@ -222,8 +236,15 @@ def assign(projects: list[Project], ecp: list[EcpRow],
     return out
 
 
-# Every constant the answer depends on. A build is keyed on it, so changing a rule
-# makes a new build rather than relabelling an old one.
-RULES = (f"mec_tolerance={MEC_TOLERANCE};node_min_projects={NODE_MIN_PROJECTS};"
-         f"node_min_share={NODE_MIN_SHARE};filler={len(FILLER)};"
-         f"cited={len(cited_table())}")
+def rules() -> str:
+    """What a build depends on, beyond its inputs: the matching code, the reader code
+    and the cited table, by content hash. Editing a rule, a filler word, the reader or
+    a cited county makes a new build rather than leaving an old one in place."""
+    import hashlib
+
+    from iegrid import ecp as reader
+
+    h = hashlib.sha256()
+    for path in (Path(__file__), Path(reader.__file__), CITED):
+        h.update(path.read_bytes())
+    return f"reader={reader.READER_VERSION};code+table={h.hexdigest()[:16]}"

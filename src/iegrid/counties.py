@@ -50,15 +50,17 @@ def ecp_candidates(rows: list[list[str]]) -> list[backfill.Candidate]:
 
 def store_ecp(con, digest: str, url: str, capture_ts: str, content: bytes, now) -> int | None:
     """Read one results file into ecp_row. None if it was read before."""
-    if con.execute("select 1 from ecp_file where archive_digest = ?", [digest]).fetchone():
+    v = ecp.READER_VERSION
+    if con.execute("select 1 from ecp_file where archive_digest = ? and reader_version = ?",
+                   [digest, v]).fetchone():
         return None
     rows = ecp.parse_ecp(content)
     con.execute("begin transaction")
     try:
-        con.execute("insert into ecp_file values (?, ?, ?, ?, ?, ?)",
-                    [digest, url, capture_ts, normalised_name(url), len(rows), now])
-        con.executemany("insert into ecp_row values (?, ?, ?, ?, ?, ?, ?)",
-                        [[digest, i, r.page, r.name, r.county, r.mec_mw, r.node]
+        con.execute("insert into ecp_file values (?, ?, ?, ?, ?, ?, ?)",
+                    [digest, v, url, capture_ts, normalised_name(url), len(rows), now])
+        con.executemany("insert into ecp_row values (?, ?, ?, ?, ?, ?, ?, ?)",
+                        [[digest, v, i, r.page, r.name, r.county, r.mec_mw, r.node]
                          for i, r in enumerate(rows, start=1)])
         con.execute("commit")
     except Exception:
@@ -135,32 +137,6 @@ def substation_county(node: str, results: list[dict]) -> tuple[str, dict] | None
     return next(iter(found.items()))
 
 
-PLACE_TYPES = {"village", "hamlet", "town", "townland", "locality", "suburb", "isolated_dwelling",
-               "neighbourhood", "administrative", "quarter"}
-
-
-def place_county(node: str, results: list[dict]) -> tuple[str, dict] | None:
-    """No substation found: the county of the place the node is named after.
-
-    Every result of exactly that name counts towards the counties, whatever it is (a
-    housing estate called Oaklands in Cork counts against the townland of Oaklands in
-    Wexford), and they must all be in one county, at least one being a place."""
-    want = region.norm_node(node)
-    counties_seen: set[str] = set()
-    place = None
-    for r in results:
-        name = r.get("name") or r["display_name"].split(",")[0]
-        if region.norm_node(name) != want:
-            continue
-        county = _county_of(r)
-        counties_seen.add(county or "?")
-        if r.get("type") in PLACE_TYPES and county and place is None:
-            place = (county, r)
-    if place is None or counties_seen != {place[0]}:
-        return None
-    return place
-
-
 def lookup_nodes(con, nodes: list[str], now, cache: Path = OSM_CACHE,
                  search=_nominatim) -> list[str]:
     """Look up nodes not yet looked up. Answers are cached on disk (data/osm/), so a
@@ -170,7 +146,7 @@ def lookup_nodes(con, nodes: list[str], now, cache: Path = OSM_CACHE,
     answers = json.loads(path.read_text()) if path.exists() else {}
     notes = []
     for node in sorted({region.norm_node(n) for n in nodes if n}):
-        for kind, query in (("substation", f"{node} substation"), ("place", node)):
+        for kind, query in (("substation", f"{node} substation"),):
             k = f"{kind}:{node}"
             if k in answers:
                 continue
@@ -181,10 +157,11 @@ def lookup_nodes(con, nodes: list[str], now, cache: Path = OSM_CACHE,
                 notes.append(f"nominatim {query!r}: {exc}")
             path.write_text(json.dumps(answers))
     for node in sorted({k.split(":", 1)[1] for k in answers}):
+        # Only a substation found by name counts. A place of the same name (the g4 review
+        # found Barnakyle townland in Limerick for a Barnakyle 110 kV node in Dublin)
+        # says nothing about where the node is.
         got = substation_county(node, answers.get(f"substation:{node}", []))
         label = "substation"
-        if got is None:
-            got, label = place_county(node, answers.get(f"place:{node}", [])), "place"
         if got is None:
             continue
         county, r = got
@@ -202,17 +179,22 @@ def latest_contracted(con) -> list[tuple[int, int, region.Project]]:
         where l.source_id like '%contracted%' and r.parser_version = {int(parse.PARSER_VERSION)}
         order by r.publication_id, r.row_order
     """).fetchall()
-    return [(pid, order, region.Project(ref, sid, name, mec,
-                                        (node if sid.startswith("eirgrid") else st110) or node))
+    # TSO: the node. DSO: the feeding station, nearer the project than the designed
+    # 110 kV station, which is used only when the feeding station is blank.
+    return [(pid, order, region.Project(ref, sid, name, mec, node or st110))
             for pid, order, ref, sid, name, mec, node, st110 in rows]
+
+
+def ecp_rows(con) -> list[ecp.EcpRow]:
+    return [ecp.EcpRow(*r) for r in con.execute(
+        "select page, name, county, mec_mw, node from ecp_row where reader_version = ?",
+        [ecp.READER_VERSION]).fetchall()]
 
 
 def unplaced_nodes(con) -> list[str]:
     """Connection nodes of projects the newest build couldn't place by name or node vote."""
     projects = latest_contracted(con)
-    rows = [ecp.EcpRow(page, name, county, mec, node) for page, name, county, mec, node in
-            con.execute("select page, name, county, mec_mw, node from ecp_row").fetchall()]
-    got = region.assign([p for _, _, p in projects], rows)
+    got = region.assign([p for _, _, p in projects], ecp_rows(con))
     return [p.node for (_, _, p), c in zip(projects, got, strict=True) if c.basis == "none"]
 
 
@@ -220,16 +202,15 @@ def build(con, now) -> str:
     projects = latest_contracted(con)
     pubs = ",".join(str(p) for p in sorted({pid for pid, _, _ in projects}))
     # the inputs count too: a new ECP file or new substations make a new build
-    n_ecp = con.execute("select count(*) from ecp_file").fetchone()[0]
+    n_ecp = con.execute("select count(*) from ecp_file where reader_version = ?",
+                        [ecp.READER_VERSION]).fetchone()[0]
     n_osm = con.execute("select count(*) from osm_node").fetchone()[0]
-    rules = f"{region.RULES};ecp_files={n_ecp};osm_nodes={n_osm}"
+    rules = f"{region.rules()};ecp_files={n_ecp};osm_nodes={n_osm}"
     if con.execute("select 1 from region_build where publications = ? and rules = ?",
                    [pubs, rules]).fetchone():
         return "build: unchanged"
-    rows = [ecp.EcpRow(page, name, county, mec, node) for page, name, county, mec, node in
-            con.execute("select page, name, county, mec_mw, node from ecp_row").fetchall()]
     subs = con.execute("select node, county, display_name from osm_node").fetchall()
-    got = region.assign([p for _, _, p in projects], rows, subs)
+    got = region.assign([p for _, _, p in projects], ecp_rows(con), subs)
     con.execute("begin transaction")
     try:
         build_id = con.execute("insert into region_build (publications, rules, built_at) "
