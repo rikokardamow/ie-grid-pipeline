@@ -6,8 +6,10 @@ or a re-issue with changed bytes, is a new row.
 
 Three times, as in the record:
     as_of         the "correct as of" date printed in the file
-    published_at  when the publisher put it up: the HTTP Last-Modified header,
-                  else the time we pulled it (vintage_quality = 'estimated')
+    published_at  when the publisher put it up. No publisher states this, so it
+                  is always an estimate (vintage_quality = 'estimated'):
+                  the HTTP Last-Modified header (the upload time, basis
+                  'last-modified'), else the time we pulled it (basis 'ingested')
     ingested_at   when we pulled it
 """
 
@@ -19,7 +21,9 @@ from pathlib import Path
 
 import duckdb
 
-DEFAULT_DB = Path("data/iegrid.duckdb")
+# Anchored at the repo root, so running from notebooks/ or anywhere else finds the same store.
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_DB = ROOT / "data" / "iegrid.duckdb"
 
 SCHEMA = """
 create sequence if not exists publication_seq;

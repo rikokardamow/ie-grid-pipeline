@@ -1,3 +1,4 @@
+import hashlib
 import re
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -19,7 +20,16 @@ def fake_site(as_of="05/08/2026", last_modified=LAST_MOD, extra_links=(), drop=(
             continue
         links[EIRGRID_PAGE if sid.startswith("eirgrid") else ESB_PAGE].append(url)
     links[ESB_PAGE].extend(extra_links)
-    files = {url: make_pdf([f"{sid} list", f"Correct as of {as_of}"]) for url, sid in CURRENT.items()}
+    # Each file laid out as the publisher does it: EirGrid prints the as-of on page 1,
+    # ESB's DSO lists on page 2 after a page of definitions, the summary on page 1.
+    def pdf(sid):
+        if sid.startswith("esb.dso"):
+            return make_pdf([f"{sid} list", "definitions"], [f"Information correct: {as_of} Rev. 9"])
+        if sid == "esb.renewable_summary":
+            return make_pdf([f"Data as of {as_of}"])
+        return make_pdf([f"{sid} list", f"Correct as of {as_of}"])
+
+    files = {url: pdf(sid) for url, sid in CURRENT.items()}
 
     def page_links(page):
         return links[page]
@@ -39,7 +49,8 @@ def test_first_run_stores_one_row_per_source(con, tmp_path):
     assert {r[0] for r in rows} == {src.source_id for src in SOURCES}
     for sid, as_of, published_at, basis, quality, raw_path in rows:
         assert as_of == date(2026, 8, 5)
-        assert published_at == LAST_MOD and basis == "last-modified" and quality == "exact"
+        assert published_at == LAST_MOD and basis == "last-modified" and quality == "estimated"
+        assert Path(raw_path).is_absolute()  # tmp_path is outside the repo, so kept absolute
         assert Path(raw_path).is_file() and Path(raw_path).parent.name == sid
         assert re.fullmatch(r"2026-08-05-[0-9a-f]{12}\.pdf", Path(raw_path).name)
 
@@ -101,6 +112,45 @@ def test_page_down_reports_and_carries_on(con, tmp_path):
     assert len(s.stored) == 6
 
 
-def test_store_module_never_updates_or_deletes():
-    src = Path(ingest.store.__file__).read_text().lower()
-    assert not re.search(r"\b(update|delete)\s", src.split('"""', 2)[2])
+def test_stored_row_never_changes(con, tmp_path):
+    """Same bytes again under a new URL and a new Last-Modified: the first row stands."""
+    pl, dl = fake_site()
+    ingest.run(con, tmp_path, pl, dl, NOW)
+    before = con.execute("select * from publication order by publication_id").fetchall()
+
+    def moved(url):
+        d = dl(url)
+        return Download(url + "?v=2", d.content, datetime(2026, 10, 1, tzinfo=UTC))
+
+    later = datetime(2026, 11, 4, tzinfo=UTC)
+    s = ingest.run(con, tmp_path, pl, moved, later)
+    assert not s.stored
+    assert con.execute("select * from publication order by publication_id").fetchall() == before
+
+
+def test_half_written_raw_file_is_replaced(con, tmp_path):
+    pl, dl = fake_site()
+    url = next(iter(CURRENT))
+    sid = CURRENT[url]
+    content = dl(url).content
+    sha = hashlib.sha256(content).hexdigest()
+    path = ingest.raw_path_for(tmp_path, sid, date(2026, 8, 5), sha)
+    path.parent.mkdir(parents=True)
+    path.write_bytes(content[:100])  # a run killed mid-write left this, with no row
+    ingest.run(con, tmp_path, pl, dl, NOW)
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == sha
+    assert not list(tmp_path.rglob("*.part"))
+
+
+def test_exit_code(tmp_path, monkeypatch, capsys):
+    pl, dl = fake_site()
+    monkeypatch.setattr(ingest.fetch, "page_links", pl)
+    monkeypatch.setattr(ingest.fetch, "download", dl)
+    args = ["--db", str(tmp_path / "s.duckdb"), "--raw", str(tmp_path / "raw")]
+    assert ingest.main(args) == 0
+    assert ingest.main(args) == 0  # nothing new is still a success
+
+    pl_missing, _ = fake_site(drop={"esb.dso_live_assessments"})
+    monkeypatch.setattr(ingest.fetch, "page_links", pl_missing)
+    assert ingest.main(args) == 1
+    assert "missing_sources: 1" in capsys.readouterr().out

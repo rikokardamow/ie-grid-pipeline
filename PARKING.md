@@ -11,3 +11,6 @@ Format: `date | item | what would settle it | stone`
 - 2026-10-28 | Data centre / large energy user connections: only aggregate MVA in policy papers (CRU LEU decision, EirGrid data centre process, June 2026) | a per-project or per-quarter published series | after v1
 - 2026-10-28 | Northern Ireland (SONI) lists for an all-island view | v1 done and read by someone | after v1
 - 2026-10-28 | Repo name and visibility (public on GitHub as rikokardamow/ie-grid-pipeline?) | owner's call | before g7
+- 2026-10-28 | g1 done-when was reworded by the build (from "as_of in pdf == as_of stored", which can't fail, to "as_of in pdf == date in file name"). For ESB the name date is inferred: q2_2026 is read as 2026-07-01, the day after the quarter | owner approves the wording, or picks another check | g1
+- 2026-10-28 | Unknown PDF links (a new kind of list, e.g. a TSO connected list) are printed but exit 0 | decide whether an unattended run should fail on them or only flag them in the run log | g8
+- 2026-10-28 | Identical bytes turning up under a new URL record nothing (dedup is source_id + sha256), so a moved file leaves no trace | whether URL history matters for g3 backfill | g3

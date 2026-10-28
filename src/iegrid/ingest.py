@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -21,7 +22,7 @@ from pathlib import Path
 from iegrid import asof, fetch, store
 from iegrid.sources import PAGES, SOURCES, classify
 
-DEFAULT_RAW = Path("data/raw")
+DEFAULT_RAW = store.ROOT / "data" / "raw"
 
 
 @dataclass
@@ -41,6 +42,25 @@ def raw_path_for(raw_dir: Path, source_id: str, as_of, sha256: str) -> Path:
     return raw_dir / source_id / f"{as_of.isoformat()}-{sha256[:12]}.pdf"
 
 
+def stored_path(path: Path) -> str:
+    """raw_path as stored: relative to the repo root when it is inside it."""
+    try:
+        return str(path.resolve().relative_to(store.ROOT))
+    except ValueError:
+        return str(path.resolve())
+
+
+def write_raw(path: Path, content: bytes, sha256: str) -> None:
+    """Write via a temp file and rename, so a killed run never leaves a half file.
+    A file already there with the wrong hash (a half write from before) is replaced."""
+    if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == sha256:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".part")
+    tmp.write_bytes(content)
+    os.replace(tmp, path)
+
+
 def ingest_file(con, raw_dir: Path, source_id: str, dl: fetch.Download,
                 now: datetime) -> tuple[str, str]:
     """Returns ('stored' | 'unchanged' | 'error', message)."""
@@ -51,17 +71,15 @@ def ingest_file(con, raw_dir: Path, source_id: str, dl: fetch.Download,
     if as_of is None:
         return "error", f"{source_id}: no as-of date found in {dl.url}"
     path = raw_path_for(raw_dir, source_id, as_of, sha)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        path.write_bytes(dl.content)
+    write_raw(path, dl.content, sha)
     if dl.last_modified is not None:
-        published_at, basis, quality = dl.last_modified, "last-modified", "exact"
+        published_at, basis = dl.last_modified, "last-modified"
     else:
-        published_at, basis, quality = now, "ingested", "estimated"
+        published_at, basis = now, "ingested"
     pub = store.Publication(
         source_id=source_id, url=dl.url, sha256=sha, size_bytes=len(dl.content), as_of=as_of,
-        published_at=published_at, published_at_basis=basis, vintage_quality=quality,
-        raw_path=str(path), ingested_at=now,
+        published_at=published_at, published_at_basis=basis, vintage_quality="estimated",
+        raw_path=stored_path(path), ingested_at=now,
     )
     if store.insert(con, pub) is None:
         return "unchanged", f"{source_id} {sha[:12]}"
@@ -69,9 +87,11 @@ def ingest_file(con, raw_dir: Path, source_id: str, dl: fetch.Download,
 
 
 def run(con, raw_dir: Path = DEFAULT_RAW,
-        page_links: Callable[[str], list[str]] = fetch.page_links,
-        download: Callable[[str], fetch.Download] = fetch.download,
+        page_links: Callable[[str], list[str]] | None = None,
+        download: Callable[[str], fetch.Download] | None = None,
         now: datetime | None = None) -> Summary:
+    page_links = page_links or fetch.page_links
+    download = download or fetch.download
     now = now or datetime.now(UTC)
     summary = Summary()
     found: set[str] = set()

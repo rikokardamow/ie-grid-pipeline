@@ -13,9 +13,9 @@ import hashlib
 import re
 from dataclasses import dataclass
 from datetime import date, datetime
-from pathlib import Path
 
 from iegrid.sources import file_name
+from iegrid.store import ROOT
 
 MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], start=1)}
@@ -56,7 +56,7 @@ def check_publications(con) -> list[Check]:
     ).fetchall()
     out = []
     for source_id, url, sha, raw_path, as_of, published_at, basis in rows:
-        path = Path(raw_path)
+        path = ROOT / raw_path  # an absolute raw_path stays absolute
         hash_ok = path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest() == sha
         out.append(Check(source_id, as_of, as_of_from_name(url), hash_ok, published_at, basis))
     return out
@@ -69,5 +69,20 @@ def table(con, sql: str) -> str:
     rows = [[("" if v is None else str(v)) for v in r] for r in cur.fetchall()]
     widths = [max(len(c), *(len(r[i]) for r in rows)) if rows else len(c)
               for i, c in enumerate(cols)]
-    line = lambda vals: "  ".join(v.ljust(w) for v, w in zip(vals, widths))  # noqa: E731
+
+    def line(vals):
+        return "  ".join(v.ljust(w) for v, w in zip(vals, widths, strict=True))
+
     return "\n".join([line(cols), line(["-" * w for w in widths]), *map(line, rows)])
+
+
+LAG_SQL = """
+    select source_id, as_of, published_at::date as published,
+           date_diff('day', as_of, published_at::date) as days_after_as_of
+    from publication order by source_id, as_of
+"""
+
+
+def publication_lag(con) -> str:
+    """How long after its as-of date each list went up (by Last-Modified)."""
+    return table(con, LAG_SQL)

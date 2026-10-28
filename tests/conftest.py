@@ -7,22 +7,27 @@ import pytest
 from iegrid import store
 
 
-def make_pdf(lines: list[str]) -> bytes:
-    """A one-page PDF with the given text lines, built by hand (no extra dependency)."""
-    ops = ["BT", "/F1 10 Tf", "14 TL", "50 780 Td"]
-    for line in lines:
-        safe = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-        ops.append(f"({safe}) Tj T*")
-    ops.append("ET")
-    stream = "\n".join(ops).encode()
+def make_pdf(lines: list[str], *more_pages: list[str]) -> bytes:
+    """A PDF with one page per list of text lines, built by hand (no extra dependency)."""
+    pages = [lines, *more_pages]
+    n = len(pages)
+    # objects: 1 catalog, 2 pages, 3 font, then a page + content pair per page
+    kids = " ".join(f"{4 + 2 * i} 0 R" for i in range(n)).encode()
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        (b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
-         b"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>"),
-        b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream",
+        b"<< /Type /Pages /Kids [" + kids + b"] /Count %d >>" % n,
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
     ]
+    for i, page_lines in enumerate(pages):
+        ops = ["BT", "/F1 10 Tf", "14 TL", "50 780 Td"]
+        for line in page_lines:
+            safe = line.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+            ops.append(f"({safe}) Tj T*")
+        ops.append("ET")
+        stream = "\n".join(ops).encode()
+        objects.append(b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+                       b"/Resources << /Font << /F1 3 0 R >> >> /Contents %d 0 R >>" % (5 + 2 * i))
+        objects.append(b"<< /Length %d >>\nstream\n" % len(stream) + stream + b"\nendstream")
     out = bytearray(b"%PDF-1.4\n")
     offsets = []
     for i, obj in enumerate(objects, start=1):
