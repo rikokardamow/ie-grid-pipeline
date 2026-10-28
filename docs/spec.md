@@ -6,7 +6,7 @@
 
 which irish grid connection projects are slipping, and where is the contracted capacity stuck? answered every time eirgrid or esb networks publish a new list, in the format a programme review reads: what moved, what didn't, what's late.
 
-reader: programme / grid analyst (aws emea grid role). one page a week they could put in front of a steering group.
+reader: a programme or grid analyst. one page a week they could put in front of a steering group.
 
 ## what the sources actually are (checked 28 oct 2026)
 
@@ -71,7 +71,7 @@ g1 blocks all. g2 before g3. g4 ‖ g5 after g2. g6 after g5. g7 after g6. g8 la
 
 same as the record's. first cell prints duckdb snapshot date + git sha. notebooks read, never write. logic lives in src/.
 
-## readme (4 sections, for the hiring manager)
+## readme (4 sections, for the reader above)
 
 question / method / result with the number (e.g. "x GW contracted, y% of ecp-2.1 MW energised after z months") / how to run. if i can't say in one line what it proves, it isn't done.
 
