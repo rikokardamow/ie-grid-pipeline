@@ -1,0 +1,32 @@
+[project]
+name = "iegrid"
+version = "0.1.0"
+description = "Irish grid connection pipeline: every published EirGrid and ESB Networks list, stored point-in-time"
+readme = "README.md"
+requires-python = ">=3.12"
+# duckdb: the local store. pdfplumber: reads the as-of date (g1) and the tables (g2).
+# pytz: duckdb needs it to hand timestamptz columns back to Python.
+# HTTP is stdlib urllib, so no client dependency.
+dependencies = [
+    "duckdb>=1.1",
+    "pdfplumber>=0.11",
+    "pytz>=2024.1",
+]
+
+[dependency-groups]
+dev = [
+    "jupyterlab>=4.2",
+    "nbstripout>=0.7",
+    "pytest>=8.3",
+    "ruff>=0.7",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

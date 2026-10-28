@@ -1,0 +1,8 @@
+# Raw PDFs and the store stay local until the licence is checked (PARKING.md).
+data/
+__pycache__/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+.DS_Store

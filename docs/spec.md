@@ -24,6 +24,7 @@ all pdf. no xlsx, no api. tables parse cleanly with pdfplumber (checked on the 0
 
 what's missing, said plainly:
 - no per-project scheduled energisation date in any list. "slippage vs plan" can't be read off a date column. it has to come from status over time (see metrics).
+- the esb dso energised lists do carry the energisation date per project ("01/01/2004", or "date pre 2005"). so for distribution, signed -> energised time is measurable once signed dates are joined from earlier contracted editions. the tso lists have neither.
 - tso lists give node, not county. county comes from the ecp batch pdfs (have county + coords) or a node->county table i build once.
 - no published per-project demand / data centre list. only aggregate MVA in policy papers. data centres stay out of v1 (parking).
 - tso connected (energised) lists: not on the current page. older ones exist on cms.eirgrid.ie (e.g. "Connected (Other Types of Generators)"). check before g1.
@@ -55,7 +56,7 @@ licence: eirgrid / esb site terms not checked yet. gate before anything goes pub
 
 | # | stone | done when | nb |
 |---|---|---|---|
-| g1 | fetch + store: download every current pdf, hash, publication row, raw kept | re-run = 0 new rows; as_of printed in pdf == as_of stored for all 7 files | 00 |
+| g1 | fetch + store: download every current pdf, hash, publication row, raw kept | re-run = 0 new rows; as_of read from the pdf == date in the file name for all 8 files (2 tso + 6 esb incl. summary) | 00 |
 | g2 | parse: pdfplumber -> project_row for tso wind, tso non-wind, dso contracted x2, dso energised x2 | row counts tie to the pdf (hand count 2 pages each); MW totals tie to the esb summary report within 1 MW | 10 |
 | g3 | backfill: wayback + cms older editions, same parser, vintage_quality marked | every edition found has a publication row or a written reason it doesn't | - |
 | g4 | region: county per project from ecp batch pdfs, node->county table for the rest | >= 95% of contracted MW has a county; the rest listed by name | 20 |
