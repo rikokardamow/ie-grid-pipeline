@@ -89,9 +89,9 @@ def publication_lag(con) -> str:
     return table(con, LAG_SQL)
 
 
-# A list ties when its rows match the text count and its MW are within this of
-# the total it prints (or, for the energised renewable list, the summary report).
-TIE_MW = 1
+# A list ties when its rows match the text count and its MW are within
+# parse.TIE_MW of the total it prints (or, for the energised renewable list,
+# the summary report).
 
 
 @dataclass(frozen=True)
@@ -110,6 +110,8 @@ class Tie:
         if self.rows != self.text_refs or self.target_mw is None:
             return False
         rows_ok = self.target_rows is None or self.rows == self.target_rows
+        from iegrid.parse import TIE_MW
+
         return rows_ok and abs(self.parsed_mw - self.target_mw) <= TIE_MW
 
 
@@ -177,3 +179,21 @@ def by_technology(con) -> str:
         where r.parser_version = {int(parse.PARSER_VERSION)}
         group by all order by p.source_id, mw desc
     """)
+
+
+def unparsed(con) -> list[tuple[str, date]]:
+    """Publications of a parsed list that have no parse at the current version:
+    a load that wasn't run, or failed."""
+    from iegrid import parse
+
+    sources = list(parse.PARSERS)
+    return con.execute(
+        f"""
+        select p.source_id, p.as_of from publication p
+        where p.source_id in ({", ".join("?" * len(sources))})
+          and not exists (select 1 from parse_result r where r.publication_id = p.publication_id
+                          and r.parser_version = ?)
+        order by 1, 2
+        """,
+        [*sources, parse.PARSER_VERSION],
+    ).fetchall()

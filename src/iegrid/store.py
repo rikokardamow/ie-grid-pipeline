@@ -125,7 +125,8 @@ def insert(con: duckdb.DuckDBPyConnection, pub: Publication) -> int | None:
     return row[0] if row else None
 
 
-SNAPSHOTS = ROOT / "data" / "snapshots"
+SNAPSHOTS = DEFAULT_DB.parent / "snapshots"
+KEEP_SNAPSHOTS = 5
 
 
 def snapshot(path: Path | str = DEFAULT_DB, out_dir: Path | None = None,
@@ -135,19 +136,25 @@ def snapshot(path: Path | str = DEFAULT_DB, out_dir: Path | None = None,
     DuckDB lets no process write while another has the file open, even read-only,
     so a notebook left open on the live store would block the weekly job.
     Notebooks read a snapshot instead; jobs call this after they write."""
+    import os
     import shutil
     from datetime import UTC
 
     now = now or datetime.now(UTC)
     out_dir = out_dir or Path(path).parent / "snapshots"
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"{now:%Y-%m-%dT%H%M%SZ}.duckdb"
+    out = out_dir / f"{now:%Y-%m-%dT%H%M%S.%fZ}.duckdb"  # microseconds: same-second runs differ
     con = duckdb.connect(str(path))
     try:
         con.execute("checkpoint")  # flush the WAL so the copy is complete on its own
     finally:
         con.close()
-    shutil.copyfile(path, out)
+    part = out.with_name(out.name + ".part")  # not matched by *.duckdb until renamed
+    shutil.copyfile(path, part)
+    os.replace(part, out)
+    # Snapshots are copies of the store, not the record, so old ones can go.
+    for old in sorted(out_dir.glob("*.duckdb"))[:-KEEP_SNAPSHOTS]:
+        old.unlink()
     return out
 
 

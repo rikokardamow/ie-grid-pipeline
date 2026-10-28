@@ -45,6 +45,12 @@ def load_one(con, publication_id: int, source_id: str, content: bytes, now: date
     result = parse.PARSERS[source_id](content)
     text_refs = sum(parse.refs_in_text(content).values())
     total = sum((r.mec_mw for r in result.rows), start=parse.Decimal(0))
+    # The tie gates the store: a parse that skipped a page or misread a MEC stores nothing.
+    if len(result.rows) != text_refs:
+        raise parse.ParseError(f"{len(result.rows)} rows parsed but {text_refs} refs in the text")
+    printed = result.printed_total_mw
+    if printed is not None and abs(total - printed) > parse.TIE_MW:
+        raise parse.ParseError(f"parsed {total} MW, the list prints {printed}")
     con.execute("begin transaction")
     try:
         con.executemany(
@@ -74,7 +80,7 @@ def run(con, now: datetime | None = None) -> Summary:
         try:
             content = (store.ROOT / raw_path).read_bytes()
             summary.parsed.append(load_one(con, publication_id, source_id, content, now))
-        except (parse.ParseError, OSError) as exc:
+        except Exception as exc:  # noqa: BLE001 - one bad publication must not stop the rest
             summary.errors.append(f"{source_id} #{publication_id}: {exc}")
     return summary
 
@@ -84,9 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--db", default=str(store.DEFAULT_DB))
     args = parser.parse_args(argv)
     con = store.connect(args.db)
-    summary = run(con)
-    con.close()
-    print(f"snapshot: {store.snapshot(args.db).name}")
+    try:
+        summary = run(con)
+    finally:
+        con.close()
+        print(f"snapshot: {store.snapshot(args.db).name}")
     for label in ("parsed", "errors"):
         items = getattr(summary, label)
         print(f"{label}: {len(items)}")

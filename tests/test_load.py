@@ -16,12 +16,14 @@ def fake_parser(monkeypatch):
         calls.append(content)
         if content == b"broken":
             raise parse.ParseError("bad row")
+        orders = (1, 1) if content == b"dup" else (1, 2)  # a duplicate key fails mid-insert
+        total = parse.Decimal("99") if content == b"off" else parse.Decimal("21")
         rows = [parse.ProjectRow(
-            row_order=i, page=1, project_ref=f"TG{i}", name="x", technology="Wind",
+            row_order=o, page=1, project_ref=f"TG{i}", name="x", technology="Wind",
             mec_mw=parse.Decimal("10.5"), node="N", station_110kv="", voltage="110 kV",
             processing_type="ECP-2.1", status="Contracted", signed_month=None,
-            energised_on=None, energised_note="", raw="[]") for i in (1, 2)]
-        return parse.Parsed(rows, parse.Decimal("21"))
+            energised_on=None, energised_note="", raw="[]") for i, o in enumerate(orders, 1)]
+        return parse.Parsed(rows, total)
 
     monkeypatch.setitem(parse.PARSERS, PUB.source_id, fake)
     monkeypatch.setattr(parse, "refs_in_text", lambda content: {1: 2})
@@ -78,3 +80,46 @@ def test_exit_code(tmp_path, fake_parser):
     con.close()
     assert load.main(["--db", str(db)]) == 1
     assert list((tmp_path / "snapshots").glob("*.duckdb"))
+
+
+def counts(con):
+    return [con.execute(f"select count(*) from {t}").fetchone()[0]
+            for t in ("project_row", "parse_result")]
+
+
+def test_failure_mid_insert_rolls_back(con, tmp_path, fake_parser):
+    add_pub(con, tmp_path, b"dup", "c" * 64)
+    s = load.run(con, NOW)
+    assert not s.ok and counts(con) == [0, 0]
+
+
+def test_total_that_does_not_tie_stores_nothing(con, tmp_path, fake_parser):
+    add_pub(con, tmp_path, b"off", "d" * 64)
+    s = load.run(con, NOW)
+    assert not s.ok and "prints 99" in s.errors[0] and counts(con) == [0, 0]
+    assert load.pending(con)  # so the next run tries again
+
+
+def test_skipped_page_stores_nothing(con, tmp_path, fake_parser, monkeypatch):
+    monkeypatch.setattr(parse, "refs_in_text", lambda content: {1: 2, 2: 16})
+    add_pub(con, tmp_path, b"ok", "e" * 64)
+    s = load.run(con, NOW)
+    assert not s.ok and "18 refs" in s.errors[0] and counts(con) == [0, 0]
+
+
+def test_unexpected_error_is_reported_and_others_still_load(con, tmp_path, fake_parser,
+                                                            monkeypatch):
+    add_pub(con, tmp_path, b"ok", "f" * 64)
+    add_pub(con, tmp_path, b"ok", "g" * 64)
+    real = parse.refs_in_text
+    seen = []
+
+    def flaky(content):
+        seen.append(1)
+        if len(seen) == 1:
+            raise RuntimeError("boom")
+        return real(content)
+
+    monkeypatch.setattr(parse, "refs_in_text", flaky)
+    s = load.run(con, NOW)
+    assert len(s.errors) == 1 and "boom" in s.errors[0] and len(s.parsed) == 1

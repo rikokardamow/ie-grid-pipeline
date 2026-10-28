@@ -36,6 +36,10 @@ import pdfplumber
 # new version adds rows; rows from older versions stay.
 PARSER_VERSION = 1
 
+# A parse is only stored if its rows equal the refs counted in the page text and,
+# where the list prints a total, its MW are within this of it.
+TIE_MW = 1
+
 REF = re.compile(r"[A-Z]{1,2}\d+[A-Za-z]?")
 TSO_HEADER = ("Node and Associated Voltage", "Ref", "Name", "Processing Type", "Type",
               "MEC (MW)", "Signed Date*")
@@ -168,8 +172,8 @@ def parse_dso_pages(pages) -> Parsed:
                         energised_on = date(y, mo, d)
                     elif "pre 2005" in connect.lower():
                         note = "pre 2005"
-                    elif connect:
-                        raise ParseError(f"page {page_no}: connect date {connect!r}")
+                    else:  # every energised row has a date or "pre 2005"; a blank is a misread
+                        raise ParseError(f"page {page_no}: connect date {connect!r} for {ref}")
                 rows.append(ProjectRow(
                     row_order=len(rows) + 1, page=page_no, project_ref=ref, name=name,
                     technology=tech, mec_mw=mw(mec), node=feeding, station_110kv=station,

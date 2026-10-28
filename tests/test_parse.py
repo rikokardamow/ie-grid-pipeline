@@ -90,16 +90,23 @@ def test_dso_energised_dates():
               ["DG948", None, None, "Dairygold,\nMitchelstown (2)", "Nat. Gas", "8.55",
                "CASTLEFARM", "BARRYMORE", "Pre-Gate", "Energised", "Energisation\ndate pre 2005",
                "38 kV", None, None],
-              ["DG93A", None, None, "x", "Wind", "1", "", "Y", "Gate 2", "Energised", "", "LV",
-               None, None],
+              ["DG93A", None, None, "x", "Wind", "1", "", "Y", "Gate 2", "Energised",
+               "01/02/2010", "LV", None, None],
               ["", None, None, "", "", "", "", "", "", "", "", "", None, None],
               ["", None, None, "", "Total", "", "", "", "", "", "", "", None, None])
     a, b, c = got.rows
     assert a.energised_on == date(2026, 4, 24) and a.energised_note == ""
     assert b.energised_on is None and b.energised_note == "pre 2005"
     assert b.name == "Dairygold, Mitchelstown (2)"
-    assert c.project_ref == "DG93A" and c.voltage == "LV" and c.energised_on is None
+    assert c.project_ref == "DG93A" and c.voltage == "LV" and c.energised_on == date(2010, 2, 1)
     assert got.printed_total_mw is None  # the energised renewable list prints a blank total
+
+
+def test_energised_row_without_date_raises():
+    with pytest.raises(parse.ParseError):
+        dso(DSO_E_HEAD, DSO_E_HEAD2,
+            ["DG93A", None, None, "x", "Wind", "1", "", "Y", "Gate 2", "Energised", "", "LV",
+             None, None])
 
 
 def test_dso_shifted_columns_raise():
@@ -140,3 +147,30 @@ def test_real_file(source_id):
     assert got.printed_total_mw == printed
     if printed is not None:
         assert abs(sum(r.mec_mw for r in got.rows) - printed) <= 1
+
+
+# Fields read off the PDFs by eye (and by the g2 reviewer's own extract_text).
+REAL_ROWS = {
+    "TG443": ("eirgrid.tso_contracted_wind", "Ardderroo Wind Farm Extension", "Wind",
+              Decimal("18.0"), "Knockranny", "", "110 kV", "ECP-2.1", None),
+    "TG454": ("eirgrid.tso_contracted_nonwind", "Ballycosney Thornsberry Battery Storage",
+              "Battery", Decimal("150.0"), "Thornsberry", "", "110 kV", "ECP-2.3", None),
+    "DG1127": ("esb.dso_energised_renewable", "Liss Solar Farm (prev Lands at Liss)", "Solar",
+               Decimal(4), "OLDCASTLE", "MULLINGAR", "20 kV", "Non GPA", date(2025, 7, 1)),
+    "DG05": ("esb.dso_energised_renewable", "Kealkil Wind Farm", "Wind", Decimal("8.5"), "",
+             "BALLYLICKY", "38 kV", "Pre-Gate", date(2006, 12, 7)),
+    "MZ953": ("esb.dso_contracted_renewable", "Tirlan Ballyragget Solar", "Solar", Decimal(0),
+              "BALLYCONRA", "BALLYRAGGET", "38 kV", "Zero Mec", None),
+}
+
+
+@pytest.mark.parametrize("ref", REAL_ROWS)
+def test_real_row_fields(ref):
+    source_id, *want = REAL_ROWS[ref]
+    sha = REAL[source_id][0]
+    files = list((ROOT / "data" / "raw" / source_id).glob(f"*-{sha}.pdf"))
+    if not files:
+        pytest.skip("raw file not on this machine")
+    (r,) = [r for r in parse.PARSERS[source_id](files[0].read_bytes()).rows if r.project_ref == ref]
+    assert [r.name, r.technology, r.mec_mw, r.node, r.station_110kv, r.voltage,
+            r.processing_type, r.energised_on] == want
