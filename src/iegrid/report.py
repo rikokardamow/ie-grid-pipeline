@@ -207,7 +207,8 @@ def _caveats(editions: dict[str, date]) -> list[str]:
         ("Waiting time runs from the earliest signed month printed for the project in any list "
          "since 2015, carried across relabelled refs (Rosspile: TG272, 2018)."),
         "The transmission total includes interconnectors; the county list leaves them out.",
-        "Republication terms of the source lists are not yet checked.",
+        ("Not for publication: ESB Networks' terms forbid republishing its lists without "
+         "written permission (PARKING.md)."),
     ]
 
 
