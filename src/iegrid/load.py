@@ -61,6 +61,10 @@ def load_one(con, publication_id: int, source_id: str, content: bytes, now: date
         if parsed != text:
             raise parse.ParseError(f"refs differ from the text: parsed only {sorted(parsed - text)[:5]}, "
                                    f"text only {sorted(text - parsed)[:5]}")
+        # independent of any ref pattern: every line with a voltage is a row
+        if len(result.rows) < (kv := parse.kv_lines(content)):
+            raise parse.ParseError(f"{len(result.rows)} rows but {kv} lines carry a voltage: "
+                                   f"a row was dropped")
     else:
         text_refs = sum(parse.refs_in_text(content).values())
         if len(result.rows) != text_refs:

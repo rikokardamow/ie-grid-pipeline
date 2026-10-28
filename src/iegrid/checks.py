@@ -481,5 +481,5 @@ def transitions_table(con, n: int | None = None) -> list[tuple]:
     from iegrid import metrics
 
     rows = [(t.source_id.split(".")[1], f"{t.before} -> {t.after}", t.kind, t.ref, t.name[:40],
-             float(t.mw), t.confirmed) for t in metrics.transitions(con)]
+             float(t.mw), t.by_ref, t.by_name) for t in metrics.transitions(con)]
     return rows[:n] if n else rows

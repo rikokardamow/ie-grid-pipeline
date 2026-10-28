@@ -208,7 +208,7 @@ def ecp_results(con) -> list[tuple[date, str]]:
     quarter late: the store has its November 2022 edition."""
     from iegrid import metrics
 
-    return [(d, b) for b, d in metrics.batch_dates(con).items() if b.startswith("ECP-2")]
+    return [(d.when, b) for b, d in metrics.batch_dates(con).items() if b.startswith("ECP-2")]
 
 
 def queue_growth(con):
@@ -387,48 +387,47 @@ def queue_flows(con):
 # --- g5: how long it takes ----------------------------------------------------------
 
 def batch_burndown(con):
-    """Distribution MW of each ECP batch energised so far, against MW still contracted."""
+    """Share of each ECP batch's distribution MW energised, by months since its results,
+    so batches are compared at the same age (g5 review: a snapshot of shares compares a
+    seven-year-old batch with a one-year-old one)."""
     from iegrid import metrics
 
-    rows = [b for b in metrics.dso_burndown(con) if b.batch.startswith("ECP")]
-    oldest = rows[0]
-    recent = []
-    for b in reversed(rows):
-        if b.share >= 0.02:
-            break
-        recent.append(b)
-    since = min(b.result for b in recent) if recent else None
-    title = (f"Distribution projects from {oldest.batch} ({oldest.result:%Y}): {oldest.share:.0%} "
-             f"energised" + (f"; every batch since {since:%Y}: under 2%" if since else ""))
-    fig, ax = plt.subplots(figsize=(11, 5.4), dpi=150)
+    rows = [b for b in metrics.burndown(con) if b.batch.startswith("ECP")]
+    at = 36
+    old = [b for b in rows if b.age_months >= at]
+    later = [b.share_at(at) for b in old[1:]]
+    title = (f"At three years, {old[0].batch} had {old[0].share_at(at):.0%} of its distribution MW "
+             f"energised; later batches {min(later):.0%}–{max(later):.0%}")
+    fig, ax = plt.subplots(figsize=(11, 5.8), dpi=150)
     _style(fig, ax)
-    y = list(range(len(rows)))
-    shares = [b.share * 100 for b in rows]
-    ax.barh(y, shares, height=0.6, color=TOKENS["series1"])
-    for yi, b in zip(y, rows, strict=True):
-        total = b.energised_n + b.contracted_n
-        # a median of a few small energised projects says nothing about the batch
-        wait = (f" · median {b.median_months_to_energise / 12:.1f} yrs to energise"
-                if b.median_months_to_energise is not None and b.energised_n >= 3
-                and b.share >= 0.05 else "")
-        ax.text(b.share * 100 + 1, yi,
-                f"{b.share:.0%} · {b.energised_n} of {total} projects, "
-                f"{float(b.energised_mw):.0f} of {float(b.energised_mw + b.contracted_mw):.0f} MW"
-                f"{wait}", va="center", fontsize=9, color=TOKENS["text"])
-    ax.set_yticks(y, [f"{b.batch}  ({b.result:%b %Y})" for b in rows], fontsize=9.5)
-    ax.invert_yaxis()
-    ax.set_xlim(0, 100)
-    ax.set_xlabel("% of the batch's distribution MW energised", color=TOKENS["muted"],
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
+    ax.axvline(at, color=TOKENS["border"], linewidth=1, zorder=1)
+    ax.text(at, 51, "3 years", ha="center", fontsize=8.5, color=TOKENS["muted"])
+    for i, b in enumerate(rows):
+        xs = list(range(b.age_months + 1))
+        ys = [b.share_at(m) * 100 for m in xs]
+        color = TOKENS["series1"] if i == 0 else TOKENS["series3"]
+        ax.step(xs, ys, where="post", color=color, linewidth=2 if i == 0 else 1.6, zorder=3)
+        ax.annotate(f"{b.batch} {ys[-1]:.0f}%", (xs[-1], ys[-1]), xytext=(5, 0),
+                    textcoords="offset points", va="center", fontsize=8.5,
+                    color=TOKENS["text"] if i == 0 else TOKENS["muted"])
+    ax.set_xlim(0, max(b.age_months for b in rows) + 14)
+    ax.set_ylim(0, 54)
+    ax.set_xticks(range(0, max(b.age_months for b in rows) + 1, 12),
+                  [f"{m // 12}y" for m in range(0, max(b.age_months for b in rows) + 1, 12)])
+    ax.set_xlabel("time since the batch's first results publication", color=TOKENS["muted"],
                   fontsize=9.5)
-    fig.subplots_adjust(left=0.18, right=0.97, top=0.78, bottom=0.15)
-    as_of = con.execute("""
-        select max(as_of) from publication where source_id like 'esb.dso_%'
-    """).fetchone()[0]
+    ax.set_ylabel("% of the batch's distribution MW energised", color=TOKENS["muted"],
+                  fontsize=9.5)
+    ax.spines["left"].set_visible(False)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.76, bottom=0.14)
+    labels = "; ".join(f"{b.batch} {b.result.label()}" for b in rows)
     _frame(fig, title,
-           "Projects offered a distribution connection in each ECP batch (month of its first "
-           "results publication): MW on ESB's energised lists against MW still on its "
-           "contracted lists. Withdrawn projects are on neither, so this is a share of the "
-           "projects still in the queue.",
-           f"Source: ESB Networks DSO energised and contracted lists, as of {fmt_date(as_of)}; "
-           f"ECP batch results publications · {LICENCE}")
+           f"Batch offers only (Non-Batch offers are processed as they come). MW on ESB's "
+           f"energised lists by energisation date, against MW still on its contracted lists; "
+           f"withdrawn projects are on neither, so this is a share of the projects still in "
+           f"the queue. Results: {labels}.",
+           f"Source: ESB Networks DSO energised and contracted lists, as of "
+           f"{fmt_date(metrics.latest_dso_as_of(con))}; ECP batch results publications · {LICENCE}")
     return fig

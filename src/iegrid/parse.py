@@ -34,7 +34,7 @@ import pdfplumber
 
 # Bump when the parser changes what it reads. Re-parsing a publication under a
 # new version adds rows; rows from older versions stay.
-PARSER_VERSION = 2  # g3b: older TSO layouts read by word position
+PARSER_VERSION = 3  # g5 review: bare-number refs, and the kV-line row count
 
 # A parse is only stored if its rows equal the refs counted in the page text and,
 # where the list prints a total, its MW are within this of it.
@@ -133,12 +133,14 @@ def parse_tso(content: bytes) -> Parsed:
     tries = [Parsed(g.rows, g.printed_total_mw if g.printed_total_mw is not None else total,
                     g.layout, "set") for g in tries]
     text = text_ref_set(content)
+    kv = kv_lines(content)
     tying = []
     for got in tries:
         mw_sum = sum((r.mec_mw for r in got.rows), start=Decimal(0))
         if (got.rows and got.printed_total_mw is not None
                 and abs(mw_sum - got.printed_total_mw) <= TIE_MW
-                and {r.project_ref for r in got.rows} == text):
+                and {r.project_ref for r in got.rows} == text
+                and len(got.rows) >= kv):
             tying.append(got)
     if tying:
         # Both tie: the one that read more of each row wins. The table finder can lose
@@ -297,13 +299,32 @@ TEXT_REF_ANY = re.compile(
 
 
 def text_ref_set(content: bytes) -> set[str]:
-    """Every ref in the page text, wherever on the line (brackets within a line left out)."""
+    """Every ref in the page text, wherever on the line (brackets within a line left out),
+    and a ref printed as a bare number right after the voltage."""
+    from iegrid.parse_tso_words import BARE_REF
+
     out: set[str] = set()
     with pdfplumber.open(io.BytesIO(content)) as pdf:
         for page in pdf.pages:
             text = re.sub(r"\([^)\n]*\)", " ", page.extract_text() or "")
             out |= {r.rstrip(".") for r in TEXT_REF_ANY.findall(text.replace("\n", " \n") + " ")}
+            for line in text.splitlines():
+                if not TEXT_REF_ANY.search(line + " ") and (m := BARE_REF.search(line)):
+                    out.add(m.group(1))
     return out
+
+
+KV_LINE = re.compile(r"\b\d+\s?kV\b|\bkV\b", re.IGNORECASE)
+
+
+def kv_lines(content: bytes) -> int:
+    """Lines that carry a voltage: every row of an EirGrid contracted list has one, so a
+    parse with fewer rows dropped one, whatever its ref (g5 review). Garbled type ('k- V')
+    can hide a row's voltage, so a parse may have more rows than this, never fewer."""
+    with pdfplumber.open(io.BytesIO(content)) as pdf:
+        return sum(1 for page in pdf.pages for line in (page.extract_text() or "").splitlines()
+                   if KV_LINE.search(line) and not line.strip().lower().startswith(
+                       ("total", "note", "*")))
 
 
 def refs_in_text(content: bytes) -> dict[int, int]:

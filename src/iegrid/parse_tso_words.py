@@ -35,6 +35,8 @@ import pdfplumber
 
 # TG/DG refs, the older P-series (P230, P283A) and the demand-side D40d
 REF = re.compile(r"^(?:TG|DG|P|D)\d+(?:-\d+)?[A-Za-z]?\.?$")
+# A ref the list printed as a bare number after the voltage
+BARE_REF = re.compile(r"\d+\s?kV\s+(\d{1,3})\s+(?=[A-Z])", re.IGNORECASE)
 # Cramped type can run a ref into the next word ("TG286Gorman", "P283GAorman"): the
 # ref is taken from the start of the token, the rest goes back into the line.
 GLUED = re.compile(r"^((?:TG|DG|P|D)\d+(?:-\d+)?[A-Za-z]?)(?=[A-Z][a-z])(.+)$")
@@ -99,7 +101,16 @@ def parse_line(line: str) -> dict | None:
             tokens.append(t)
     refs = [i for i, t in enumerate(tokens) if REF.match(t)]
     if not refs:
-        return None
+        # a ref printed as a bare number right after the voltage ("Wexford 110 kV 19
+        # Wexford Synchronous Condenser ...", Sep 2025): the g5 review found it dropped
+        m = BARE_REF.search(line)
+        if m is None:
+            return None
+        bare = m.group(1)
+        refs = [i for i, t in enumerate(tokens)
+                if t == bare and i > 0 and tokens[i - 1].lower().endswith("kv")][:1]
+        if not refs:
+            return None
     r = refs[0]
     ref = tokens[r].rstrip(".")
     before, after = tokens[:r], tokens[r + 1:]
