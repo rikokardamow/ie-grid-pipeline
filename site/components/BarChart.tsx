@@ -5,14 +5,15 @@ export type Bar = { label: string; value: number | null; text: string; note?: st
 // Horizontal bars, one colour, the value written at the end of each bar (CHARTS.md:
 // direct labels, title states the finding, footer names the source). A bar with no
 // value prints its note instead. The same rows are underneath as a table.
-export function BarChart({ title, subtitle, footer, bars, valueHeading }: {
+export function BarChart({ title, subtitle, footer, bars, valueHeading, scaleMax }: {
   title: string;
   subtitle: string;
   footer: string;
   bars: Bar[];
   valueHeading: string;
+  scaleMax?: number; // shares are drawn against 1 (100%), not against the largest bar
 }) {
-  const max = Math.max(...bars.map((b) => b.value ?? 0)) || 1;
+  const max = scaleMax ?? (Math.max(...bars.map((b) => b.value ?? 0)) || 1);
   return (
     <figure className="card chart bar-chart">
       <figcaption>

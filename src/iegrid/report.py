@@ -337,8 +337,9 @@ def render(rep: dict, path: Path) -> Path:
     y -= 0.14
 
     wh = rep["where"]
-    head(f"Where · counties with most generation waiting ({wh['generation_placed_share']:.0%} of "
-         f"it placed)")
+    placed = wh["generation_placed_share"]  # None when nothing is placed yet
+    head("Where · counties with most generation waiting"
+         + (f" ({placed:.0%} of it placed)" if placed is not None else ""))
     text("  ·  ".join(f"{c['county']} {c['gw']:.1f} GW" for c in wh["counties"][:TOP]), x=0.08)
 
     head("Read with care")

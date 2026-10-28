@@ -61,7 +61,7 @@ export type Report = {
     burndown_first_at: number | null;
     burndown_later_max_at: number | null;
   };
-  where: { generation_placed_share: number; counties: { county: string; gw: number }[] };
+  where: { generation_placed_share: number | null; counties: { county: string; gw: number }[] };
   caveats: string[];
 };
 
@@ -79,17 +79,37 @@ const REQUIRED: [string, (r: Report) => unknown][] = [
   ["where.generation_placed_share", (r) => r.where?.generation_placed_share],
 ];
 
-export function newestReportFile(dir: string = REPORTS): string {
+function reportFiles(dir: string): string[] {
   const names = readdirSync(dir).filter((n) => REPORT_NAME.test(n)).sort();
   if (names.length === 0) {
     throw new Error(`No report in ${dir}. Run: uv run python -m iegrid.report`);
   }
+  return names;
+}
+
+export function newestReportFile(dir: string = REPORTS): string {
+  const names = reportFiles(dir);
   return join(dir, names[names.length - 1]);
 }
 
+// Like report.last_report: the newest file that reads as JSON; one cut off mid-write
+// is skipped for the one before it.
 export function loadReport(dir: string = REPORTS): Report {
-  const file = newestReportFile(dir);
-  const report = JSON.parse(readFileSync(file, "utf8")) as Report;
+  const names = reportFiles(dir);
+  let file = "";
+  let report: Report | undefined;
+  for (const name of names.reverse()) {
+    try {
+      report = JSON.parse(readFileSync(join(dir, name), "utf8")) as Report;
+      file = join(dir, name);
+      break;
+    } catch {
+      continue;
+    }
+  }
+  if (report === undefined) {
+    throw new Error(`No readable report in ${dir}. Run: uv run python -m iegrid.report`);
+  }
   const missing = REQUIRED.filter(([, get]) => get(report) === undefined).map(([k]) => k);
   if (missing.length > 0) {
     throw new Error(

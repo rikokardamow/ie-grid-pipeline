@@ -16,7 +16,13 @@ if (!existsSync(root)) {
 }
 
 createServer((req, res) => {
-  const path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
+  let path;
+  try {
+    path = normalize(decodeURIComponent(new URL(req.url, "http://x").pathname));
+  } catch {
+    res.writeHead(400).end("Bad request");
+    return;
+  }
   let file = join(root, path);
   if (!file.startsWith(root)) {
     res.writeHead(403).end();

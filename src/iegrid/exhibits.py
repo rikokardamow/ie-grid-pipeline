@@ -25,7 +25,7 @@ TOKENS = {
     "bg": "#FFFFFF", "border": "#DCE3EC", "text": "#0B1F3A", "muted": "#5B6878",
     "series1": "#0F2A4A", "series3": "#7D8996", "accent": "#1F5FBF",
 }
-LICENCE = "licence not yet checked (PARKING.md)"
+LICENCE = "not for publication: ESB Networks' terms (PARKING.md)"
 
 # The lists use about 30 technology labels. These are the groups a reader knows.
 TECH_GROUP = {

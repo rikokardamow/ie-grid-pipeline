@@ -7,8 +7,17 @@ import type { Project, Report } from "@/lib/report";
 // Rows shown before "show all"; a layout choice, never printed.
 const TOP = 10;
 
-const EIRGRID = "EirGrid contracted lists · Supported by EirGrid Group Data";
-const ESB = "ESB Networks DSO lists";
+const EIRGRID = "EirGrid contracted lists, Supported by EirGrid Group Data";
+const ESB = "ESB Networks DSO lists, © ESB Networks, not for republication";
+const OSM = "substations © OpenStreetMap contributors, ODbL";
+
+const span = (editions: string[]) => (editions.length > 0 ? `, ${editions.join("; ")}` : "");
+
+// "As of" for a chart: the editions its data comes from, never the report date
+function asOf(editions: Record<string, string>, ids: string[]) {
+  const dates = [...new Set(ids.map((id) => editions[id]).filter(Boolean))].sort();
+  return dates.length > 0 ? ` · As of ${dates.join(" and ")}` : "";
+}
 
 function ProjectTable({ label, rows, extra }: {
   label: string;
@@ -128,15 +137,21 @@ export function Dashboard({ report }: { report: Report }) {
       <section aria-labelledby="moved">
         <h2 id="moved">What moved</h2>
         <div className="card">
-          <h3>Transmission, {tso.editions.join("; ")}</h3>
-          <p>
-            {tso.joined_count} projects joined ({gw(tso.joined_gw)}) and {tso.left_count} left (
-            {gw(tso.left_gw)}).{" "}
-            {tso.all_confirmed
-              ? "Every one is confirmed by name as well as ref."
-              : "Some are not confirmed by name: check them in the lists."}
-          </p>
-          <ProjectTable label="Projects that joined the transmission lists" rows={tso.joined} />
+          <h3>Transmission{span(tso.editions)}</h3>
+          {tso.joined.length + tso.left.length === 0 ? (
+            <p>No project joined or left the transmission lists.</p>
+          ) : (
+            <p>
+              {tso.joined_count} projects joined ({gw(tso.joined_gw)}) and {tso.left_count} left (
+              {gw(tso.left_gw)}).{" "}
+              {tso.all_confirmed
+                ? "Every one is confirmed by name as well as ref."
+                : "Some are not confirmed by name: check them in the lists."}
+            </p>
+          )}
+          {tso.joined.length > 0 && (
+            <ProjectTable label="Projects that joined the transmission lists" rows={tso.joined} />
+          )}
           {tso.left.length > 0 && (
             <>
               <h3>Left (connected, withdrawn or moved)</h3>
@@ -145,7 +160,7 @@ export function Dashboard({ report }: { report: Report }) {
           )}
         </div>
         <div className="card">
-          <h3>Distribution, {dso.editions.join("; ")}</h3>
+          <h3>Distribution{span(dso.editions)}</h3>
           <p>
             {dso.count} projects newly energised ({mw(dso.mw)}).
             {dso.newly_listed_count > 0 &&
@@ -166,8 +181,9 @@ export function Dashboard({ report }: { report: Report }) {
         <BarChart
           title={burndownTitle(report)}
           subtitle={`Share of each ECP batch's distribution projects energised ${stuck.at_years} years after its results, by MW`}
-          footer={`Source: ${ESB}; ECP batch results · As of ${report.editions["esb.dso_energised_renewable"] ?? stuck.as_of}`}
+          footer={`Source: ${ESB}; ECP batch results${asOf(report.editions, ["esb.dso_energised_renewable", "esb.dso_energised_nonrenewable"])}`}
           valueHeading={`Energised at ${stuck.at_years} years`}
+          scaleMax={1}
           bars={stuck.burndown.map((b) => ({
             label: b.batch,
             value: b.share_at,
@@ -193,8 +209,15 @@ export function Dashboard({ report }: { report: Report }) {
         <h2 id="where">Where</h2>
         <BarChart
           title={top ? `${top.county} has the most contracted generation waiting: ${gw(top.gw)}` : "No project placed in a county yet"}
-          subtitle={`Contracted GW by county, ${pct(where.generation_placed_share)} of generation MW placed`}
-          footer={`Source: ${EIRGRID}; ${ESB}; ECP batch results; substations © OpenStreetMap contributors, ODbL · As of ${report.report_date}`}
+          subtitle={`Contracted GW by county, transmission and distribution, interconnectors left out${
+            where.generation_placed_share === null ? "" : `; ${pct(where.generation_placed_share)} of generation MW placed`
+          }`}
+          footer={`Source: ${EIRGRID}; ${ESB}; ECP batch results; ${OSM}${asOf(report.editions, [
+            "eirgrid.tso_contracted_wind",
+            "eirgrid.tso_contracted_nonwind",
+            "esb.dso_contracted_renewable",
+            "esb.dso_contracted_nonrenewable",
+          ])}`}
           valueHeading="Contracted GW"
           bars={where.counties.map((c) => ({ label: c.county, value: c.gw, text: gw(c.gw) }))}
         />
