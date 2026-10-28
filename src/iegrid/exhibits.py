@@ -3,21 +3,23 @@
 Drawn to the record's chart rules (energy-forecasting docs/CHARTS.md): the title
 states the finding and is computed from the data, the subtitle gives the units,
 and a footer names source, licence and as-of. Colours are the record's tokens
-(site/styles/tokens.css), light mode, since these are exported PNGs.
+(site/styles/tokens.css), light mode, since the same figure is exported as a PNG.
+
+Each function returns a matplotlib figure: a notebook shows it inline, and
+save() writes it to data/exhibits/<name>.png at 1650x840-odd pixels. No backend
+is forced here, so Jupyter's inline display works.
 """
 
 from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
-import matplotlib
 import matplotlib.dates
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from iegrid import parse
+from iegrid import parse, store
 
 TOKENS = {
     "bg": "#FFFFFF", "border": "#DCE3EC", "text": "#0B1F3A", "muted": "#5B6878",
@@ -72,6 +74,21 @@ def fmt_date(d: date) -> str:
     return f"{d:%-d %b %Y}"
 
 
+EXHIBITS = store.ROOT / "data" / "exhibits"
+
+
+def save(fig, name: str, out_dir: Path = EXHIBITS) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{name}.png"
+    fig.savefig(path, facecolor=fig.get_facecolor())
+    return path
+
+
+def _span(values: list[int]) -> str:
+    lo, hi = min(values), max(values)
+    return f"{lo}" if lo == hi else f"{lo}–{hi}"
+
+
 # --- g1: how fresh the lists are -------------------------------------------------
 
 def publication_lag(con):
@@ -85,8 +102,8 @@ def publication_lag(con):
     lags = [r[3] for r in rows]
     tso = [r[3] for r in rows if r[0].startswith("eirgrid")]
     dso = [r[3] for r in rows if r[0].startswith("esb")]
-    title = (f"EirGrid's lists go up {min(tso)} days after their as-of date; "
-             f"ESB's take {min(dso)}–{max(dso)}")
+    title = (f"EirGrid's lists go up {_span(tso)} days after their as-of date; "
+             f"ESB's take {_span(dso)}")
     fig, ax = plt.subplots(figsize=(11, 4.6), dpi=150)
     _style(fig, ax)
     labels = [r[0].split(".", 1)[1].replace("_", " ") for r in rows]
@@ -115,14 +132,12 @@ def publication_lag(con):
 def contracted_by_technology(con):
     """MW with a signed connection agreement, not yet energised, latest editions."""
     rows = con.execute(f"""
-        with latest as (
-            select source_id, max(as_of) as as_of from publication
-            where source_id like '%contracted%' and fetched_from is null group by 1)
         select p.source_id like 'eirgrid%' as transmission, r.technology, p.as_of,
                sum(r.mec_mw) as mw
         from project_row r join publication p using (publication_id)
-        join latest l on l.source_id = p.source_id and l.as_of = p.as_of
-        where r.parser_version = {int(parse.PARSER_VERSION)} and r.status = 'Contracted'
+        join ({store.LATEST_LIVE}) l using (publication_id)
+        where p.source_id like '%contracted%' and r.status = 'Contracted'
+          and r.parser_version = {int(parse.PARSER_VERSION)}
         group by all
     """).fetchall()
     groups: dict[str, list[Decimal]] = {}
@@ -168,6 +183,21 @@ def contracted_by_technology(con):
            f"{fmt_date(as_of[True])}; ESB Networks DSO contracted renewable and non-renewable "
            f"lists, as of {fmt_date(as_of[False])} · {LICENCE}")
     return fig
+
+
+def _top_groups(con, source_id: str, n: int) -> str:
+    """'solar 4.5 GW, battery storage 1.9 GW, ...' for the newest live edition of a list."""
+    rows = con.execute(f"""
+        select r.technology, sum(r.mec_mw) from project_row r
+        join ({store.LATEST_LIVE}) l using (publication_id)
+        where l.source_id = ? and r.parser_version = {int(parse.PARSER_VERSION)}
+        group by 1
+    """, [source_id]).fetchall()
+    groups: dict[str, Decimal] = {}
+    for tech, mw in rows:
+        groups[group(tech)] = groups.get(group(tech), Decimal(0)) + mw
+    best = sorted(groups.items(), key=lambda kv: -kv[1])[:n]
+    return ", ".join(f"{g.lower()} {float(mw) / 1000:.1f} GW" for g, mw in best)
 
 
 # --- g3: how the queue has grown --------------------------------------------------
@@ -218,12 +248,13 @@ def queue_growth(con):
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
     ax.set_ylabel("GW contracted, not yet connected", color=TOKENS["muted"], fontsize=9.5)
     ax.spines["left"].set_visible(False)
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.78, bottom=0.17)
+    fig.subplots_adjust(left=0.07, right=0.97, top=0.73, bottom=0.17)
+    top = _top_groups(con, "eirgrid.tso_contracted_nonwind", 3)
     _frame(fig, title,
-           f"Total maximum export capacity printed on each EirGrid contracted list, "
-           f"{len(rows)} editions from {n0[0]:%b %Y}. Each dot is one edition; rules mark "
-           f"the results of each connection batch (ECP). Non-wind is now mostly solar, "
-           f"battery and gas.",
-           f"Source: EirGrid TSO contracted wind and non-wind lists, {len(rows)} editions read "
-           f"from the Internet Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(n1[0])}")
+           f"Total maximum export capacity printed on each EirGrid contracted list: "
+           f"{len(nonwind)} non-wind and {len(wind)} wind editions from {n0[0]:%b %Y}. Each dot "
+           f"is one edition; rules mark the results of each connection batch (ECP). The largest "
+           f"non-wind groups now: {top}.",
+           f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
+           f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(n1[0])}")
     return fig

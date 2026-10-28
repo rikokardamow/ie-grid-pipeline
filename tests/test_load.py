@@ -132,9 +132,11 @@ def test_failed_parse_is_recorded_and_not_retried_until_version_bump(con, tmp_pa
     assert not load.run(con, NOW).ok
     assert con.execute("select parser_version, error from parse_failure").fetchall() == [
         (1, "bad row")]
-    assert load.run(con, NOW).ok  # not retried at the same version
+    load.run(con, NOW)
+    assert len(fake_parser) == 1  # not retried at the same version
     monkeypatch.setattr(parse, "PARSER_VERSION", 2)
-    assert not load.run(con, NOW).ok  # tried again under a new parser
+    load.run(con, NOW)
+    assert len(fake_parser) == 2  # tried again under a new parser
 
 
 def test_printed_totals_read_even_when_rows_fail(con, tmp_path, fake_parser, monkeypatch):
@@ -146,3 +148,37 @@ def test_printed_totals_read_even_when_rows_fail(con, tmp_path, fake_parser, mon
         (parse.Decimal("1714.23"), "Total TSO Contracted Wind")]
     load.run(con, NOW)  # read once
     assert con.execute("select count(*) from edition_total").fetchone()[0] == 1
+
+
+def test_unreadable_raw_file_is_retried_not_recorded(con, tmp_path, fake_parser):
+    pid = add_pub(con, tmp_path, b"ok", "j" * 64)
+    (tmp_path / ("j" * 64 + ".pdf")).unlink()
+    s = load.run(con, NOW)
+    assert not s.ok and any("will retry" in e for e in s.errors)
+    assert con.execute("select count(*) from parse_failure").fetchone()[0] == 0
+    assert [p[0] for p in load.pending(con)] == [pid]
+
+
+def test_a_parser_crash_is_a_parse_failure(con, tmp_path, fake_parser, monkeypatch):
+    def crash(content):
+        raise IndexError("list index out of range")
+    monkeypatch.setitem(parse.PARSERS, PUB.source_id, crash)
+    add_pub(con, tmp_path, b"ok", "k" * 64)
+    load.run(con, NOW)
+    assert con.execute("select error from parse_failure").fetchone()[0].startswith("IndexError")
+
+
+def test_newest_live_edition_that_fails_stays_loud(con, tmp_path, fake_parser):
+    add_pub(con, tmp_path, b"broken", "l" * 64)  # PUB is a live edition (no fetched_from)
+    assert not load.run(con, NOW).ok
+    s = load.run(con, NOW)  # not re-parsed, but still reported
+    assert not s.ok and "newest edition" in s.errors[0]
+
+
+def test_archived_edition_that_fails_goes_quiet(con, tmp_path, fake_parser):
+    raw = tmp_path / "m.pdf"
+    raw.write_bytes(b"broken")
+    store.insert(con, store.Publication(**{**PUB.__dict__, "sha256": "m" * 64,
+                                           "raw_path": str(raw), "fetched_from": "https://web.archive.org/x"}))
+    assert not load.run(con, NOW).ok
+    assert load.run(con, NOW).ok

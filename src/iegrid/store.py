@@ -169,6 +169,13 @@ def insert(con: duckdb.DuckDBPyConnection, pub: Publication) -> int | None:
     return row[0] if row else None
 
 
+# The newest live edition of each list, one publication_id per source. Two editions
+# can share an as-of (a re-issue), so this picks by as-of, then publication time.
+LATEST_LIVE = """
+    select source_id, arg_max(publication_id, (as_of, published_at)) as publication_id
+    from publication where fetched_from is null group by source_id
+"""
+
 SNAPSHOTS = DEFAULT_DB.parent / "snapshots"
 KEEP_SNAPSHOTS = 5
 

@@ -46,7 +46,12 @@ def pending(con, version: int | None = None) -> list[tuple[int, str, str]]:
 
 
 def load_one(con, publication_id: int, source_id: str, content: bytes, now: datetime) -> str:
-    result = parse.PARSERS[source_id](content)
+    try:
+        result = parse.PARSERS[source_id](content)
+    except parse.ParseError:
+        raise
+    except Exception as exc:  # the parser choking on a layout is a parse failure too
+        raise parse.ParseError(f"{type(exc).__name__}: {exc}") from exc
     text_refs = sum(parse.refs_in_text(content).values())
     total = sum((r.mec_mw for r in result.rows), start=parse.Decimal(0))
     # The tie gates the store: a parse that skipped a page or misread a MEC stores nothing.
@@ -79,7 +84,9 @@ def load_one(con, publication_id: int, source_id: str, content: bytes, now: date
 
 def read_totals(con, now: datetime) -> list[str]:
     """The printed total of every EirGrid contracted edition that has none stored yet,
-    whether or not its rows parse. Returns problems, if any."""
+    whether or not its rows parse. Returns problems with the files themselves (a raw
+    file that can't be read), not editions that print no total or two different ones:
+    those are reported by notebook 15, so they don't fail every weekly run."""
     problems = []
     todo = con.execute(
         f"""select p.publication_id, p.raw_path from publication p
@@ -88,10 +95,14 @@ def read_totals(con, now: datetime) -> list[str]:
         """, list(parse.TOTAL_SOURCES)).fetchall()
     for publication_id, raw_path in todo:
         try:
-            got = parse.printed_total((store.ROOT / raw_path).read_bytes())
-        except Exception as exc:  # noqa: BLE001 - reported, the rest carry on
+            content = (store.ROOT / raw_path).read_bytes()
+        except OSError as exc:
             problems.append(f"total #{publication_id}: {exc}")
             continue
+        try:
+            got = parse.printed_total(content)
+        except parse.ParseError:
+            continue  # two different totals in one file: left out, shown in notebook 15
         if got is not None:
             con.execute("insert into edition_total values (?, ?, ?, ?)",
                         [publication_id, got[0], got[1], now])
@@ -106,11 +117,38 @@ def run(con, now: datetime | None = None) -> Summary:
         try:
             content = (store.ROOT / raw_path).read_bytes()
             summary.parsed.append(load_one(con, publication_id, source_id, content, now))
-        except Exception as exc:  # noqa: BLE001 - one bad publication must not stop the rest
+        except parse.ParseError as exc:
+            # The content can't be read by this parser: record it, so it isn't retried
+            # every run, only when PARSER_VERSION goes up.
             summary.errors.append(f"{source_id} #{publication_id}: {exc}")
             con.execute("insert into parse_failure values (?, ?, ?, ?) on conflict do nothing",
                         [publication_id, parse.PARSER_VERSION, str(exc)[:500], now])
+        except Exception as exc:  # noqa: BLE001 - one bad publication must not stop the rest
+            # A missing raw file, a database hiccup: not the content's fault. Retried next run.
+            summary.errors.append(f"{source_id} #{publication_id} (will retry): {exc}")
+    summary.errors.extend(newest_unparsed(con))
     return summary
+
+
+def newest_unparsed(con) -> list[str]:
+    """A current list whose newest live edition failed to parse: reported on every run,
+    so a publisher's layout change can't fail once and then go quiet."""
+    sources = list(parse.PARSERS)
+    rows = con.execute(
+        f"""
+        with newest as (
+            select source_id, max(as_of) as as_of from publication
+            where fetched_from is null and source_id in ({", ".join("?" * len(sources))})
+            group by 1)
+        select p.source_id, p.as_of, f.error from publication p
+        join newest n on n.source_id = p.source_id and n.as_of = p.as_of
+        join parse_failure f on f.publication_id = p.publication_id and f.parser_version = ?
+        where not exists (select 1 from parse_result r where r.publication_id = p.publication_id
+                          and r.parser_version = ?)
+        """,
+        [*sources, parse.PARSER_VERSION, parse.PARSER_VERSION],
+    ).fetchall()
+    return [f"{sid}: newest edition ({as_of}) does not parse: {err}" for sid, as_of, err in rows]
 
 
 def main(argv: list[str] | None = None) -> int:

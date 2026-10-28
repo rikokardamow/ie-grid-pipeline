@@ -71,7 +71,7 @@ every stone ends in one exhibit in its notebook, as well as its checks: a chart 
 |---|---|
 | g1 | how fresh the lists are: days from as-of to publication, per list |
 | g2 | what is waiting to connect: contracted GW by technology, transmission and distribution |
-| g3 | how the queue has grown: contracted and connected GW per edition since 2009 |
+| g3 | how the queue has grown: contracted GW on transmission per edition since 2015, from each list's printed total (connected GW and 2008-2014 wait for the layout parsers, PARKING.md) |
 | g4 | where it is stuck: contracted GW by county |
 | g5 | how long it takes: share of each ecp batch energised by months since the batch result |
 | g6 | the weekly page itself |

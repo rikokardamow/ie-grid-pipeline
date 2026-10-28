@@ -15,12 +15,16 @@ ESB = "https://esbnetworks.ie/docs/default-source/publications/"
 
 
 @pytest.mark.parametrize("url, source_id", [
-    (E + "Connected%20Wind%20Report%2012Jan10.pdf", "eirgrid.tso_connected_wind"),
+    (E + "Connected%20Wind%20Report%2012Jan10.pdf", "eirgrid.tso_dso_connected_wind"),
     (E + "Connected%20(Other%20Types%20of%20Generators)_14092009.pdf",
-     "eirgrid.tso_connected_nonwind"),
+     "eirgrid.tso_dso_connected_nonwind"),
+    (E + "Connected%20(Non-Wind%20Generators)%20-%2031%20Dec%202011.pdf",
+     "eirgrid.tso_dso_connected_nonwind"),
+    (E + "Contracted%20Wind%20Farms%20-%2030%20Sep%202011.pdf", "eirgrid.tso_dso_contracted_wind"),
+    (E + "Connected%20TSO%20Wind%20Farms%2016%20Nov%2012.pdf", "eirgrid.tso_connected_wind"),
     (E + "ConnectedTSO(Non-Wind)Generators-18thSept2015.pdf", "eirgrid.tso_connected_nonwind"),
     (E + "contractedtso(non%20wind)generators18july2013.pdf", "eirgrid.tso_contracted_nonwind"),
-    (E + "Contracted%20(Wind)%2009042009.pdf", "eirgrid.tso_contracted_wind"),
+    (E + "Contracted%20(Wind)%2009042009.pdf", "eirgrid.tso_dso_contracted_wind"),
     (E + "TSO-Wind-Contracted-31.03.2022.pdf", "eirgrid.tso_contracted_wind"),
     (E + "tso_nonwind_contracted_14.12.2018.pdf", "eirgrid.tso_contracted_nonwind"),
     (C + "Revised-TSO-Wind-Contracted-23.08.2021.pdf", "eirgrid.tso_contracted_wind"),
@@ -136,3 +140,29 @@ def test_index_down_is_reported(con, tmp_path):
         raise OSError("archive index unavailable")
     s = backfill.run(con, tmp_path, rows_for=down, get_capture=cap(PDF), now=NOW)
     assert not s.ok and len(s.outcomes["download-failed"]) == 4
+
+
+def test_text_date_far_from_the_name_is_refused_with_both_dates(con, tmp_path):
+    c = cand("Contracted-TSO-(NonWind)-Generators-22-June-2016.pdf")
+    pdf = make_pdf(["TSO Non-Wind Generators - Contracted", "it. Correct as of the 31th of May 2015"])
+    outcome, note, pid = backfill.backfill_one(con, c, tmp_path, NOW, cap(pdf))
+    assert outcome == "no-as-of" and pid is None
+    assert "2015-05-31" in note and "2016-06-22" in note
+
+
+def test_wrong_file_name_overruled_when_last_modified_agrees(con, tmp_path):
+    # "contracted-tso-non-wind-generators-7-11-2024.pdf" is month-first; the text and the
+    # server both say 11 July 2024
+    c = cand("Contracted-TSO-Non-Wind-Generators-7-11-2024.pdf")
+    pdf = make_pdf(["Correct as of 11 July 2024"])
+    lm = datetime(2024, 7, 11, 9, 43, tzinfo=UTC)
+    outcome, note, _ = backfill.backfill_one(con, c, tmp_path, NOW, cap(pdf, lm=lm))
+    assert outcome == "stored" and "Last-Modified 2024-07-11 agrees" in note
+    assert con.execute("select as_of from publication").fetchone()[0] == date(2024, 7, 11)
+
+
+def test_last_modified_cannot_rescue_a_typo(con, tmp_path):
+    c = cand("Contracted-TSO-(NonWind)-Generators-22-June-2016.pdf")
+    pdf = make_pdf(["it. Correct as of the 31th of May 2015"])
+    lm = datetime(2016, 6, 22, 9, 25, tzinfo=UTC)
+    assert backfill.backfill_one(con, c, tmp_path, NOW, cap(pdf, lm=lm))[0] == "no-as-of"

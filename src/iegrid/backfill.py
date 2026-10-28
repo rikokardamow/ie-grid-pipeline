@@ -155,14 +155,26 @@ def backfill_one(con, c: Candidate, raw_dir: Path, now: datetime,
                            "sha256 = ?", [c.source_id, sha]).fetchone()
     if existing:
         return "duplicate", f"same bytes as publication {existing[0]}", existing[0]
+    name_date = asof.date_in_name(normalised_name(c.original_url))
+    witness = ""
     try:
-        as_of = asof.as_of_from_pdf(cap.content)
-    except ValueError as exc:  # two different as-of dates in one file
-        return "no-as-of", str(exc), None
+        as_of = asof.as_of_from_pdf(cap.content, name_date)
+    except asof.AsOfConflict as exc:
+        # Two witnesses out of three: the file name can be wrong (written month-first,
+        # or an old name reused for a newer edition). If the server's Last-Modified
+        # agrees with the text, the text stands.
+        lm = cap.orig_last_modified.date() if cap.orig_last_modified else None
+        try:
+            as_of = asof.as_of_from_pdf(cap.content, lm) if lm and name_date else None
+        except asof.AsOfConflict:
+            as_of = None
+        if as_of is None:
+            return "no-as-of", f"as-of conflict: {exc}", None
+        witness = f"; file name says {name_date}, Last-Modified {lm} agrees with the text"
     except Exception as exc:  # noqa: BLE001 - a PDF pdfplumber can't open
         return "no-as-of", f"unreadable PDF: {str(exc)[:150]}", None
     if as_of is None:
-        return "no-as-of", "no as-of phrase found in the first pages", None
+        return "no-as-of", "no readable as-of phrase in the text", None
     if cap.orig_last_modified is None:
         return "no-publish-time", "the archive kept no Last-Modified for this capture", None
     path = ingest.raw_path_for(raw_dir, c.source_id, as_of, sha)
@@ -174,7 +186,7 @@ def backfill_one(con, c: Candidate, raw_dir: Path, now: datetime,
         fetched_from=f"https://web.archive.org/web/{c.capture_ts}id_/{c.original_url}",
         first_captured_at=cap.captured_at,
     ))
-    return "stored", f"as of {as_of}", pid
+    return "stored", f"as of {as_of}{witness}", pid
 
 
 def run(con, raw_dir: Path = ingest.DEFAULT_RAW, retry: bool = False,

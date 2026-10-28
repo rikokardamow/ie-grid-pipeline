@@ -59,11 +59,17 @@ def classify(url: str) -> Source | None:
 # since 2009 ("Connected Wind Report 12Jan10", "contractedtso(non wind)generators
 # 18july2013", "TSO-Wind-Contracted-31.03.2022"), and both publishers changed
 # what the lists cover:
-#   EirGrid to 2017: wind / non-wind ("other types" before 2012).
+#   EirGrid 2008-2011: TSO and DSO together ("TSO and DSO Contracted Wind Farms",
+#     "Installed Wind Capacity DSO TSO Total"); no "TSO" in the file name.
+#   EirGrid 2012-2017: TSO only, wind / non-wind.
 #   EirGrid connected from Sep 2017: renewables / non-renewables.
 #   ESB to 2023: wind / non-wind. From Q1 2024: renewable / non-renewable.
 # A list that covers something different keeps its own source_id.
 ARCHIVE_ONLY = (
+    "eirgrid.tso_dso_contracted_wind",
+    "eirgrid.tso_dso_contracted_nonwind",
+    "eirgrid.tso_dso_connected_wind",
+    "eirgrid.tso_dso_connected_nonwind",
     "eirgrid.tso_connected_wind",
     "eirgrid.tso_connected_nonwind",
     "eirgrid.tso_connected_renewable",
@@ -125,4 +131,5 @@ def classify_archived(url: str) -> str | None:
     if not (nonwind or "wind" in name):
         return None
     kind = "contracted" if contracted else "connected"
-    return f"eirgrid.tso_{kind}_{'nonwind' if nonwind else 'wind'}"
+    scope = "tso" if "tso" in name else "tso_dso"  # every 2008-2011 list covers both
+    return f"eirgrid.{scope}_{kind}_{'nonwind' if nonwind else 'wind'}"

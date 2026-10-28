@@ -14,6 +14,7 @@ import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
+from pathlib import Path
 
 from iegrid.sources import file_name
 from iegrid.store import ROOT
@@ -176,12 +177,14 @@ def hand_count_pages(con) -> str:
 
 def by_technology(con) -> str:
     from iegrid import parse
+    from iegrid.store import LATEST_LIVE
 
     return table(con, f"""
-        select p.source_id, r.technology, count(*) as projects, sum(r.mec_mw)::decimal(12,1) as mw
-        from project_row r join publication p using (publication_id)
+        select l.source_id, r.technology, count(*) as projects,
+               sum(r.mec_mw)::decimal(12,1) as mw
+        from project_row r join ({LATEST_LIVE}) l using (publication_id)
         where r.parser_version = {int(parse.PARSER_VERSION)}
-        group by all order by p.source_id, mw desc
+        group by all order by l.source_id, mw desc
     """)
 
 
@@ -265,3 +268,66 @@ def editions(con) -> str:
     from iegrid import parse
 
     return table(con, EDITIONS_SQL.format(v=int(parse.PARSER_VERSION)))
+
+
+def prefixes_without_editions(con) -> list[str]:
+    """Archive prefixes that contributed no edition: an index that was down, or a
+    publisher that moved. backfill_found can't record what the index never listed."""
+    from iegrid.sources import ARCHIVE_PREFIXES
+
+    urls = [r[0] for r in con.execute("select original_url from backfill_found").fetchall()]
+    return [p for p in ARCHIVE_PREFIXES
+            if not any(p.rstrip("*").split("/", 1)[0] in u and
+                       p.rstrip("*").split("/", 1)[1] in u for u in urls)]
+
+
+def recheck_no_as_of(con, cache: Path | None = None) -> list[str]:
+    """Re-read every 'no-as-of' edition from the archive cache with today's reader.
+    A reason that no longer holds (the reader now finds a date) is listed."""
+    from iegrid import asof, backfill
+    from iegrid.sources import normalised_name
+
+    cache = cache or backfill.CACHE
+    rows = con.execute("""
+        select archive_digest, arg_max(original_url, found_id), arg_max(outcome, found_id)
+        from backfill_found group by 1
+    """).fetchall()
+    stale = []
+    for digest, url, outcome in rows:
+        if outcome != "no-as-of":
+            continue
+        path = cache / f"{digest}.pdf"
+        if not path.exists():
+            stale.append(f"{digest}: not in the cache")
+            continue
+        try:
+            got = asof.as_of_from_pdf(path.read_bytes(), asof.date_in_name(normalised_name(url)))
+        except asof.AsOfConflict:
+            continue  # still refused, for a reason that still holds
+        except Exception:  # noqa: BLE001, S112 - still unreadable, so the reason holds
+            continue
+        if got is not None:
+            stale.append(f"{normalised_name(url)}: the reader now finds {got}")
+    return stale
+
+
+def same_as_of_pairs(con) -> str:
+    """Two different files of one list with the same as-of: re-issues, or a misdated file."""
+    return table(con, """
+        select source_id, as_of, count(*) as files,
+               string_agg(right(url, 45), ' | ') as names
+        from publication group by 1, 2 having count(*) > 1 order by 1, 2
+    """)
+
+
+def reupload_lag(con) -> str:
+    """Archived editions whose Last-Modified is over a year after the as-of: the file was
+    re-uploaded (EirGrid moved its library around 2015), so publication time is unknown."""
+    return table(con, """
+        select source_id, count(*) as editions,
+               min(date_diff('day', as_of, published_at::date)) as min_days,
+               max(date_diff('day', as_of, published_at::date)) as max_days
+        from publication
+        where fetched_from is not null and date_diff('day', as_of, published_at::date) > 365
+        group by 1 order by 1
+    """)

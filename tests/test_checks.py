@@ -34,3 +34,19 @@ def test_tampered_raw_file_fails_hash(con, tmp_path):
         f.write(b"x")
     bad = [c for c in check_publications(con) if not c.hash_ok]
     assert len(bad) == 1
+
+
+def test_recheck_lists_a_no_as_of_reason_that_no_longer_holds(con, tmp_path):
+    from iegrid import backfill
+    from iegrid.checks import recheck_no_as_of
+    from tests.conftest import make_pdf
+
+    url = ("https://esbnetworks.ie/docs/default-source/publications/"
+           "dso-live-connection-assessments-q3-2024.pdf")
+    c = backfill.Candidate("esb.dso_live_assessments", url, "20241101000000", "DIG1")
+    backfill.record(con, c, "no-as-of", "no readable as-of phrase in the text", NOW)
+    (tmp_path / "DIG1.pdf").write_bytes(make_pdf(["Information correct: 01Oct 2024 Rev. 2"]))
+    assert recheck_no_as_of(con, cache=tmp_path) == [
+        "dso-live-connection-assessments-q3-2024.pdf: the reader now finds 2024-10-01"]
+    (tmp_path / "DIG1.pdf").write_bytes(make_pdf(["Information correct: Rev. 0"]))
+    assert recheck_no_as_of(con, cache=tmp_path) == []
