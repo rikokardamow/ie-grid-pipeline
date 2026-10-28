@@ -202,12 +202,13 @@ def _top_groups(con, source_id: str, n: int) -> str:
 
 # --- g3: how the queue has grown --------------------------------------------------
 
-# Results of each ECP batch (the joint system-operator publications, first issue).
-ECP_RESULTS = (
-    (date(2020, 11, 1), "ECP-2.1"), (date(2021, 11, 1), "ECP-2.2"),
-    (date(2023, 4, 1), "ECP-2.3"), (date(2024, 1, 1), "ECP-2.4"),
-    (date(2025, 5, 1), "ECP-2.5"),
-)
+def ecp_results(con) -> list[tuple[date, str]]:
+    """When each ECP-2 batch's results were first published, from the earliest results
+    file the store holds (metrics.batch_dates). Was typed in until g5, with ECP-2.3 a
+    quarter late: the store has its November 2022 edition."""
+    from iegrid import metrics
+
+    return [(d, b) for b, d in metrics.batch_dates(con).items() if b.startswith("ECP-2")]
 
 
 def queue_growth(con):
@@ -228,7 +229,7 @@ def queue_growth(con):
     _style(fig, ax)
     ax.grid(axis="x", visible=False)
     ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
-    for d, label in ECP_RESULTS:
+    for d, label in ecp_results(con):
         ax.axvline(d, color=TOKENS["border"], linewidth=1, zorder=1)
         ax.text(d, n1[1] * 1.04, label, ha="center", va="bottom", fontsize=8.5,
                 color=TOKENS["muted"])
@@ -380,4 +381,54 @@ def queue_flows(con):
            f"whatever changed since the one before.",
            f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
            f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(last_date)}")
+    return fig
+
+
+# --- g5: how long it takes ----------------------------------------------------------
+
+def batch_burndown(con):
+    """Distribution MW of each ECP batch energised so far, against MW still contracted."""
+    from iegrid import metrics
+
+    rows = [b for b in metrics.dso_burndown(con) if b.batch.startswith("ECP")]
+    oldest = rows[0]
+    recent = []
+    for b in reversed(rows):
+        if b.share >= 0.02:
+            break
+        recent.append(b)
+    since = min(b.result for b in recent) if recent else None
+    title = (f"Distribution projects from {oldest.batch} ({oldest.result:%Y}): {oldest.share:.0%} "
+             f"energised" + (f"; every batch since {since:%Y}: under 2%" if since else ""))
+    fig, ax = plt.subplots(figsize=(11, 5.4), dpi=150)
+    _style(fig, ax)
+    y = list(range(len(rows)))
+    shares = [b.share * 100 for b in rows]
+    ax.barh(y, shares, height=0.6, color=TOKENS["series1"])
+    for yi, b in zip(y, rows, strict=True):
+        total = b.energised_n + b.contracted_n
+        # a median of a few small energised projects says nothing about the batch
+        wait = (f" · median {b.median_months_to_energise / 12:.1f} yrs to energise"
+                if b.median_months_to_energise is not None and b.energised_n >= 3
+                and b.share >= 0.05 else "")
+        ax.text(b.share * 100 + 1, yi,
+                f"{b.share:.0%} · {b.energised_n} of {total} projects, "
+                f"{float(b.energised_mw):.0f} of {float(b.energised_mw + b.contracted_mw):.0f} MW"
+                f"{wait}", va="center", fontsize=9, color=TOKENS["text"])
+    ax.set_yticks(y, [f"{b.batch}  ({b.result:%b %Y})" for b in rows], fontsize=9.5)
+    ax.invert_yaxis()
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("% of the batch's distribution MW energised", color=TOKENS["muted"],
+                  fontsize=9.5)
+    fig.subplots_adjust(left=0.18, right=0.97, top=0.78, bottom=0.15)
+    as_of = con.execute("""
+        select max(as_of) from publication where source_id like 'esb.dso_%'
+    """).fetchone()[0]
+    _frame(fig, title,
+           "Projects offered a distribution connection in each ECP batch (month of its first "
+           "results publication): MW on ESB's energised lists against MW still on its "
+           "contracted lists. Withdrawn projects are on neither, so this is a share of the "
+           "projects still in the queue.",
+           f"Source: ESB Networks DSO energised and contracted lists, as of {fmt_date(as_of)}; "
+           f"ECP batch results publications · {LICENCE}")
     return fig

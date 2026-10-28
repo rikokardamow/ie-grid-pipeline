@@ -473,3 +473,13 @@ def tso_rows_missing_signed(con) -> list[tuple]:
         having count(*) filter (where r.signed_month is null) > 0
         order by 1, 2
     """, [parse.PARSER_VERSION]).fetchall()
+
+
+def transitions_table(con, n: int | None = None) -> list[tuple]:
+    """g5 done-when: joins and leaves between the two newest editions of each EirGrid
+    list, each with whether the PDFs' own text confirms it."""
+    from iegrid import metrics
+
+    rows = [(t.source_id.split(".")[1], f"{t.before} -> {t.after}", t.kind, t.ref, t.name[:40],
+             float(t.mw), t.confirmed) for t in metrics.transitions(con)]
+    return rows[:n] if n else rows
