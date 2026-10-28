@@ -1,372 +1,2073 @@
 {
-  "report_date": "2026-10-28",
-  "editions": {
-    "eirgrid.tso_contracted_nonwind": "2026-08-05",
-    "eirgrid.tso_contracted_wind": "2026-08-05",
-    "esb.dso_contracted_nonrenewable": "2026-07-01",
-    "esb.dso_contracted_renewable": "2026-07-01",
-    "esb.dso_energised_nonrenewable": "2026-07-01",
-    "esb.dso_energised_renewable": "2026-07-01"
-  },
-  "new": {
-    "first_report": true,
-    "lists": []
-  },
-  "warnings": [],
-  "queue": {
-    "transmission_gw": 14.694,
-    "transmission_projects": 158,
-    "interconnector_gw": 1.204,
-    "distribution_gw": 1.964,
-    "distribution_projects": 177
-  },
-  "moved": {
-    "transmission": {
-      "editions": [
-        "2025-09-17 to 2026-08-05"
-      ],
-      "joined_count": 29,
-      "joined_gw": 3.002,
-      "left_count": 2,
-      "left_gw": 0.069,
-      "all_confirmed": true,
-      "joined": [
-        {
-          "ref": "TG676",
-          "name": "Moor OCGT (2028/2029 T-4)",
-          "mw": 340.0
-        },
-        {
-          "ref": "TG645",
-          "name": "Delamain Solar Farm",
-          "mw": 210.0
-        },
-        {
-          "ref": "TG449",
-          "name": "Ballysumaghan BESS & SC",
-          "mw": 200.0
-        },
-        {
-          "ref": "TG653",
-          "name": "Ballivor Wind Farm",
-          "mw": 182.0
-        },
-        {
-          "ref": "TG485",
-          "name": "Kilmorna Energy Storage Facility",
-          "mw": 170.0
-        },
-        {
-          "ref": "TG644",
-          "name": "Rathcoursey Solar Farm",
-          "mw": 130.0
-        },
-        {
-          "ref": "TG593",
-          "name": "Seven Hills Wind Farm",
-          "mw": 122.4
-        },
-        {
-          "ref": "TG659",
-          "name": "Rath Solar PV (ECP2.4+2.5)",
-          "mw": 119.3
-        },
-        {
-          "ref": "TG671",
-          "name": "Ballinagree Wind Farm",
-          "mw": 112.0
-        },
-        {
-          "ref": "TG650",
-          "name": "Baunogephlure BESS and Solar",
-          "mw": 105.0
-        },
-        {
-          "ref": "TG324",
-          "name": "Flagford Battery Storage",
-          "mw": 100.0
-        },
-        {
-          "ref": "TG450",
-          "name": "Tarbert BESS",
-          "mw": 100.0
-        }
-      ],
-      "left": [
-        {
-          "ref": "TG280",
-          "name": "Shantallow Solar",
-          "mw": 35.0
-        },
-        {
-          "ref": "TG275",
-          "name": "Banemore Solar Farm",
-          "mw": 34.0
-        }
-      ]
+ "report_date": "2026-10-28",
+ "editions": {
+  "eirgrid.tso_contracted_nonwind": "2026-08-05",
+  "eirgrid.tso_contracted_wind": "2026-08-05",
+  "esb.dso_contracted_nonrenewable": "2026-07-01",
+  "esb.dso_contracted_renewable": "2026-07-01",
+  "esb.dso_energised_nonrenewable": "2026-07-01",
+  "esb.dso_energised_renewable": "2026-07-01"
+ },
+ "new": {
+  "first_report": true,
+  "lists": []
+ },
+ "warnings": [],
+ "queue": {
+  "transmission_gw": 14.694,
+  "transmission_projects": 158,
+  "interconnector_gw": 1.204,
+  "distribution_gw": 1.964,
+  "distribution_projects": 177,
+  "by_technology": {
+   "transmission_as_of": "2026-08-05",
+   "distribution_as_of": "2026-07-01",
+   "total_gw": 16.658,
+   "top_share": 0.336,
+   "groups": [
+    {
+     "group": "Solar",
+     "transmission_gw": 4.458,
+     "distribution_gw": 1.144
     },
-    "distribution": {
-      "editions": [
-        "2026-04-01 to 2026-07-01"
-      ],
-      "count": 7,
-      "mw": 29.773,
-      "projects": [
-        {
-          "list": "ESB energised renewable",
-          "ref": "DG1892",
-          "name": "The Dell PV",
-          "mw": 20.0,
-          "energised_on": "2026-05-14",
-          "note": null
-        },
-        {
-          "list": "ESB energised renewable",
-          "ref": "DG1403",
-          "name": "Creevy Solar",
-          "mw": 4.0,
-          "energised_on": "2026-04-24",
-          "note": null
-        },
-        {
-          "list": "ESB energised renewable",
-          "ref": "DG1664",
-          "name": "Dromsallagh Solar Farm",
-          "mw": 4.0,
-          "energised_on": "2026-06-29",
-          "note": null
-        }
-      ],
-      "newly_listed_count": 1,
-      "newly_listed": [
-        {
-          "list": "ESB energised renewable",
-          "ref": "DG929",
-          "name": "Silliot Hill LFG",
-          "mw": 1.255,
-          "energised_on": null,
-          "note": "pre 2005"
-        }
-      ]
+    {
+     "group": "Gas and oil",
+     "transmission_gw": 2.734,
+     "distribution_gw": 0.013
+    },
+    {
+     "group": "Wind",
+     "transmission_gw": 2.054,
+     "distribution_gw": 0.602
+    },
+    {
+     "group": "Hybrid (with battery)",
+     "transmission_gw": 2.086,
+     "distribution_gw": 0.0
+    },
+    {
+     "group": "Battery storage",
+     "transmission_gw": 1.871,
+     "distribution_gw": 0.118
+    },
+    {
+     "group": "Interconnector",
+     "transmission_gw": 1.204,
+     "distribution_gw": 0.0
+    },
+    {
+     "group": "Other",
+     "transmission_gw": 0.288,
+     "distribution_gw": 0.086
     }
+   ]
   },
-  "stuck": {
-    "as_of": "2026-08-05",
-    "large_mw": 50,
-    "at_years": 3,
-    "longest_waiting": [
-      {
-        "ref": "TG71",
-        "name": "Oweninny 3 (Formerly Oweninny 5)",
-        "mw": 50.0,
-        "route": "Gate 3",
-        "months": 175,
-        "years_part": 14,
-        "months_part": 7,
-        "first_signed": "2012-01-01"
-      },
-      {
-        "ref": "TG86",
-        "name": "Oriel Wind Farm (Split)",
-        "mw": 210.0,
-        "route": "Gate 3",
-        "months": 148,
-        "years_part": 12,
-        "months_part": 4,
-        "first_signed": "2014-04-01"
-      },
-      {
-        "ref": "TG483",
-        "name": "Rosspile Storage Facility",
-        "mw": 100.0,
-        "route": "ECP-2.2",
-        "months": 99,
-        "years_part": 8,
-        "months_part": 3,
-        "first_signed": "2018-05-01"
-      },
-      {
-        "ref": "TG334",
-        "name": "Shannonbridge ESS B",
-        "mw": 63.2,
-        "route": "T-3 capacity auction",
-        "months": 95,
-        "years_part": 7,
-        "months_part": 11,
-        "first_signed": "2018-09-01"
-      },
-      {
-        "ref": "TG282",
-        "name": "East Laois Solar Farm (formerly Loughteague)",
-        "mw": 55.0,
-        "route": "Non GPA",
-        "months": 95,
-        "years_part": 7,
-        "months_part": 11,
-        "first_signed": "2018-09-01"
-      },
-      {
-        "ref": "TG322",
-        "name": "Drombeg Solar Park",
-        "mw": 50.0,
-        "route": "Non GPA",
-        "months": 94,
-        "years_part": 7,
-        "months_part": 10,
-        "first_signed": "2018-10-01"
-      },
-      {
-        "ref": "TG299",
-        "name": "Ballinknockane Solar Farm",
-        "mw": 50.0,
-        "route": "Non GPA",
-        "months": 92,
-        "years_part": 7,
-        "months_part": 8,
-        "first_signed": "2018-12-01"
-      },
-      {
-        "ref": "TG288",
-        "name": "Greenlink Interconnector",
-        "mw": 504.0,
-        "route": "PCI",
-        "months": 81,
-        "years_part": 6,
-        "months_part": 9,
-        "first_signed": "2019-11-01"
-      },
-      {
-        "ref": "TG289",
-        "name": "Blackwater Bog Solar Farm 1",
-        "mw": 65.0,
-        "route": "ECP-1",
-        "months": 73,
-        "years_part": 6,
-        "months_part": 1,
-        "first_signed": "2020-07-01"
-      },
-      {
-        "ref": "TG328",
-        "name": "Gaskinstown Solar Farm",
-        "mw": 85.0,
-        "route": "ECP-1",
-        "months": 72,
-        "years_part": 6,
-        "months_part": 0,
-        "first_signed": "2020-08-01"
-      },
-      {
-        "ref": "TG315",
-        "name": "Clonfad Solar",
-        "mw": 100.0,
-        "route": "ECP-1",
-        "months": 70,
-        "years_part": 5,
-        "months_part": 10,
-        "first_signed": "2020-10-01"
-      },
-      {
-        "ref": "TG428",
-        "name": "Moanvane Wind Farm",
-        "mw": 56.4,
-        "route": "ECP-2.1",
-        "months": 60,
-        "years_part": 5,
-        "months_part": 0,
-        "first_signed": "2021-08-01"
-      }
-    ],
-    "burndown": [
-      {
-        "batch": "ECP-1",
-        "results": "Nov 2018",
-        "age_months": 92,
-        "share_now": 0.446,
-        "share_at": 0.095,
-        "projects": 45
-      },
-      {
-        "batch": "ECP-2.1",
-        "results": "Nov 2020",
-        "age_months": 68,
-        "share_now": 0.23,
-        "share_at": 0.011,
-        "projects": 33
-      },
-      {
-        "batch": "ECP-2.2",
-        "results": "Nov 2021",
-        "age_months": 56,
-        "share_now": 0.034,
-        "share_at": 0.0,
-        "projects": 24
-      },
-      {
-        "batch": "ECP-2.3",
-        "results": "Nov 2022",
-        "age_months": 44,
-        "share_now": 0.0,
-        "share_at": 0.0,
-        "projects": 18
-      },
-      {
-        "batch": "ECP-2.4",
-        "results": "Jan 2024",
-        "age_months": 30,
-        "share_now": 0.0,
-        "share_at": null,
-        "projects": 17
-      },
-      {
-        "batch": "ECP-2.5",
-        "results": "by Feb 2025",
-        "age_months": 17,
-        "share_now": 0.005,
-        "share_at": null,
-        "projects": 18
-      }
-    ],
-    "burndown_first": "ECP-1",
-    "burndown_first_at": 0.095,
-    "burndown_later_max_at": 0.011
+  "history": {
+   "nonwind": [
+    {
+     "as_of": "2015-08-31",
+     "gw": 0.395
+    },
+    {
+     "as_of": "2015-12-31",
+     "gw": 0.395
+    },
+    {
+     "as_of": "2016-08-31",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2016-12-01",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2017-01-01",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2017-02-01",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2017-03-01",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2017-05-01",
+     "gw": 0.437
+    },
+    {
+     "as_of": "2018-01-30",
+     "gw": 0.223
+    },
+    {
+     "as_of": "2018-06-15",
+     "gw": 0.388
+    },
+    {
+     "as_of": "2018-12-14",
+     "gw": 0.903
+    },
+    {
+     "as_of": "2019-01-18",
+     "gw": 1.023
+    },
+    {
+     "as_of": "2019-10-25",
+     "gw": 1.103
+    },
+    {
+     "as_of": "2020-02-10",
+     "gw": 1.103
+    },
+    {
+     "as_of": "2020-05-29",
+     "gw": 1.529
+    },
+    {
+     "as_of": "2020-11-03",
+     "gw": 2.018
+    },
+    {
+     "as_of": "2021-03-16",
+     "gw": 2.072
+    },
+    {
+     "as_of": "2021-07-09",
+     "gw": 2.572
+    },
+    {
+     "as_of": "2021-08-23",
+     "gw": 2.607
+    },
+    {
+     "as_of": "2021-09-29",
+     "gw": 2.607
+    },
+    {
+     "as_of": "2021-11-04",
+     "gw": 2.607
+    },
+    {
+     "as_of": "2021-12-03",
+     "gw": 3.14
+    },
+    {
+     "as_of": "2022-02-11",
+     "gw": 3.226
+    },
+    {
+     "as_of": "2022-03-31",
+     "gw": 3.156
+    },
+    {
+     "as_of": "2022-05-26",
+     "gw": 3.147
+    },
+    {
+     "as_of": "2022-07-07",
+     "gw": 3.786
+    },
+    {
+     "as_of": "2022-08-29",
+     "gw": 4.06
+    },
+    {
+     "as_of": "2022-10-28",
+     "gw": 4.217
+    },
+    {
+     "as_of": "2023-02-21",
+     "gw": 4.414
+    },
+    {
+     "as_of": "2023-12-21",
+     "gw": 6.448
+    },
+    {
+     "as_of": "2024-07-11",
+     "gw": 6.783
+    },
+    {
+     "as_of": "2025-02-26",
+     "gw": 8.957
+    },
+    {
+     "as_of": "2025-09-17",
+     "gw": 10.248
+    },
+    {
+     "as_of": "2026-08-05",
+     "gw": 12.641
+    }
+   ],
+   "wind": [
+    {
+     "as_of": "2015-08-31",
+     "gw": 1.714
+    },
+    {
+     "as_of": "2015-12-31",
+     "gw": 1.681
+    },
+    {
+     "as_of": "2016-05-31",
+     "gw": 1.701
+    },
+    {
+     "as_of": "2016-08-31",
+     "gw": 1.701
+    },
+    {
+     "as_of": "2016-12-01",
+     "gw": 1.548
+    },
+    {
+     "as_of": "2017-01-01",
+     "gw": 1.501
+    },
+    {
+     "as_of": "2017-02-01",
+     "gw": 1.501
+    },
+    {
+     "as_of": "2017-03-01",
+     "gw": 1.535
+    },
+    {
+     "as_of": "2017-05-01",
+     "gw": 1.43
+    },
+    {
+     "as_of": "2018-01-30",
+     "gw": 1.318
+    },
+    {
+     "as_of": "2018-06-15",
+     "gw": 1.228
+    },
+    {
+     "as_of": "2018-12-14",
+     "gw": 1.173
+    },
+    {
+     "as_of": "2019-01-18",
+     "gw": 1.173
+    },
+    {
+     "as_of": "2019-05-28",
+     "gw": 1.024
+    },
+    {
+     "as_of": "2019-10-25",
+     "gw": 1.024
+    },
+    {
+     "as_of": "2020-02-10",
+     "gw": 1.032
+    },
+    {
+     "as_of": "2020-06-16",
+     "gw": 0.959
+    },
+    {
+     "as_of": "2020-11-03",
+     "gw": 1.337
+    },
+    {
+     "as_of": "2021-03-16",
+     "gw": 0.891
+    },
+    {
+     "as_of": "2021-07-09",
+     "gw": 0.975
+    },
+    {
+     "as_of": "2021-08-23",
+     "gw": 1.035
+    },
+    {
+     "as_of": "2021-09-29",
+     "gw": 1.094
+    },
+    {
+     "as_of": "2021-11-03",
+     "gw": 1.288
+    },
+    {
+     "as_of": "2021-12-03",
+     "gw": 1.288
+    },
+    {
+     "as_of": "2022-02-11",
+     "gw": 1.358
+    },
+    {
+     "as_of": "2022-03-31",
+     "gw": 1.385
+    },
+    {
+     "as_of": "2022-05-26",
+     "gw": 1.403
+    },
+    {
+     "as_of": "2022-07-07",
+     "gw": 1.45
+    },
+    {
+     "as_of": "2022-08-29",
+     "gw": 1.45
+    },
+    {
+     "as_of": "2022-10-28",
+     "gw": 1.45
+    },
+    {
+     "as_of": "2023-02-21",
+     "gw": 1.556
+    },
+    {
+     "as_of": "2023-05-03",
+     "gw": 1.402
+    },
+    {
+     "as_of": "2023-12-21",
+     "gw": 1.005
+    },
+    {
+     "as_of": "2025-02-26",
+     "gw": 1.416
+    },
+    {
+     "as_of": "2025-09-17",
+     "gw": 1.473
+    },
+    {
+     "as_of": "2026-08-05",
+     "gw": 2.053
+    }
+   ],
+   "batches": [
+    {
+     "batch": "ECP-2.1",
+     "results": "2020-11-01",
+     "label": "Nov 2020"
+    },
+    {
+     "batch": "ECP-2.2",
+     "results": "2021-11-01",
+     "label": "Nov 2021"
+    },
+    {
+     "batch": "ECP-2.3",
+     "results": "2022-11-01",
+     "label": "Nov 2022"
+    },
+    {
+     "batch": "ECP-2.4",
+     "results": "2024-01-01",
+     "label": "Jan 2024"
+    },
+    {
+     "batch": "ECP-2.5",
+     "results": "2025-02-01",
+     "label": "by Feb 2025"
+    }
+   ]
+  }
+ },
+ "moved": {
+  "transmission": {
+   "editions": [
+    "2025-09-17 to 2026-08-05"
+   ],
+   "joined_count": 29,
+   "joined_gw": 3.002,
+   "left_count": 2,
+   "left_gw": 0.069,
+   "all_confirmed": true,
+   "joined": [
+    {
+     "ref": "TG676",
+     "name": "Moor OCGT (2028/2029 T-4)",
+     "mw": 340.0
+    },
+    {
+     "ref": "TG645",
+     "name": "Delamain Solar Farm",
+     "mw": 210.0
+    },
+    {
+     "ref": "TG449",
+     "name": "Ballysumaghan BESS & SC",
+     "mw": 200.0
+    },
+    {
+     "ref": "TG653",
+     "name": "Ballivor Wind Farm",
+     "mw": 182.0
+    },
+    {
+     "ref": "TG485",
+     "name": "Kilmorna Energy Storage Facility",
+     "mw": 170.0
+    },
+    {
+     "ref": "TG644",
+     "name": "Rathcoursey Solar Farm",
+     "mw": 130.0
+    },
+    {
+     "ref": "TG593",
+     "name": "Seven Hills Wind Farm",
+     "mw": 122.4
+    },
+    {
+     "ref": "TG659",
+     "name": "Rath Solar PV (ECP2.4+2.5)",
+     "mw": 119.3
+    },
+    {
+     "ref": "TG671",
+     "name": "Ballinagree Wind Farm",
+     "mw": 112.0
+    },
+    {
+     "ref": "TG650",
+     "name": "Baunogephlure BESS and Solar",
+     "mw": 105.0
+    },
+    {
+     "ref": "TG324",
+     "name": "Flagford Battery Storage",
+     "mw": 100.0
+    },
+    {
+     "ref": "TG450",
+     "name": "Tarbert BESS",
+     "mw": 100.0
+    }
+   ],
+   "left": [
+    {
+     "ref": "TG280",
+     "name": "Shantallow Solar",
+     "mw": 35.0
+    },
+    {
+     "ref": "TG275",
+     "name": "Banemore Solar Farm",
+     "mw": 34.0
+    }
+   ]
   },
-  "where": {
-    "generation_placed_share": 0.953,
-    "counties": [
-      {
-        "county": "Offaly",
-        "gw": 1.682
-      },
-      {
-        "county": "Kerry",
-        "gw": 1.304
-      },
-      {
-        "county": "Meath",
-        "gw": 1.158
-      },
-      {
-        "county": "Cork",
-        "gw": 1.09
-      },
-      {
-        "county": "Galway",
-        "gw": 0.995
-      },
-      {
-        "county": "Dublin",
-        "gw": 0.924
-      }
-    ]
+  "distribution": {
+   "editions": [
+    "2026-04-01 to 2026-07-01"
+   ],
+   "count": 7,
+   "mw": 29.773,
+   "projects": [
+    {
+     "list": "ESB energised renewable",
+     "ref": "DG1892",
+     "name": "The Dell PV",
+     "mw": 20.0,
+     "energised_on": "2026-05-14",
+     "note": null
+    },
+    {
+     "list": "ESB energised renewable",
+     "ref": "DG1403",
+     "name": "Creevy Solar",
+     "mw": 4.0,
+     "energised_on": "2026-04-24",
+     "note": null
+    },
+    {
+     "list": "ESB energised renewable",
+     "ref": "DG1664",
+     "name": "Dromsallagh Solar Farm",
+     "mw": 4.0,
+     "energised_on": "2026-06-29",
+     "note": null
+    }
+   ],
+   "newly_listed_count": 1,
+   "newly_listed": [
+    {
+     "list": "ESB energised renewable",
+     "ref": "DG929",
+     "name": "Silliot Hill LFG",
+     "mw": 1.255,
+     "energised_on": null,
+     "note": "pre 2005"
+    }
+   ]
   },
-  "caveats": [
-    "Lists as of 5 Aug 2026 (transmission) and 1 Jul 2026 (distribution); ESB posts its lists about a month after their as-of date.",
-    "'Left' a list means connected, withdrawn or moved: the contracted lists don't say which.",
-    "Burn-down shares are of projects still on a list; withdrawn projects are on neither.",
-    "Distribution burn-down only: transmission energisations need EirGrid's connected lists.",
-    "Waiting time runs from the earliest signed month printed for the project in any list since 2015, carried across relabelled refs (Rosspile: TG272, 2018).",
-    "The transmission total includes interconnectors; the county list leaves them out.",
-    "Not for publication: ESB Networks' terms forbid republishing its lists without written permission (PARKING.md)."
+  "by_year": [
+   {
+    "year": 2015,
+    "joined_gw": 0.103,
+    "left_gw": 0.136
+   },
+   {
+    "year": 2016,
+    "joined_gw": 0.22,
+    "left_gw": 0.311
+   },
+   {
+    "year": 2017,
+    "joined_gw": 0.138,
+    "left_gw": 0.274
+   },
+   {
+    "year": 2018,
+    "joined_gw": 1.681,
+    "left_gw": 1.45
+   },
+   {
+    "year": 2019,
+    "joined_gw": 0.322,
+    "left_gw": 0.271
+   },
+   {
+    "year": 2020,
+    "joined_gw": 1.497,
+    "left_gw": 0.303
+   },
+   {
+    "year": 2021,
+    "joined_gw": 2.116,
+    "left_gw": 1.002
+   },
+   {
+    "year": 2022,
+    "joined_gw": 1.732,
+    "left_gw": 0.505
+   },
+   {
+    "year": 2023,
+    "joined_gw": 3.031,
+    "left_gw": 1.174
+   },
+   {
+    "year": 2024,
+    "joined_gw": 0.888,
+    "left_gw": 0.567
+   },
+   {
+    "year": 2025,
+    "joined_gw": 4.28,
+    "left_gw": 0.325
+   },
+   {
+    "year": 2026,
+    "joined_gw": 3.002,
+    "left_gw": 0.069
+   }
+  ]
+ },
+ "stuck": {
+  "as_of": "2026-08-05",
+  "large_mw": 50,
+  "at_years": 3,
+  "longest_waiting": [
+   {
+    "ref": "TG71",
+    "name": "Oweninny 3 (Formerly Oweninny 5)",
+    "mw": 50.0,
+    "route": "Gate 3",
+    "months": 175,
+    "years_part": 14,
+    "months_part": 7,
+    "first_signed": "2012-01-01"
+   },
+   {
+    "ref": "TG86",
+    "name": "Oriel Wind Farm (Split)",
+    "mw": 210.0,
+    "route": "Gate 3",
+    "months": 148,
+    "years_part": 12,
+    "months_part": 4,
+    "first_signed": "2014-04-01"
+   },
+   {
+    "ref": "TG483",
+    "name": "Rosspile Storage Facility",
+    "mw": 100.0,
+    "route": "ECP-2.2",
+    "months": 99,
+    "years_part": 8,
+    "months_part": 3,
+    "first_signed": "2018-05-01"
+   },
+   {
+    "ref": "TG334",
+    "name": "Shannonbridge ESS B",
+    "mw": 63.2,
+    "route": "T-3 capacity auction",
+    "months": 95,
+    "years_part": 7,
+    "months_part": 11,
+    "first_signed": "2018-09-01"
+   },
+   {
+    "ref": "TG282",
+    "name": "East Laois Solar Farm (formerly Loughteague)",
+    "mw": 55.0,
+    "route": "Non GPA",
+    "months": 95,
+    "years_part": 7,
+    "months_part": 11,
+    "first_signed": "2018-09-01"
+   },
+   {
+    "ref": "TG322",
+    "name": "Drombeg Solar Park",
+    "mw": 50.0,
+    "route": "Non GPA",
+    "months": 94,
+    "years_part": 7,
+    "months_part": 10,
+    "first_signed": "2018-10-01"
+   },
+   {
+    "ref": "TG299",
+    "name": "Ballinknockane Solar Farm",
+    "mw": 50.0,
+    "route": "Non GPA",
+    "months": 92,
+    "years_part": 7,
+    "months_part": 8,
+    "first_signed": "2018-12-01"
+   },
+   {
+    "ref": "TG288",
+    "name": "Greenlink Interconnector",
+    "mw": 504.0,
+    "route": "PCI",
+    "months": 81,
+    "years_part": 6,
+    "months_part": 9,
+    "first_signed": "2019-11-01"
+   },
+   {
+    "ref": "TG289",
+    "name": "Blackwater Bog Solar Farm 1",
+    "mw": 65.0,
+    "route": "ECP-1",
+    "months": 73,
+    "years_part": 6,
+    "months_part": 1,
+    "first_signed": "2020-07-01"
+   },
+   {
+    "ref": "TG328",
+    "name": "Gaskinstown Solar Farm",
+    "mw": 85.0,
+    "route": "ECP-1",
+    "months": 72,
+    "years_part": 6,
+    "months_part": 0,
+    "first_signed": "2020-08-01"
+   },
+   {
+    "ref": "TG315",
+    "name": "Clonfad Solar",
+    "mw": 100.0,
+    "route": "ECP-1",
+    "months": 70,
+    "years_part": 5,
+    "months_part": 10,
+    "first_signed": "2020-10-01"
+   },
+   {
+    "ref": "TG428",
+    "name": "Moanvane Wind Farm",
+    "mw": 56.4,
+    "route": "ECP-2.1",
+    "months": 60,
+    "years_part": 5,
+    "months_part": 0,
+    "first_signed": "2021-08-01"
+   }
   ],
-  "generated_at": "2026-10-28T19:50:55.025897+00:00"
+  "burndown": [
+   {
+    "batch": "ECP-1",
+    "results": "Nov 2018",
+    "age_months": 92,
+    "share_now": 0.446,
+    "share_at": 0.095,
+    "projects": 45
+   },
+   {
+    "batch": "ECP-2.1",
+    "results": "Nov 2020",
+    "age_months": 68,
+    "share_now": 0.23,
+    "share_at": 0.011,
+    "projects": 33
+   },
+   {
+    "batch": "ECP-2.2",
+    "results": "Nov 2021",
+    "age_months": 56,
+    "share_now": 0.034,
+    "share_at": 0.0,
+    "projects": 24
+   },
+   {
+    "batch": "ECP-2.3",
+    "results": "Nov 2022",
+    "age_months": 44,
+    "share_now": 0.0,
+    "share_at": 0.0,
+    "projects": 18
+   },
+   {
+    "batch": "ECP-2.4",
+    "results": "Jan 2024",
+    "age_months": 30,
+    "share_now": 0.0,
+    "share_at": null,
+    "projects": 17
+   },
+   {
+    "batch": "ECP-2.5",
+    "results": "by Feb 2025",
+    "age_months": 17,
+    "share_now": 0.005,
+    "share_at": null,
+    "projects": 18
+   }
+  ],
+  "burndown_first": "ECP-1",
+  "burndown_first_at": 0.095,
+  "burndown_later_max_at": 0.011
+ },
+ "where": {
+  "generation_placed_share": 0.953,
+  "counties": [
+   {
+    "county": "Offaly",
+    "gw": 1.682
+   },
+   {
+    "county": "Kerry",
+    "gw": 1.304
+   },
+   {
+    "county": "Meath",
+    "gw": 1.158
+   },
+   {
+    "county": "Cork",
+    "gw": 1.09
+   },
+   {
+    "county": "Galway",
+    "gw": 0.995
+   },
+   {
+    "county": "Dublin",
+    "gw": 0.924
+   }
+  ]
+ },
+ "grid": {
+  "osm_fetched_at": "2026-10-28T20:25:46+00:00",
+  "bands": [
+   {
+    "label": "under 2 km",
+    "gw": 6.181,
+    "nodes": 37
+   },
+   {
+    "label": "2-10 km",
+    "gw": 2.605,
+    "nodes": 57
+   },
+   {
+    "label": "10-20 km",
+    "gw": 1.504,
+    "nodes": 33
+   },
+   {
+    "label": "20 km and over",
+    "gw": 1.362,
+    "nodes": 39
+   }
+  ],
+  "backbone_kv": [
+   220,
+   275,
+   400
+  ],
+  "far_km": 20,
+  "placed_share": 0.754,
+  "placed_gw": 11.653,
+  "far_gw": 1.362,
+  "far_nodes": 39,
+  "nodes": [
+   {
+    "node": "Cashla 220 kV Substation",
+    "kv": 220,
+    "lon": -8.8534,
+    "lat": 53.3081,
+    "mw": 705.0,
+    "projects": 5,
+    "tso_mw": 705.0,
+    "match": "exact",
+    "km_backbone": 0.0
+   },
+   {
+    "node": "Kilpaddoge 220kV Substation",
+    "kv": 220,
+    "lon": -9.3964,
+    "lat": 52.5802,
+    "mw": 600.0,
+    "projects": 2,
+    "tso_mw": 600.0,
+    "match": "exact",
+    "km_backbone": 0.0
+   },
+   {
+    "node": "Arklow 220kV Substation",
+    "kv": 220,
+    "lon": -6.1477,
+    "lat": 52.8152,
+    "mw": 501.0,
+    "projects": 9,
+    "tso_mw": 415.1,
+    "match": "exact",
+    "km_backbone": 0.1
+   },
+   {
+    "node": "Kinnegad 110kV",
+    "kv": 110,
+    "lon": -7.1427,
+    "lat": 53.4303,
+    "mw": 394.3,
+    "projects": 3,
+    "tso_mw": 394.3,
+    "match": "exact",
+    "km_backbone": 1.0
+   },
+   {
+    "node": "Shannonbridge 220/110kV",
+    "kv": 220,
+    "lon": -8.0378,
+    "lat": 53.2711,
+    "mw": 388.2,
+    "projects": 3,
+    "tso_mw": 388.2,
+    "match": "exact",
+    "km_backbone": 0.0
+   },
+   {
+    "node": "Derryiron 110 kV Substation",
+    "kv": 110,
+    "lon": -7.2138,
+    "lat": 53.3581,
+    "mw": 369.5,
+    "projects": 5,
+    "tso_mw": 332.0,
+    "match": "exact",
+    "km_backbone": 2.6
+   },
+   {
+    "node": "Athlone 110 kV Substation",
+    "kv": 110,
+    "lon": -7.9745,
+    "lat": 53.423,
+    "mw": 346.4,
+    "projects": 5,
+    "tso_mw": 302.4,
+    "match": "exact",
+    "km_backbone": 16.3
+   },
+   {
+    "node": "Louth 275 kV Substation",
+    "kv": 275,
+    "lon": -6.5658,
+    "lat": 53.9675,
+    "mw": 340.4,
+    "projects": 2,
+    "tso_mw": 340.4,
+    "match": "exact",
+    "km_backbone": 0.0
+   }
+  ],
+  "unplaced": [
+   {
+    "node": "Southbank",
+    "mw": 299.0
+   },
+   {
+    "node": "Timoney",
+    "mw": 231.6
+   },
+   {
+    "node": "Oriel",
+    "mw": 210.0
+   },
+   {
+    "node": "Pollagh",
+    "mw": 178.0
+   },
+   {
+    "node": "Bellewstown",
+    "mw": 157.0
+   },
+   {
+    "node": "Kildinan",
+    "mw": 155.6
+   },
+   {
+    "node": "Kilvinoge",
+    "mw": 138.6
+   },
+   {
+    "node": "Raheenmeel",
+    "mw": 125.0
+   },
+   {
+    "node": "Balruntagh",
+    "mw": 115.0
+   },
+   {
+    "node": "Oaklands",
+    "mw": 114.0
+   },
+   {
+    "node": "Ballyvalode",
+    "mw": 113.0
+   },
+   {
+    "node": "Moanalow",
+    "mw": 105.0
+   }
+  ],
+  "lines": [
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.196,
+      53.256
+     ],
+     [
+      -6.196,
+      53.255
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.565,
+      53.967
+     ],
+     [
+      -6.547,
+      53.936
+     ],
+     [
+      -6.51,
+      53.915
+     ],
+     [
+      -6.507,
+      53.854
+     ],
+     [
+      -6.53,
+      53.803
+     ],
+     [
+      -6.519,
+      53.744
+     ],
+     [
+      -6.524,
+      53.725
+     ],
+     [
+      -6.515,
+      53.707
+     ],
+     [
+      -6.533,
+      53.65
+     ],
+     [
+      -6.521,
+      53.581
+     ],
+     [
+      -6.493,
+      53.569
+     ],
+     [
+      -6.481,
+      53.521
+     ],
+     [
+      -6.487,
+      53.487
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.494,
+      53.411
+     ],
+     [
+      -6.524,
+      53.434
+     ],
+     [
+      -6.551,
+      53.472
+     ],
+     [
+      -6.567,
+      53.475
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.518,
+      53.267
+     ],
+     [
+      -6.64,
+      53.284
+     ],
+     [
+      -6.659,
+      53.299
+     ],
+     [
+      -6.658,
+      53.311
+     ],
+     [
+      -6.61,
+      53.343
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.601,
+      53.348
+     ],
+     [
+      -6.563,
+      53.338
+     ],
+     [
+      -6.554,
+      53.327
+     ],
+     [
+      -6.474,
+      53.336
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.538,
+      52.579
+     ],
+     [
+      -6.547,
+      52.583
+     ],
+     [
+      -6.643,
+      52.53
+     ],
+     [
+      -6.664,
+      52.465
+     ],
+     [
+      -6.731,
+      52.408
+     ],
+     [
+      -6.769,
+      52.391
+     ],
+     [
+      -6.807,
+      52.365
+     ],
+     [
+      -6.865,
+      52.341
+     ],
+     [
+      -6.928,
+      52.295
+     ],
+     [
+      -6.981,
+      52.292
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.88,
+      52.342
+     ],
+     [
+      -6.898,
+      52.318
+     ],
+     [
+      -6.94,
+      52.3
+     ],
+     [
+      -6.981,
+      52.292
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.687,
+      53.156
+     ],
+     [
+      -6.708,
+      53.17
+     ],
+     [
+      -6.708,
+      53.204
+     ],
+     [
+      -6.719,
+      53.224
+     ],
+     [
+      -6.745,
+      53.234
+     ],
+     [
+      -6.76,
+      53.26
+     ],
+     [
+      -6.737,
+      53.287
+     ],
+     [
+      -6.716,
+      53.336
+     ],
+     [
+      -6.662,
+      53.347
+     ],
+     [
+      -6.622,
+      53.344
+     ],
+     [
+      -6.603,
+      53.349
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.603,
+      53.348
+     ],
+     [
+      -6.616,
+      53.35
+     ],
+     [
+      -6.626,
+      53.362
+     ],
+     [
+      -6.63,
+      53.401
+     ],
+     [
+      -6.624,
+      53.415
+     ],
+     [
+      -6.641,
+      53.45
+     ],
+     [
+      -6.647,
+      53.521
+     ],
+     [
+      -6.661,
+      53.546
+     ],
+     [
+      -6.613,
+      53.603
+     ],
+     [
+      -6.627,
+      53.642
+     ],
+     [
+      -6.623,
+      53.673
+     ],
+     [
+      -6.643,
+      53.683
+     ],
+     [
+      -6.644,
+      53.7
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.603,
+      53.35
+     ],
+     [
+      -6.603,
+      53.349
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -8.037,
+      53.272
+     ],
+     [
+      -7.95,
+      53.262
+     ],
+     [
+      -7.881,
+      53.261
+     ],
+     [
+      -7.841,
+      53.299
+     ],
+     [
+      -7.779,
+      53.331
+     ],
+     [
+      -7.706,
+      53.335
+     ],
+     [
+      -7.663,
+      53.347
+     ],
+     [
+      -7.558,
+      53.359
+     ],
+     [
+      -7.493,
+      53.379
+     ],
+     [
+      -7.387,
+      53.38
+     ],
+     [
+      -7.327,
+      53.397
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.513,
+      53.267
+     ],
+     [
+      -6.471,
+      53.263
+     ],
+     [
+      -6.441,
+      53.273
+     ],
+     [
+      -6.395,
+      53.272
+     ],
+     [
+      -6.345,
+      53.268
+     ],
+     [
+      -6.327,
+      53.258
+     ],
+     [
+      -6.234,
+      53.26
+     ],
+     [
+      -6.212,
+      53.25
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.682,
+      53.157
+     ],
+     [
+      -6.674,
+      53.16
+     ],
+     [
+      -6.636,
+      53.154
+     ],
+     [
+      -6.623,
+      53.159
+     ],
+     [
+      -6.597,
+      53.18
+     ],
+     [
+      -6.598,
+      53.199
+     ],
+     [
+      -6.523,
+      53.25
+     ],
+     [
+      -6.516,
+      53.265
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.603,
+      53.348
+     ],
+     [
+      -6.604,
+      53.348
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -6.723,
+      52.744
+     ],
+     [
+      -6.766,
+      52.754
+     ],
+     [
+      -6.816,
+      52.788
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -8.319,
+      51.953
+     ],
+     [
+      -8.319,
+      51.954
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -8.227,
+      51.835
+     ],
+     [
+      -8.226,
+      51.836
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -8.31,
+      51.863
+     ],
+     [
+      -8.271,
+      51.881
+     ],
+     [
+      -8.275,
+      51.907
+     ],
+     [
+      -8.307,
+      51.96
+     ]
+    ]
+   },
+   {
+    "kv": 220,
+    "path": [
+     [
+      -8.627,
+      51.974
+     ],
+     [
+      -8.543,
+      51.98
+     ],
+     [
+      -8.474,
+      51.969
+     ],
+     [
+      -8.444,
+      51.98
+     ],
+     [
+      -8.332,
+      51.962
+     ],
+     [
+      -8.321,
+      51.954
+     ]
+    ]
+   },
+   {
+    "kv": 400,
+    "path": [
+     [
+      -9.369,
+      52.639
+     ],
+     [
+      -9.315,
+      52.659
+     ],
+     [
+      -9.27,
+      52.684
+     ],
+     [
+      -9.229,
+      52.694
+     ],
+     [
+      -9.191,
+      52.714
+     ],
+     [
+      -9.139,
+      52.718
+     ],
+     [
+      -9.093,
+      52.736
+     ],
+     [
+      -9.032,
+      52.778
+     ],
+     [
+      -8.926,
+      52.805
+     ],
+     [
+      -8.812,
+      52.8
+     ],
+     [
+      -8.723,
+      52.781
+     ],
+     [
+      -8.64,
+      52.796
+     ],
+     [
+      -8.541,
+      52.788
+     ],
+     [
+      -8.463,
+      52.8
+     ],
+     [
+      -8.43,
+      52.791
+     ],
+     [
+      -8.307,
+      52.833
+     ],
+     [
+      -8.26,
+      52.818
+     ],
+     [
+      -8.176,
+      52.818
+     ],
+     [
+      -8.03,
+      52.835
+     ],
+     [
+      -7.936,
+      52.875
+     ],
+     [
+      -7.852,
+      52.877
+     ],
+     [
+      -7.808,
+      52.895
+     ],
+     [
+      -7.71,
+      52.885
+     ],
+     [
+      -7.628,
+      52.906
+     ],
+     [
+      -7.525,
+      52.919
+     ],
+     [
+      -7.47,
+      52.908
+     ],
+     [
+      -7.327,
+      52.933
+     ],
+     [
+      -7.299,
+      52.971
+     ],
+     [
+      -7.205,
+      52.998
+     ],
+     [
+      -7.142,
+      53.04
+     ],
+     [
+      -7.084,
+      53.047
+     ],
+     [
+      -6.982,
+      53.089
+     ],
+     [
+      -6.835,
+      53.093
+     ],
+     [
+      -6.796,
+      53.109
+     ],
+     [
+      -6.796,
+      53.127
+     ],
+     [
+      -6.753,
+      53.148
+     ],
+     [
+      -6.702,
+      53.148
+     ],
+     [
+      -6.688,
+      53.153
+     ]
+    ]
+   }
+  ],
+  "outline": [
+   [
+    [
+     -7.247,
+     55.069
+    ],
+    [
+     -7.543,
+     54.742
+    ],
+    [
+     -7.815,
+     54.639
+    ],
+    [
+     -8.056,
+     54.366
+    ],
+    [
+     -7.502,
+     54.125
+    ],
+    [
+     -7.296,
+     54.165
+    ],
+    [
+     -7.16,
+     54.241
+    ],
+    [
+     -7.079,
+     54.395
+    ],
+    [
+     -6.695,
+     54.198
+    ],
+    [
+     -6.434,
+     54.055
+    ],
+    [
+     -6.348,
+     54.004
+    ],
+    [
+     -6.23,
+     53.657
+    ],
+    [
+     -6.131,
+     53.443
+    ],
+    [
+     -6.097,
+     53.286
+    ],
+    [
+     -6.064,
+     52.865
+    ],
+    [
+     -6.39,
+     52.359
+    ],
+    [
+     -6.373,
+     52.323
+    ],
+    [
+     -6.426,
+     52.194
+    ],
+    [
+     -6.793,
+     52.24
+    ],
+    [
+     -6.904,
+     52.172
+    ],
+    [
+     -7.106,
+     52.131
+    ],
+    [
+     -7.565,
+     52.084
+    ],
+    [
+     -7.59,
+     51.991
+    ],
+    [
+     -7.891,
+     51.882
+    ],
+    [
+     -8.175,
+     51.857
+    ],
+    [
+     -8.298,
+     51.83
+    ],
+    [
+     -8.436,
+     51.693
+    ],
+    [
+     -8.532,
+     51.611
+    ],
+    [
+     -8.854,
+     51.596
+    ],
+    [
+     -9.193,
+     51.525
+    ],
+    [
+     -9.377,
+     51.495
+    ],
+    [
+     -9.448,
+     51.544
+    ],
+    [
+     -9.813,
+     51.474
+    ],
+    [
+     -9.443,
+     51.72
+    ],
+    [
+     -10.163,
+     51.59
+    ],
+    [
+     -9.998,
+     51.714
+    ],
+    [
+     -9.738,
+     51.837
+    ],
+    [
+     -10.136,
+     51.741
+    ],
+    [
+     -10.341,
+     51.844
+    ],
+    [
+     -10.266,
+     51.988
+    ],
+    [
+     -9.793,
+     52.138
+    ],
+    [
+     -10.242,
+     52.12
+    ],
+    [
+     -10.478,
+     52.152
+    ],
+    [
+     -10.166,
+     52.235
+    ],
+    [
+     -9.826,
+     52.258
+    ],
+    [
+     -9.834,
+     52.375
+    ],
+    [
+     -9.648,
+     52.57
+    ],
+    [
+     -8.961,
+     52.694
+    ],
+    [
+     -9.286,
+     52.591
+    ],
+    [
+     -9.553,
+     52.639
+    ],
+    [
+     -9.484,
+     52.783
+    ],
+    [
+     -9.272,
+     53.147
+    ],
+    [
+     -9.004,
+     53.146
+    ],
+    [
+     -8.991,
+     53.248
+    ],
+    [
+     -9.585,
+     53.25
+    ],
+    [
+     -9.553,
+     53.385
+    ],
+    [
+     -9.807,
+     53.302
+    ],
+    [
+     -9.881,
+     53.406
+    ],
+    [
+     -10.142,
+     53.446
+    ],
+    [
+     -10.18,
+     53.555
+    ],
+    [
+     -9.931,
+     53.6
+    ],
+    [
+     -9.789,
+     53.787
+    ],
+    [
+     -9.911,
+     53.859
+    ],
+    [
+     -9.786,
+     53.947
+    ],
+    [
+     -9.834,
+     54.112
+    ],
+    [
+     -9.93,
+     54.146
+    ],
+    [
+     -10.087,
+     54.159
+    ],
+    [
+     -10.115,
+     54.235
+    ],
+    [
+     -9.868,
+     54.228
+    ],
+    [
+     -9.846,
+     54.321
+    ],
+    [
+     -9.211,
+     54.276
+    ],
+    [
+     -9.051,
+     54.289
+    ],
+    [
+     -8.594,
+     54.284
+    ],
+    [
+     -8.661,
+     54.338
+    ],
+    [
+     -8.219,
+     54.57
+    ],
+    [
+     -8.457,
+     54.565
+    ],
+    [
+     -8.673,
+     54.619
+    ],
+    [
+     -8.545,
+     54.784
+    ],
+    [
+     -8.326,
+     54.832
+    ],
+    [
+     -8.451,
+     54.922
+    ],
+    [
+     -8.403,
+     55.031
+    ],
+    [
+     -8.207,
+     55.147
+    ],
+    [
+     -7.86,
+     55.168
+    ],
+    [
+     -7.696,
+     55.133
+    ],
+    [
+     -7.788,
+     55.219
+    ],
+    [
+     -7.641,
+     55.051
+    ],
+    [
+     -7.463,
+     55.143
+    ],
+    [
+     -7.348,
+     55.314
+    ],
+    [
+     -7.384,
+     55.386
+    ]
+   ]
+  ]
+ },
+ "freshness": [
+  {
+   "list": "EirGrid contracted non-wind",
+   "as_of": "2026-08-05",
+   "published": "2026-08-10",
+   "days": 5
+  },
+  {
+   "list": "EirGrid contracted wind",
+   "as_of": "2026-08-05",
+   "published": "2026-08-10",
+   "days": 5
+  },
+  {
+   "list": "ESB contracted non-renewable",
+   "as_of": "2026-07-01",
+   "published": "2026-07-30",
+   "days": 29
+  },
+  {
+   "list": "ESB contracted renewable",
+   "as_of": "2026-07-01",
+   "published": "2026-07-30",
+   "days": 29
+  },
+  {
+   "list": "ESB energised non-renewable",
+   "as_of": "2026-07-01",
+   "published": "2026-07-30",
+   "days": 29
+  },
+  {
+   "list": "ESB energised renewable",
+   "as_of": "2026-07-01",
+   "published": "2026-07-30",
+   "days": 29
+  }
+ ],
+ "caveats": [
+  "Lists as of 5 Aug 2026 (transmission) and 1 Jul 2026 (distribution); ESB posts its lists about a month after their as-of date.",
+  "'Left' a list means connected, withdrawn or moved: the contracted lists don't say which.",
+  "Burn-down shares are of projects still on a list; withdrawn projects are on neither.",
+  "Distribution burn-down only: transmission energisations need EirGrid's connected lists.",
+  "Waiting time runs from the earliest signed month printed for the project in any list since 2015, carried across relabelled refs (Rosspile: TG272, 2018).",
+  "The transmission total includes interconnectors; the county list leaves them out.",
+  "Not for publication: ESB Networks' terms forbid republishing its lists without written permission (PARKING.md)."
+ ],
+ "generated_at": "2026-10-28T20:46:51.208482+00:00"
 }

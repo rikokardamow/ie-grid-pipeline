@@ -91,14 +91,22 @@ def _span(values: list[int]) -> str:
 
 # --- g1: how fresh the lists are -------------------------------------------------
 
-def publication_lag(con):
-    """Each list's as-of date against when it went up. Live editions only."""
-    rows = con.execute("""
+def publication_lags(con) -> list[tuple[str, date, date, int]]:
+    """(source_id, as_of, published, days between) for each list's newest live edition
+    (the report shows the same rows)."""
+    return con.execute("""
         select source_id, as_of, published_at::date,
                date_diff('day', as_of, published_at::date) as lag
         from publication where fetched_from is null
+        qualify row_number() over (partition by source_id
+                                   order by as_of desc, published_at desc) = 1
         order by lag, source_id
     """).fetchall()
+
+
+def publication_lag(con):
+    """Each list's as-of date against when it went up. Live editions only."""
+    rows = publication_lags(con)
     lags = [r[3] for r in rows]
     tso = [r[3] for r in rows if r[0].startswith("eirgrid")]
     dso = [r[3] for r in rows if r[0].startswith("esb")]
@@ -129,8 +137,9 @@ def publication_lag(con):
 
 # --- g2: what is waiting to connect ---------------------------------------------
 
-def contracted_by_technology(con):
-    """MW with a signed connection agreement, not yet energised, latest editions."""
+def technology_groups(con):
+    """{group: [transmission MW, distribution MW]} in display order (Other last), and the
+    as-of date of each side, from the latest live contracted editions."""
     rows = con.execute(f"""
         select p.source_id like 'eirgrid%' as transmission, r.technology, p.as_of,
                sum(r.mec_mw) as mw
@@ -147,6 +156,12 @@ def contracted_by_technology(con):
         g[0 if transmission else 1] += mw
         as_of[transmission] = d
     order = sorted(groups, key=lambda g: (g == OTHER, -sum(groups[g])))
+    return order, groups, as_of
+
+
+def contracted_by_technology(con):
+    """MW with a signed connection agreement, not yet energised, latest editions."""
+    order, groups, as_of = technology_groups(con)
     total = sum(sum(v) for v in groups.values())
     top = order[0]
     share = sum(groups[top]) / total
@@ -211,8 +226,8 @@ def ecp_results(con) -> list[tuple[date, str]]:
     return [(d.when, b) for b, d in metrics.batch_dates(con).items() if b.startswith("ECP-2")]
 
 
-def queue_growth(con):
-    """Contracted MW on transmission as EirGrid printed it, every edition since 2015."""
+def queue_series(con) -> dict[str, list[tuple[date, float]]]:
+    """GW printed on each EirGrid contracted edition, per list, in date order."""
     rows = con.execute("""
         select p.source_id, p.as_of, arg_max(t.printed_mw, p.published_at) as mw
         from edition_total t join publication p using (publication_id)
@@ -221,6 +236,12 @@ def queue_growth(con):
     series = {"eirgrid.tso_contracted_nonwind": [], "eirgrid.tso_contracted_wind": []}
     for sid, d, mw in rows:
         series[sid].append((d, float(mw) / 1000))
+    return series
+
+
+def queue_growth(con):
+    """Contracted MW on transmission as EirGrid printed it, every edition since 2015."""
+    series = queue_series(con)
     nonwind, wind = series["eirgrid.tso_contracted_nonwind"], series["eirgrid.tso_contracted_wind"]
     n0, n1 = nonwind[0], nonwind[-1]
     title = (f"Non-wind waiting to connect to the transmission grid: {n0[1]:.1f} GW in "

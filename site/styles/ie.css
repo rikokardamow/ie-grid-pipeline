@@ -123,3 +123,214 @@ ul.plain {
 ul.plain li + li {
   margin-top: 4px;
 }
+
+/* g7b: the line chart, the split bars and the map */
+
+.line-chart,
+.grid-map {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.line-chart .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.line-chart .rule {
+  stroke: var(--text-muted);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.line-chart .tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+}
+
+.line-chart .label {
+  fill: var(--text);
+  font-size: 12px;
+}
+
+.series polyline {
+  fill: none;
+  stroke-width: 2;
+}
+
+.series.main polyline,
+.series.main circle {
+  stroke: var(--series-1);
+  fill: var(--series-1);
+}
+
+.series.second polyline,
+.series.second circle {
+  stroke: var(--series-3);
+  fill: var(--series-3);
+}
+
+.line-chart .series polyline {
+  fill: none;
+}
+
+.series circle {
+  stroke: var(--bg);
+  stroke-width: 1;
+}
+
+.series circle.end {
+  stroke-width: 2;
+}
+
+.key {
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-left: 8px;
+}
+
+.swatch:first-child {
+  margin-left: 0;
+}
+
+.swatch.main,
+.bar.main {
+  background: var(--series-1);
+}
+
+.swatch.second,
+.bar.second {
+  background: var(--series-3);
+}
+
+.bar-stack {
+  display: flex;
+  gap: 2px;
+  flex: 0 1 auto;
+  width: calc(100% - 190px);
+  min-width: 0;
+}
+
+.bar-stack .bar,
+.bar-pair .bar {
+  max-width: none;
+}
+
+.bar-stack .bar:first-child {
+  border-radius: 0;
+}
+
+.bar-pair {
+  display: grid;
+  gap: 2px;
+  width: calc(100% - 190px);
+}
+
+.bar-pair .bar {
+  height: 7px;
+}
+
+.split .bar-value {
+  white-space: nowrap;
+}
+
+.grid-map .land {
+  fill: var(--surface);
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.grid-map .power {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.grid-map .kv110 {
+  stroke: var(--text-muted);
+  stroke-width: 0.6;
+  opacity: 0.6;
+}
+
+.grid-map .kv220 {
+  stroke: var(--text-muted);
+  stroke-width: 1.3;
+}
+
+.grid-map .kv400 {
+  stroke: var(--text);
+  stroke-width: 2.2;
+}
+
+.grid-map .node {
+  fill: var(--accent);
+  fill-opacity: 0.55;
+  stroke: var(--bg);
+  stroke-width: 1;
+}
+
+.map-key .line-swatch {
+  display: inline-block;
+  width: 20px;
+  height: 0;
+  border-top: 1px solid var(--text-muted);
+  margin-left: 8px;
+}
+
+.map-key .line-swatch.kv220 {
+  border-top-width: 2px;
+}
+
+.map-key .line-swatch.kv400 {
+  border-top: 3px solid var(--text);
+}
+
+.map-key .dot-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.55;
+  margin-left: 8px;
+}
+
+.map-layout {
+  display: grid;
+  gap: 16px;
+}
+
+.grid-map {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.map-layout .card {
+  background: none;
+  border: 0;
+  padding: 0;
+}
+
+@media (max-width: 600px) {
+  .bar-value,
+  .split .bar-value {
+    white-space: normal;
+    min-width: 0;
+  }
+
+  .bar-stack,
+  .bar-pair {
+    width: 50%;
+  }
+}
