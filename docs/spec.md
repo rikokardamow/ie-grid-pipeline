@@ -75,7 +75,7 @@ every stone ends in one exhibit in its notebook, as well as its checks: a chart 
 | g3 | how the queue has grown: contracted GW on transmission per edition since 2015, from each list's printed total (connected GW and 2008-2014 wait for the layout parsers, PARKING.md) |
 | g3b | who joins and who leaves: GW joining and leaving the TSO contracted lists each year |
 | g4 | where it is stuck: contracted GW by county |
-| g5 | how long it takes: share of each ecp batch energised by months since the batch result |
+| g5 | how long it takes: share of each ecp batch energised by months since the batch result (distribution MW; owner approved distribution-only 2026-10-28, transmission waits for the connected lists) |
 | g6 | the weekly page itself |
 
 g1 blocks all. g2 before g3. g4 ‖ g5 after g2. g6 after g5. g7 after g6. g8 last. "weekly" = the job checks weekly; a new list lands quarterly (dso) or irregularly (tso), so most weeks the report says "no new publication" and shows the age clock moving. that's honest, not a gap.
