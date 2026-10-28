@@ -22,7 +22,7 @@ export function GridMap({ grid, format }: { grid: Grid; format: (node: Grid["nod
   const path = (ring: number[][]) => ring.map((p, i) => `${i ? "L" : "M"}${px(p[0]).toFixed(1)},${py(p[1]).toFixed(1)}`).join("") + "Z";
   const line = (ring: number[][]) => ring.map((p, i) => `${i ? "L" : "M"}${px(p[0]).toFixed(1)},${py(p[1]).toFixed(1)}`).join("");
   const maxMw = Math.max(...grid.nodes.map((n) => n.mw)) || 1;
-  const r = (mw: number) => 1.5 + 13 * Math.sqrt(mw / maxMw);
+  const r = (mw: number) => 14 * Math.sqrt(mw / maxMw); // area in proportion to MW
   const byKv = [...grid.lines].sort((a, b) => a.kv - b.kv);
   const kvClass = (kv: number) => (kv >= 400 ? "kv400" : kv >= 220 ? "kv220" : "kv110");
 
@@ -34,7 +34,7 @@ export function GridMap({ grid, format }: { grid: Grid; format: (node: Grid["nod
       {byKv.map((l, i) => (
         <path key={i} d={line(l.path)} className={`power ${kvClass(l.kv)}`} />
       ))}
-      {[...grid.nodes].reverse().map((n) => (
+      {[...grid.nodes].filter((n) => n.mw > 0).reverse().map((n) => (
         <circle key={n.node} cx={px(n.lon)} cy={py(n.lat)} r={r(n.mw)} className="node">
           <title>{format(n)}</title>
         </circle>

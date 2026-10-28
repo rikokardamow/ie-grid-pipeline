@@ -92,12 +92,14 @@ def _span(values: list[int]) -> str:
 # --- g1: how fresh the lists are -------------------------------------------------
 
 def publication_lags(con) -> list[tuple[str, date, date, int]]:
-    """(source_id, as_of, published, days between) for the live editions (the report
-    shows the same rows)."""
+    """(source_id, as_of, published, days between) for each list's newest live edition
+    (the report shows the same rows)."""
     return con.execute("""
         select source_id, as_of, published_at::date,
                date_diff('day', as_of, published_at::date) as lag
         from publication where fetched_from is null
+        qualify row_number() over (partition by source_id
+                                   order by as_of desc, published_at desc) = 1
         order by lag, source_id
     """).fetchall()
 

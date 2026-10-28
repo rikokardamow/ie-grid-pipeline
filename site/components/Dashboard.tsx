@@ -344,8 +344,8 @@ export function Dashboard({ report }: { report: Report }) {
           <>
             <Figure
               id="fig-map"
-              title={`${gw(grid.far_gw)} waits at ${grid.far_nodes} substations more than ${grid.far_km} km from the ${grid.backbone_kv.join("/")} kV network`}
-              subtitle={`Contracted MW by connection substation (circle area) on OpenStreetMap's lines; ${gw(grid.placed_gw)}${grid.placed_share === null ? "" : ` (${pct(grid.placed_share)})`} of the queue is at a substation on the map. Distance is from the substation, not the project's site`}
+              title={`${gw(grid.far_gw)} waits at ${grid.far_nodes} substations ${grid.far_km} km or more from the ${grid.backbone_kv.join("/")} kV network`}
+              subtitle={`Contracted MW by connection substation (circle area) on OpenStreetMap's lines, all-island; ${gw(grid.placed_gw)}${grid.placed_share === null ? "" : ` (${pct(grid.placed_share)})`} of the queue is at a substation on the map. Distance is from the substation, not the project's site`}
               footer={`Source: ${EIRGRID}; ${ESB}; lines and ${OSM}, fetched ${grid.osm_fetched_at.slice(0, 10)}; coast Natural Earth${asOf(report.editions, [...TSO_IDS, ...DSO_CONTRACTED])}`}
               table={{
                 headings: ["Substation", "kV", "Contracted", "Projects", `To ${grid.backbone_kv.join("/")} kV`],
@@ -356,7 +356,7 @@ export function Dashboard({ report }: { report: Report }) {
                 <div>
                   <p className="key map-key">
                     <span className="line-swatch kv400" aria-hidden="true" /> {grid.backbone_kv[grid.backbone_kv.length - 1]} kV
-                    <span className="line-swatch kv220" aria-hidden="true" /> {grid.backbone_kv[0]} kV
+                    <span className="line-swatch kv220" aria-hidden="true" /> {grid.backbone_kv.slice(0, -1).join("/")} kV
                     <span className="line-swatch" aria-hidden="true" /> lower
                     <span className="dot-swatch" aria-hidden="true" /> contracted MW
                   </p>

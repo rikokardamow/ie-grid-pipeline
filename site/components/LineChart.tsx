@@ -1,6 +1,7 @@
 // Lines over time, drawn as SVG on the server. Each line ends in a dot and its name and
 // latest value (direct labels, no legend box); thin rules mark events. Every point has
-// a hover title. The only number the chart writes itself is the zero of its y axis.
+// a hover title. The only number the chart writes itself is the zero of its y axis,
+// marked data-layout so the numbers check knows it.
 
 export type Series = { name: string; points: { date: string; value: number }[]; tone: "main" | "second" };
 export type Rule = { date: string; label: string };
@@ -45,9 +46,15 @@ export function LineChart({ series, rules, unit, format }: {
       {ticks.map((t) => (
         <g key={t}>
           <line x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} className="grid" />
-          <text x={PAD.left - 6} y={y(t)} className="tick" textAnchor="end" dominantBaseline="middle">
-            {t === 0 ? "0" : format(t)}
-          </text>
+          {t === 0 ? (
+            <text x={PAD.left - 6} y={y(t)} className="tick" textAnchor="end" dominantBaseline="middle" data-layout="">
+              0
+            </text>
+          ) : (
+            <text x={PAD.left - 6} y={y(t)} className="tick" textAnchor="end" dominantBaseline="middle">
+              {format(t)}
+            </text>
+          )}
         </g>
       ))}
       {years.map((yr) => (

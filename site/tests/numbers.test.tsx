@@ -28,14 +28,15 @@ function perturb(x: unknown, k: number): unknown {
   return x;
 }
 
-// The page's own layout: the zero of a chart's y axis (report.LAYOUT_NUMBERS does the same)
-const LAYOUT_NUMBERS = new Set(["0"]);
-
 const READ_ATTRS = /\b(?:title|aria-label|alt|content)="([^"]*)"/g;
 
 export function pageText(html: string): string {
   const attrs = [...html.matchAll(READ_ATTRS)].map((m) => m[1]);
-  const body = html.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ");
+  // a chart's axis zero is layout, marked data-layout (checks.LAYOUT_NUMBERS does the same)
+  const body = html
+    .replace(/<style[\s\S]*?<\/style>/g, "")
+    .replace(/<text[^>]*data-layout[^>]*>[^<]*<\/text>/g, " ")
+    .replace(/<[^>]+>/g, " ");
   return [body, ...attrs, String(metadata.title), String(metadata.description)]
     .join(" ")
     .replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, " ");
@@ -55,7 +56,7 @@ const numbers = (report: Report, extra?: React.ReactNode) =>
 function numbersNotFromReport(report: Report, extra?: React.ReactNode): string[] {
   const base = numbers(report, extra);
   const moved = [1, 2].map((k) => new Set(numbers(perturb(report, k) as Report, extra)));
-  return [...new Set(base.filter((n) => !LAYOUT_NUMBERS.has(n) && moved.every((m) => m.has(n))))];
+  return [...new Set(base.filter((n) => moved.every((m) => m.has(n))))];
 }
 
 // The branches the fixture doesn't take
@@ -70,7 +71,18 @@ function variants(): [string, Report][] {
   empty.moved.distribution = { ...empty.moved.distribution, editions: [], projects: [], count: 0, mw: 0, newly_listed_count: 0 };
   empty.stuck = { ...empty.stuck, burndown_first: null, burndown_first_at: null, burndown_later_max_at: null, longest_waiting: [] };
   empty.where = { generation_placed_share: null, counties: [] };
-  return [["first report", fixture()], ["new lists and a warning", later], ["no new list", quiet], ["empty", empty]];
+  const bare = fixture();
+  bare.grid = null;
+  bare.freshness = [];
+  bare.queue.history = { nonwind: [], wind: [], batches: [] };
+  bare.queue.by_technology = { ...bare.queue.by_technology, groups: [], top_share: null };
+  bare.moved.by_year = [];
+  const onePoint = fixture();
+  onePoint.queue.history = { ...onePoint.queue.history, nonwind: onePoint.queue.history.nonwind.slice(-1), wind: [] };
+  return [
+    ["first report", fixture()], ["new lists and a warning", later], ["no new list", quiet],
+    ["empty", empty], ["no grid and no series", bare], ["one-point history", onePoint],
+  ];
 }
 
 describe("every number on the page comes from the report", () => {
@@ -82,6 +94,10 @@ describe("every number on the page comes from the report", () => {
 
   it("catches a number the page writes in its text", () => {
     expect(numbersNotFromReport(fixture(), <p>13.69 GW</p>)).toContain("13.69");
+  });
+
+  it("catches a zero the page writes outside a chart axis", () => {
+    expect(numbersNotFromReport(fixture(), <p>0 projects</p>)).toContain("0");
   });
 
   it("catches a number the page writes in an attribute", () => {

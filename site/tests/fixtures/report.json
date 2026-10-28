@@ -22,6 +22,8 @@
   "by_technology": {
    "transmission_as_of": "2026-08-05",
    "distribution_as_of": "2026-07-01",
+   "total_gw": 16.658,
+   "top_share": 0.336,
    "groups": [
     {
      "group": "Solar",
@@ -58,9 +60,7 @@
      "transmission_gw": 0.288,
      "distribution_gw": 0.086
     }
-   ],
-   "total_gw": 16.658,
-   "top_share": 0.336
+   ]
   },
   "history": {
    "nonwind": [
@@ -787,29 +787,30 @@
    },
    {
     "label": "2-10 km",
-    "gw": 2.776,
-    "nodes": 58
+    "gw": 2.605,
+    "nodes": 57
    },
    {
     "label": "10-20 km",
-    "gw": 1.618,
-    "nodes": 32
+    "gw": 1.504,
+    "nodes": 33
    },
    {
-    "label": "over 20 km",
-    "gw": 1.351,
-    "nodes": 38
+    "label": "20 km and over",
+    "gw": 1.362,
+    "nodes": 39
    }
   ],
   "backbone_kv": [
    220,
+   275,
    400
   ],
   "far_km": 20,
-  "placed_share": 0.772,
-  "placed_gw": 11.925,
-  "far_gw": 1.351,
-  "far_nodes": 38,
+  "placed_share": 0.754,
+  "placed_gw": 11.653,
+  "far_gw": 1.362,
+  "far_nodes": 39,
   "nodes": [
    {
     "node": "Cashla 220 kV Substation",
@@ -882,8 +883,8 @@
     "kv": 110,
     "lon": -7.9745,
     "lat": 53.423,
-    "mw": 342.4,
-    "projects": 4,
+    "mw": 346.4,
+    "projects": 5,
     "tso_mw": 302.4,
     "match": "exact",
     "km_backbone": 16.3
@@ -930,6 +931,10 @@
     "mw": 138.6
    },
    {
+    "node": "Raheenmeel",
+    "mw": 125.0
+   },
+   {
     "node": "Balruntagh",
     "mw": 115.0
    },
@@ -944,10 +949,6 @@
    {
     "node": "Moanalow",
     "mw": 105.0
-   },
-   {
-    "node": "Rattin",
-    "mw": 100.0
    }
   ],
   "lines": [
@@ -2068,5 +2069,5 @@
   "The transmission total includes interconnectors; the county list leaves them out.",
   "Not for publication: ESB Networks' terms forbid republishing its lists without written permission (PARKING.md)."
  ],
- "generated_at": "2026-10-28T20:30:11.270897+00:00"
+ "generated_at": "2026-10-28T20:46:51.208482+00:00"
 }

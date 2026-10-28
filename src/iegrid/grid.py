@@ -4,15 +4,21 @@ The lists name the substation each project connects at (the node), not the proje
 site, so the map places MW at nodes. OpenStreetMap gives the grid: every line of
 110 kV and over and every named substation, fetched from Overpass once and cached in
 data/osm/grid.json (ODbL, (c) OpenStreetMap contributors). A node is placed when its
-name matches one substation of 38 kV or over:
+name matches one substation:
 
     exact     norm_node(list node) == norm_substation(OSM name)
     prefix    one is the other's prefix, both at least PREFIX_MIN letters, one candidate
               ("Lanesboro" / "Lanesborough")
 
-and a name OSM gives to several substations far apart is not placed (ambiguous).
-Distance is from the substation to the nearest line of BACKBONE_KV: how far the queued
-MW sits from the 220/400 kV network. It is not the length of the project's own cable.
+with two checks the g7b review showed prefix names need (Raheenmeel is not Raheen,
+244 km away): a transmission project only matches a substation tagged TSO_MIN_KV or
+over, and a distribution project's feeding station must be within PARENT_KM of its
+110 kV station when that station is on the map. A distribution project whose feeding
+station isn't found is drawn at its 110 kV station ('parent'). A name OSM gives to
+several substations far apart is not placed (ambiguous).
+Distance is from the substation to the nearest line of BACKBONE_KV, all-island (the
+north's backbone is 275 kV): how far the queued MW sits from the transmission
+backbone. It is not the length of the project's own cable.
 """
 
 from __future__ import annotations
@@ -33,16 +39,18 @@ from pathlib import Path
 from iegrid import parse, region, store
 
 CACHE = Path(__file__).resolve().parents[2] / "data" / "osm" / "grid.json"
-BBOX = (51.3, -10.8, 55.5, -5.9)  # the island; Northern Ireland's lines draw the whole grid
+BBOX = (51.3, -10.8, 55.5, -5.9)  # the island: the grid is all-island
 ENDPOINTS = ("https://overpass-api.de/api/interpreter",
              "https://maps.mail.ru/osm/tools/overpass/api/interpreter")
 QUERIES = {
-    "lines": 'way["power"="line"]["voltage"~"(110|220|400)000"];out tags geom;',
+    "lines": 'way["power"="line"]["voltage"~"(110|220|275|400)000"];out tags geom;',
     "substations": ('(way["power"="substation"];node["power"="substation"];'
                     'relation["power"="substation"];);out tags center;'),
 }
-BACKBONE_KV = (220, 400)
+BACKBONE_KV = (220, 275, 400)
 MIN_SUBSTATION_KV = 38
+TSO_MIN_KV = 110
+PARENT_KM = 40          # a feeding station hangs off a 110 kV station nearby
 PREFIX_MIN = 6
 SAME_PLACE_KM = 2.0     # two OSM objects of one name this close are one substation
 FAR_KM = 20             # "far from the backbone", printed with the number it gives
@@ -177,19 +185,46 @@ def _one_place(cands: list[Substation]) -> Substation | None:
     return None
 
 
-def match(node: str, idx: dict[str, list[Substation]]) -> tuple[Substation | None, str]:
+def match(node: str, idx: dict[str, list[Substation]], min_kv: int = 0,
+          near: Substation | None = None) -> tuple[Substation | None, str]:
+    """The one substation this list node names, of min_kv or over and, if near is
+    given, within PARENT_KM of it."""
     k = region.norm_node(node)
     if not k:
         return None, "none"
-    if k in idx:
-        s = _one_place(idx[k])
-        return (s, "exact") if s else (None, "ambiguous")
+
+    def ok(s: Substation) -> bool:
+        return (s.kv >= min_kv and
+                (near is None or km_between((s.lon, s.lat), (near.lon, near.lat)) <= PARENT_KM))
+
+    def pick(name: str, how: str) -> tuple[Substation | None, str]:
+        cands = [s for s in idx[name] if ok(s)]
+        if not cands:
+            return None, "none"
+        s = _one_place(cands)
+        return (s, how) if s else (None, "ambiguous")
+
+    if k in idx and (got := pick(k, "exact"))[1] != "none":
+        return got
     if len(k) >= PREFIX_MIN:
-        hits = [n for n in idx if len(n) >= PREFIX_MIN and (n.startswith(k) or k.startswith(n))]
+        hits = [n for n in idx if n != k and len(n) >= PREFIX_MIN
+                and (n.startswith(k) or k.startswith(n)) and any(ok(s) for s in idx[n])]
         if len(hits) == 1:
-            s = _one_place(idx[hits[0]])
-            return (s, "prefix") if s else (None, "ambiguous")
+            return pick(hits[0], "prefix")
     return None, "none"
+
+
+def place(tso: bool, node: str, station: str,
+          idx: dict[str, list[Substation]]) -> tuple[Substation | None, str]:
+    """Where a list row is drawn. Transmission: its node, at TSO_MIN_KV or over.
+    Distribution: its feeding station near its 110 kV station, else that station."""
+    if tso:
+        return match(node, idx, TSO_MIN_KV)
+    parent, _ = match(station, idx, TSO_MIN_KV) if station else (None, "none")
+    s, how = match(node, idx, near=parent) if node else (None, "none")
+    if s is None and parent is not None:
+        return parent, "parent"
+    return s, how
 
 
 # --- what the report shows ----------------------------------------------------------
@@ -199,7 +234,7 @@ def nodes(con, cache: Path = CACHE) -> dict:
     idx = _index(subs)
     backbone = [ln for ln in lines if ln.kv in BACKBONE_KV]
     rows = con.execute(f"""
-        select p.source_id like 'eirgrid%', coalesce(nullif(r.node, ''), r.station_110kv), r.mec_mw
+        select p.source_id like 'eirgrid%', r.node, r.station_110kv, r.mec_mw
         from project_row r join ({store.LATEST_LIVE}) l using (publication_id)
         join publication p using (publication_id)
         where p.source_id like '%contracted%' and r.parser_version = {int(parse.PARSER_VERSION)}
@@ -208,11 +243,11 @@ def nodes(con, cache: Path = CACHE) -> dict:
     at: dict[str, dict] = {}
     unplaced: dict[str, float] = defaultdict(float)
     total = 0.0
-    for tso, node, mw in rows:
+    for tso, node, station, mw in rows:
         total += float(mw)
-        s, how = match(node or "", idx)
+        s, how = place(tso, node or "", station or "", idx)
         if s is None:
-            unplaced[(node or "").strip() or "(no node)"] += float(mw)
+            unplaced[(node or station or "").strip() or "(no node)"] += float(mw)
             continue
         n = at.setdefault(s.name, {"node": s.name, "kv": s.kv, "lon": round(s.lon, 4),
                                    "lat": round(s.lat, 4), "mw": 0.0, "projects": 0,
@@ -225,14 +260,15 @@ def nodes(con, cache: Path = CACHE) -> dict:
         n["km_backbone"] = round(d, 1) if d is not None else None
         n["mw"], n["tso_mw"] = round(n["mw"], 1), round(n["tso_mw"], 1)
     placed = sum(n["mw"] for n in at.values())
-    far = [n for n in at.values() if (n["km_backbone"] or 0) > FAR_KM]
     edges = (0, *BANDS_KM)
     bands = [{"label": f"{lo}-{hi} km" if lo else f"under {hi} km", "gw": 0.0, "nodes": 0}
              for lo, hi in pairwise(edges)]
-    bands.append({"label": f"over {FAR_KM} km", "gw": 0.0, "nodes": 0})
+    bands.append({"label": f"{FAR_KM} km and over", "gw": 0.0, "nodes": 0})
+    # a node with no distance (no backbone line loaded) is in no band and not "far"
     for n in at.values():
-        d = n["km_backbone"] if n["km_backbone"] is not None else float("inf")
-        b = bands[sum(d >= e for e in BANDS_KM)]
+        if n["km_backbone"] is None:
+            continue
+        b = bands[sum(n["km_backbone"] >= e for e in BANDS_KM)]
         b["gw"] += n["mw"] / 1000
         b["nodes"] += 1
     for b in bands:
@@ -244,8 +280,8 @@ def nodes(con, cache: Path = CACHE) -> dict:
         "far_km": FAR_KM,
         "placed_share": round(placed / total, 3) if total else None,
         "placed_gw": round(placed / 1000, 3),
-        "far_gw": round(sum(n["mw"] for n in far) / 1000, 3),
-        "far_nodes": len(far),
+        "far_gw": bands[-1]["gw"],      # the last band: FAR_KM and over
+        "far_nodes": bands[-1]["nodes"],
         "nodes": sorted(at.values(), key=lambda n: -n["mw"]),
         "unplaced": [{"node": k, "mw": round(v, 1)}
                      for k, v in sorted(unplaced.items(), key=lambda kv: -kv[1])],

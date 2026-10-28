@@ -228,7 +228,8 @@ def _by_technology(con) -> dict:
 
     order, groups, as_of = exhibits.technology_groups(con)
     total = sum(sum(v) for v in groups.values())
-    return {"transmission_as_of": str(as_of[True]), "distribution_as_of": str(as_of[False]),
+    side = {k: str(v) if v is not None else None for k, v in as_of.items()}
+    return {"transmission_as_of": side.get(True), "distribution_as_of": side.get(False),
             "total_gw": _f(total / 1000),
             "top_share": _f(sum(groups[order[0]]) / total) if total else None,
             "groups": [{"group": g, "transmission_gw": _f(groups[g][0] / 1000),

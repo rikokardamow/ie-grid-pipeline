@@ -14,7 +14,7 @@ From the report of 28 Oct 2026, with lists as of 5 Aug 2026 (transmission) and 1
 - 14.69 GW is contracted on transmission (158 projects) and 1.96 GW on distribution (177), not yet energised.
 - Three years after its results, ECP-1 had 10% of its distribution MW energised; no later batch passed 1%.
 - Offaly holds the most contracted generation (1.68 GW); 95% of generation MW is placed in a county.
-- 1.35 GW waits at 38 substations more than 20 km from the 220/400 kV network; 6.18 GW is within 2 km of it.
+- 1.36 GW waits at 39 substations 20 km or more from the all-island 220/275/400 kV network; 6.18 GW is under 2 km from it.
 
 The charts below are from the dashboard (`site/`), each with its finding as the title.
 
@@ -31,9 +31,9 @@ The charts below are from the dashboard (`site/`), each with its finding as the 
 
 ![Share of each ECP batch energised three years after its results](docs/img/burndown.png)
 
-**Where.** Each circle is a connection substation, sized by the MW waiting there, on OpenStreetMap's 110, 220 and 400 kV lines.
+**Where.** Each circle is a connection substation, sized by the MW waiting there, on OpenStreetMap's 110 kV and higher lines. 75% of contracted MW is at a substation OpenStreetMap names; the rest, mostly at new stations, is listed under the map.
 
-![Contracted MW by substation on the grid, with distance to the 220/400 kV network](docs/img/map.png)
+![Contracted MW by substation on the grid, with distance to the 220/275/400 kV network](docs/img/map.png)
 ![Contracted GW by county](docs/img/counties.png)
 
 **How fresh.** EirGrid posts its lists about 5 days after their as-of date and ESB about 29, so the distribution side runs a month behind.

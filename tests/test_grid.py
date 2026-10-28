@@ -19,6 +19,25 @@ def test_a_node_matches_its_substation_by_name():
                                              "exact")
 
 
+def test_a_transmission_project_needs_a_transmission_substation():
+    # g7b review: Raheenmeel (Offaly) was drawn at Raheen 38 kV in Limerick by prefix,
+    # Curraghdoo (Meath) at an untagged Curragh in Kerry
+    i = idx(S("Raheen 38 kV Substation", 38, -8.6, 52.6), S("Curragh Substation", 0, -9.5, 52.1))
+    assert grid.place(True, "Raheenmeel", "", i) == (None, "none")
+    assert grid.place(True, "Curraghdoo", "", i) == (None, "none")
+
+
+def test_a_feeding_station_must_be_near_its_110kv_station_or_the_project_is_drawn_there():
+    # g7b review: "MILLTOWN (SR)" under OUGHTRAGH (Kerry) was drawn at Milltown in Dublin
+    parent = S("Oughtragh 110kV Substation", 110, -9.7, 52.15)
+    dublin = S("Milltown 110 kV Substation", 110, -6.25, 53.31)
+    kerry = S("Milltown 38 kV Substation", 38, -9.72, 52.14)
+    assert grid.place(False, "MILLTOWN (SR)", "OUGHTRAGH", idx(parent, dublin)) == (parent, "parent")
+    assert grid.place(False, "MILLTOWN", "OUGHTRAGH", idx(parent, dublin, kerry)) == (kerry, "exact")
+    # no 110 kV station on the map: the feeding station alone decides
+    assert grid.place(False, "MILLTOWN", "NOWHERE", idx(kerry)) == (kerry, "exact")
+
+
 def test_a_spelling_variant_matches_by_prefix_only_when_it_is_the_one_candidate():
     lanes = S("Lanesborough 110kV Substation", 110, -7.99, 53.67)
     assert grid.match("Lanesboro", idx(lanes)) == (lanes, "prefix")
@@ -71,8 +90,8 @@ def test_every_mw_is_placed_or_listed_as_unplaced(tmp_path, monkeypatch):
             return self
 
         def fetchall(self):
-            return [(True, "Cashla", 100), (True, "Cashla 220kV", 50), (False, "Nowhere", 25),
-                    (False, "", 5)]
+            return [(True, "Cashla", "", 100), (True, "Cashla 220kV", "", 50),
+                    (False, "Nowhere", "", 25), (False, "", "", 5)]
 
     out = grid.nodes(Con(), cache)
     placed = sum(n["mw"] for n in out["nodes"])
@@ -83,5 +102,28 @@ def test_every_mw_is_placed_or_listed_as_unplaced(tmp_path, monkeypatch):
     assert out["far_gw"] == pytest.approx(0.15)  # 33 km is past FAR_KM
     assert [u["node"] for u in out["unplaced"]] == ["Nowhere", "(no node)"]
     assert [b["label"] for b in out["bands"]] == [
-        "under 2 km", "2-10 km", "10-20 km", "over 20 km"]
+        "under 2 km", "2-10 km", "10-20 km", "20 km and over"]
     assert [b["gw"] for b in out["bands"]] == [0, 0, 0, 0.15]
+
+
+def test_far_and_the_last_band_are_one_rule(tmp_path):
+    # g7b review: far used > 20 and counted no-distance as 0, the bands >= 20 and infinity
+    cache = tmp_path / "grid.json"
+    cache.write_text(json.dumps({
+        "fetched_at": "x",
+        "lines": [{"tags": {"voltage": "400000"}, "geometry": [
+            {"lon": -8.0, "lat": 53.0}, {"lon": -6.0, "lat": 53.0}]}],
+        "substations": [{"tags": {"name": "Edge 110kV", "voltage": "110000"},
+                         "center": {"lon": -7.0, "lat": 53.0 + 20 / grid.KM_PER_DEG_LAT}}],
+    }))
+
+    class Con:
+        def execute(self, sql):
+            return self
+
+        def fetchall(self):
+            return [(True, "Edge", "", 10)]
+
+    out = grid.nodes(Con(), cache)
+    assert out["nodes"][0]["km_backbone"] == 20.0
+    assert (out["far_gw"], out["far_nodes"]) == (out["bands"][-1]["gw"], 1)

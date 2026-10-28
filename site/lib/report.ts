@@ -46,8 +46,8 @@ export type Report = {
     distribution_gw: number;
     distribution_projects: number;
     by_technology: {
-      transmission_as_of: string;
-      distribution_as_of: string;
+      transmission_as_of: string | null;
+      distribution_as_of: string | null;
       total_gw: number;
       top_share: number | null;
       groups: { group: string; transmission_gw: number; distribution_gw: number }[];
@@ -116,6 +116,7 @@ const REQUIRED: [string, (r: Report) => unknown][] = [
   ["stuck.at_years", (r) => r.stuck?.at_years],
   ["where.generation_placed_share", (r) => r.where?.generation_placed_share],
   ["queue.history", (r) => r.queue?.history],
+  ["queue.by_technology", (r) => r.queue?.by_technology],
   ["moved.by_year", (r) => r.moved?.by_year],
   ["grid", (r) => r.grid],
   ["freshness", (r) => r.freshness],
