@@ -485,49 +485,49 @@ def transitions_table(con, n: int | None = None) -> list[tuple]:
     return rows[:n] if n else rows
 
 
-def untraced_numbers(pdf_path, rep: dict) -> list[str]:
-    """g6 done-when: numbers printed on the page that no value in the report dict gives
-    (allowing for rounding, percentages and GW/MW). Dates and the page's fixed wording
-    ("3 years", "100") are left out. An empty list means every number traces."""
-    import io
-    import json as _json
+def _perturb(x, k: int):
+    """Every number in the report changed: numbers moved by a k-dependent amount, and every
+    digit run in a string (dates, names, refs) moved too."""
     import re as _re
+
+    if isinstance(x, bool) or x is None:
+        return x
+    # large moves, so a changed number can't land on a small one already on the page
+    if isinstance(x, int):
+        return x + 1000 * k
+    if isinstance(x, float):
+        return x * (1.37 + 0.11 * k) + 111.1 * k
+    if isinstance(x, str):
+        return _re.sub(r"\d+", lambda m: str(int(m.group(0)) + 1000 * k), x)
+    if isinstance(x, dict):
+        return {key: _perturb(v, k) for key, v in x.items()}
+    if isinstance(x, list):
+        return [_perturb(v, k) for v in x]
+    return x
+
+
+# The page's own layout: the burn-down axis ticks
+LAYOUT_NUMBERS = {"0", "20", "40", "60", "80", "100"}
+
+
+def numbers_not_from_report(rep: dict, render, work_dir) -> list[str]:
+    """g6 done-when: numbers on the page that don't come from the report dict. The page is
+    rendered three times, from the report and from two copies with every number changed
+    (checks._perturb); a number on the first page that is on both changed pages as well
+    was written by the renderer, not read from the report. Axis ticks are allowed."""
+    import io
+    import re as _re
+    from pathlib import Path as _Path
 
     import pdfplumber
 
-    values: list[float] = []
+    def numbers(path):
+        with pdfplumber.open(io.BytesIO(_Path(path).read_bytes())) as pdf:
+            text = "\n".join(p.extract_text() or "" for p in pdf.pages)
+        return _re.findall(r"\d+(?:\.\d+)?", text)
 
-    def walk(x):
-        if isinstance(x, bool):
-            return
-        if isinstance(x, (int, float)):
-            values.append(float(x))
-        elif isinstance(x, str):
-            values.extend(float(v) for v in _re.findall(r"\d+(?:\.\d+)?", x))
-        elif isinstance(x, dict):
-            for v in x.values():
-                walk(v)
-        elif isinstance(x, list):
-            for v in x:
-                walk(v)
-
-    walk(_json.loads(_json.dumps(rep, default=str)))
-    with pdfplumber.open(io.BytesIO(open(pdf_path, "rb").read())) as pdf:
-        text = "\n".join(p.extract_text() or "" for p in pdf.pages)
-    text = _re.sub(r"\d{4}-\d{2}(-\d{2})?", " ", text)  # dates come from strings
-    fixed = {"3", "0", "20", "40", "60", "80", "100", "1", "2", "4", "5", "6"}  # axis, wording
-
-    def traces(n: float) -> bool:
-        for v in values:
-            if abs(v - n) < 0.051 or abs(v * 100 - n) < 0.51 or abs(v / 1000 - n) < 0.051 \
-                    or abs(round(v) - n) < 0.5:
-                return True
-        return False
-
-    out = []
-    for tok in _re.findall(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])", text):
-        if tok in fixed:
-            continue
-        if not traces(float(tok)):
-            out.append(tok)
-    return out
+    work_dir = _Path(work_dir)
+    base = numbers(render(rep, work_dir / "base.pdf"))
+    moved = [set(numbers(render(_perturb(rep, k), work_dir / f"moved{k}.pdf"))) for k in (1, 2)]
+    return sorted({n for n in base if n not in LAYOUT_NUMBERS and all(n in m for m in moved)},
+                  key=lambda n: float(n))
