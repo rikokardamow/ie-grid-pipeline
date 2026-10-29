@@ -19,7 +19,7 @@ much of the queue would count and which technologies carry it.
 | no factor applied | 4,668 MW | | | |
 
 Gas turbines are 16% of the nameplate that has a factor and 70% to 74% of what counts. Between the two
-auctions the factor for a battery fell by about two fifths (a 4-hour battery of 100 MW: 0.275 to 0.143),
+auctions the factor for a battery fell by about half (a 4-hour battery of 100 MW: 0.275 to 0.143),
 wind by 6% and solar by 16%: the more of a technology is built or contracted, the less each further MW counts.
 
 ## The six questions
@@ -30,7 +30,7 @@ wind by 6% and solar by 16%: the more of a technology is built or contracted, th
    a future factor. The two auctions are shown to show how far the factors moved, not to extrapolate.
 3. **Validate**: the factors are read out of the packs by code (`python -m iegrid.derating <pack.pdf>`), which
    refuses a curve with a gap or a factor outside 0 to 1, and a test re-reads the saved pack and compares every
-   stored value. The contracted total it starts from ties to the lists' printed totals (layer 0). The
+   stored value. The contracted total it starts from ties to the lists' printed totals (the g2 parse gate). The
    sum is checked by hand-computed cases in `tests/test_derating.py`.
 4. **Propose**: that the queue's capacity value is about an eighth of its nameplate, and mostly gas.
 5. **Give**: the number a system planner or a developer reads, which no list prints, with every factor
