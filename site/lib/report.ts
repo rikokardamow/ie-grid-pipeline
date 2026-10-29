@@ -100,11 +100,18 @@ export type Report = {
   where: { generation_placed_share: number | null; counties: { county: string; gw: number }[] };
   grid: Grid | null;
   freshness: { list: string; as_of: string; published: string; days: number }[];
+  runs: {
+    count: number;
+    with_new_files: number;
+    failed: number;
+    first: string | null;
+    latest: { run: number; started: string; status: string; new_files: number; stored: string[]; parsed: number }[];
+  };
   caveats: string[];
 };
 
-// Same names as report.REPORT_NAME: <date>[T<HHMM>].json
-export const REPORT_NAME = /^\d{4}-\d{2}-\d{2}(T\d{4})?\.json$/;
+// Same names as report.REPORT_NAME: <date>[T<HHMM>[SS]].json
+export const REPORT_NAME = /^\d{4}-\d{2}-\d{2}(T\d{4}(\d{2})?)?\.json$/;
 
 export const REPORTS = process.env.REPORT_DIR ?? join(process.cwd(), "..", "data", "reports");
 
@@ -120,6 +127,7 @@ const REQUIRED: [string, (r: Report) => unknown][] = [
   ["moved.by_year", (r) => r.moved?.by_year],
   ["grid", (r) => r.grid],
   ["freshness", (r) => r.freshness],
+  ["runs.latest", (r) => r.runs?.latest],
 ];
 
 function reportFiles(dir: string): string[] {

@@ -171,6 +171,24 @@ create table if not exists parse_result (
     parsed_at         timestamptz not null,
     primary key (publication_id, parser_version)
 );
+
+-- g8: one row per weekly run, written when the run ends (a failed run too).
+create sequence if not exists run_log_seq;
+create table if not exists run_log (
+    run_id            bigint primary key default nextval('run_log_seq'),
+    started_at        timestamptz not null,
+    finished_at       timestamptz not null,
+    status            text not null,       -- 'ok', 'attention' or 'failed'
+    new_files         integer not null,    -- publications stored by this run
+    stored            text not null,       -- what they were, one per line
+    parsed            integer not null,
+    problems          text not null,       -- what made it 'attention' or 'failed'
+    notes             text not null,       -- what it did besides: county build, ECP rows read
+    ecp_read          boolean not null,    -- the ECP batch results were read without a failure
+    report_path       text,
+    code_version      text not null,       -- git sha, parser version
+    error             text
+);
 """
 
 

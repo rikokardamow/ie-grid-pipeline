@@ -43,8 +43,14 @@ The charts below are from the dashboard (`site/`), each with its finding as the 
 
 ## How to run
 
+    ops/weekly.sh                      # the weekly run: new lists in, report out, page rebuilt, one run_log row
+
+or step by step:
+
     uv sync
     uv run python -m iegrid.ingest     # fetch every current list into data/
+    uv run python -m iegrid.load       # parse what's new, each edition tied to its printed total
+    uv run python -m iegrid.counties   # place projects in counties
     uv run python -m iegrid.grid       # OpenStreetMap lines and substations into data/osm (once, or to refresh)
     uv run python -m iegrid.report     # the weekly page: data/reports/<date>T<HHMM>.json and .pdf
     uv run pytest
