@@ -1,6 +1,6 @@
 # ie-grid-pipeline spec
 
-28 oct 2026. p7 in energy-forecasting/docs/career.md. drafted from the sources as they stand today, before any code. same rules as the record: point-in-time, nothing overwritten, a stone ends in a notebook i open.
+28 oct 2026. drafted from the sources as they stand today, before any code. same rules as the record: point-in-time, nothing overwritten, a stone ends in a notebook i open.
 
 ## the question
 
@@ -98,4 +98,4 @@ data centre / demand connections, northern ireland (soni), planning-permission s
 
 ## budget
 
-2 weekends (career.md). nov-dec 2026, done before christmas. streak gate applies: a week with a missed freeze on the record = no stone that week.
+2 weekends. nov-dec 2026, done before christmas. streak gate applies: a week with a missed freeze on the record = no stone that week.

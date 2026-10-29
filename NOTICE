@@ -1,0 +1,13 @@
+Data and credits (the MIT licence in LICENSE covers the code only)
+
+- EirGrid contracted and connected generator lists and ECP results: Supported by EirGrid Group Data.
+  Used with EirGrid's permission.
+- ESB Networks DSO contracted and energised lists and ECP results: (c) ESB Networks.
+  Used with ESB Networks' permission. Neither publisher endorses this work.
+- County lookups and grid lines: (c) OpenStreetMap contributors, available under the Open Database
+  Licence (https://www.openstreetmap.org/copyright).
+- IEA Wind TCP Annual Report 2022, Ireland chapter (national team: SEAI): quoted in
+  src/iegrid/data/external_checks.csv with the words and date read.
+- Other sources cited in src/iegrid/data/resolutions.csv are quoted with their URLs.
+
+The raw PDFs and the store are not in this repository.

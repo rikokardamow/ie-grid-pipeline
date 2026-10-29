@@ -1,5 +1,7 @@
 # ie-grid-pipeline
 
+Point-in-time record of Ireland's grid connection queue, read from the PDF lists EirGrid and ESB Networks publish: what is waiting, what moved, what is stuck, where, and what became of projects that left the lists.
+
 ## Question
 
 How much generation is waiting to connect to Ireland's grid, what moved this week, what is stuck, and where?
@@ -63,4 +65,22 @@ or step by step:
     pnpm a11y                          # WCAG 2.2 AA, both modes, desktop and phone
     pnpm exhibit                       # screenshots into data/exhibits, charts into docs/img
 
-ESB Networks and EirGrid have each confirmed permission to use their lists (reported by the owner on 29 Oct 2026; keep the replies with the repo's private records, not in git). The page is still served locally only until a host and the repo's visibility are chosen (`PARKING.md`). Credit lines stay on every exhibit.
+ESB Networks and EirGrid have each confirmed permission to use their lists here. Credit lines stay on every exhibit; see `NOTICE`. The dashboard is served locally (127.0.0.1), not hosted.
+
+## Analysis layers
+
+Built on the record, each with its own README and tests (`docs/layers/`): connected outcomes, delivery pace, target slippage, the ECP funnel, an errata ledger of where the lists disagree, ESB's older lists, an external check against a published wind total, and sourced resolutions of open questions. Start with `docs/layers/00-decisions.md`; `docs/layers/BRING-IN.md` lists the expected numbers.
+
+## Layout
+
+    src/iegrid/     ingest, parse, load, report and the layer modules
+    src/iegrid/data/ small cited tables (stations, external checks, resolutions)
+    tests/          pytest; every edition is tied to its printed total
+    site/           Next.js static dashboard; its tests check every number against the report
+    ops/            the weekly run
+    docs/           spec, layers, charts
+    data/           raw PDFs, the store and reports (not in git)
+
+## Licence and data
+
+Code: MIT (`LICENSE`). The lists belong to their publishers and are used with their permission, not under this licence; the raw PDFs and the store are not in the repository. Credits and the OpenStreetMap (ODbL) attribution are in `NOTICE`.
