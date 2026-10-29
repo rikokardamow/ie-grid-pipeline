@@ -183,3 +183,25 @@ The open gaps were answered from data and from sources read at the source, and t
 What the numbers check caught while building these: a hard-coded year in my wording (twice), a
 count taken from an array's length instead of the report, and, most seriously, a fallback that
 would have printed "100%" and "0%" where a batch had no count. Each is fixed and has a test.
+
+## Fifth session (29 Oct 2026, "next session"): the 37 non-wind unknowns, tested, no build
+
+The idea parked earlier: read the non-wind connected lists (nine editions held: eight from 2015-17, one
+non-renewable list updated 1 Aug 2022), which print a name, node and MEC but no ref, and match the 37
+non-wind unknown leavers by name and MEC. Prototyped before any code was kept: a leaver matched when its
+distinctive name words all appear on a line and a number on that line is within 3% of its MEC.
+
+**Result: 2 of 37 match, and the rest cannot.** Lisdrumdoagh (TG320, 60 MW) is on the 2022 list as
+"Lisdrumdoagh LH1 Battery", 60 MW, 30 Jan 2022, and Porterstown (TG336, 30 MW) as "Porterstown PN1 Battery",
+27 Feb 2022. Of the other 35, 33 left the contracted list after the last connected non-wind list (Aug 2022),
+so no list we hold can say whether they connected; the remaining two (Aghada BESS 01, Kelwin Power Plant
+Phase 2 and its sibling) did not match by name. EirGrid's connected non-renewable file is still the Aug 2022
+one on its site (checked 29 Oct 2026 by search; the file page itself was not read), so the evidence does not exist in a
+public list yet.
+
+**Decision: no-go.** A parser for nine PDFs to move two projects (90 MW) from "unknown" would add a store table
+and a matching gate for no change to the picture. The two matches are recorded here; the outcomes are left
+as they are. What would change this: a connected list published after Aug 2022. The weekly run already
+checks the page for new files, so the first one is picked up without work, but the non-wind reader would
+then be worth building. Parked in `PARKING.md`.
+
