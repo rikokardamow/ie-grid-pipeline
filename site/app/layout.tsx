@@ -26,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             OpenStreetMap contributors, available under the{" "}
             <a href="https://www.openstreetmap.org/copyright">Open Database License</a>.
           </p>
-          <p>Private draft, not for publication: the lists&apos; republication terms are not settled.</p>
+          <p>ESB Networks and EirGrid have each given permission to use their lists here. Not endorsed by either.</p>
         </footer>
       </body>
     </html>

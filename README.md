@@ -63,4 +63,4 @@ or step by step:
     pnpm a11y                          # WCAG 2.2 AA, both modes, desktop and phone
     pnpm exhibit                       # screenshots into data/exhibits, charts into docs/img
 
-The page is not published. ESB Networks' terms forbid republishing its lists without written permission (`PARKING.md`, licence).
+ESB Networks and EirGrid have each confirmed permission to use their lists (reported by the owner on 29 Oct 2026; keep the replies with the repo's private records, not in git). The page is still served locally only until a host and the repo's visibility are chosen (`PARKING.md`). Credit lines stay on every exhibit.

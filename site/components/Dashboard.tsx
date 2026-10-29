@@ -12,7 +12,7 @@ import type { Pace, Project, Report } from "@/lib/report";
 const TOP = 10;
 
 const EIRGRID = "EirGrid contracted lists, Supported by EirGrid Group Data";
-const ESB = "ESB Networks DSO lists, © ESB Networks, not for republication";
+const ESB = "ESB Networks DSO lists, © ESB Networks, used with their permission";
 const OSM = "substations © OpenStreetMap contributors, ODbL";
 
 const span = (editions: string[]) => (editions.length > 0 ? `, ${editions.join("; ")}` : "");
