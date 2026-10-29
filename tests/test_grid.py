@@ -90,10 +90,10 @@ def test_every_mw_is_placed_or_listed_as_unplaced(tmp_path, monkeypatch):
             return self
 
         def fetchall(self):
-            return [(True, "Cashla", "", 100), (True, "Cashla 220kV", "", 50),
-                    (False, "Nowhere", "", 25), (False, "", "", 5)]
+            return [(True, "Cashla", "", 100, "TG1", "A"), (True, "Cashla 220kV", "", 50, "TG2", "B"),
+                    (False, "Nowhere", "", 25, "DG1", "C"), (False, "", "", 5, "DG2", "D")]
 
-    out = grid.nodes(Con(), cache)
+    out = grid.nodes(Con(), cache, ecp={})
     placed = sum(n["mw"] for n in out["nodes"])
     unplaced = sum(u["mw"] for u in out["unplaced"])
     assert (placed, unplaced) == (150, 30)
@@ -122,8 +122,35 @@ def test_far_and_the_last_band_are_one_rule(tmp_path):
             return self
 
         def fetchall(self):
-            return [(True, "Edge", "", 10)]
+            return [(True, "Edge", "", 10, "TG1", "Edge Solar")]
 
-    out = grid.nodes(Con(), cache)
+    out = grid.nodes(Con(), cache, ecp={})
     assert out["nodes"][0]["km_backbone"] == 20.0
     assert (out["far_gw"], out["far_nodes"]) == (out["bands"][-1]["gw"], 1)
+
+
+def test_the_ecp_results_node_places_a_new_station_and_catches_a_wrong_one():
+    from decimal import Decimal
+
+    waterford = S("Waterford 110kV Substation", 110, -7.10, 52.25)
+    kinnegad = S("Kinnegad 110kV", 110, -7.14, 53.43)
+    knockanure = S("Knockanure 220kV Substation", 220, -9.40, 52.48)
+    i = idx(waterford, kinnegad, knockanure)
+    ecp = {grid.region.key("Castlebanny Wind Farm"): [("Waterford", Decimal("138.6"))],
+           grid.region.key("Kilmorna Energy Storage Facility"): [("Knockanure", Decimal(170))]}
+
+    class Con:
+        def execute(self, sql):
+            return self
+
+        def fetchall(self):
+            return [(True, "Kilvinoge", "", 138.6, "TG541", "Castlebanny Wind Farm"),
+                    (True, "Kinnegad", "", 170.0, "TG485", "Kilmorna Energy Storage Facility")]
+
+    got = {p.ref: p for p in grid.placements(Con(), i, ecp)}
+    # a new station OSM doesn't have: drawn at the station the results name
+    assert (got["TG541"].at, got["TG541"].how) == (waterford, "ecp")
+    # list and results 185 km apart: one of them is wrong, so it isn't drawn
+    assert (got["TG485"].at, got["TG485"].how) == (None, "conflict")
+    assert got["TG485"].conflict["km"] > grid.CONFLICT_KM
+    assert got["TG485"].label == "Kinnegad (list) or Knockanure (ECP results)"
