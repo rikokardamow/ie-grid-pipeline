@@ -2962,5 +2962,191 @@
     ]
    }
   ]
+ },
+ "firm_capacity": {
+  "prior_year": "2029/30",
+  "latest_year": "2030/31",
+  "storage_hours": {
+   "low": 2,
+   "high": 4
+  },
+  "contracted_mw": 16658.2,
+  "applied_mw": 11990.5,
+  "applied_share": 0.72,
+  "classes": [
+   {
+    "class": "Wind",
+    "label": "Wind",
+    "projects": 66,
+    "nameplate_mw": 2656.0,
+    "prior": {
+     "year": "2029/30",
+     "low_mw": 167.3,
+     "high_mw": 167.3,
+     "low_share": 0.063,
+     "high_share": 0.063
+    },
+    "latest": {
+     "year": "2030/31",
+     "low_mw": 156.7,
+     "high_mw": 156.7,
+     "low_share": 0.059,
+     "high_share": 0.059
+    }
+   },
+   {
+    "class": "Solar",
+    "label": "Solar",
+    "projects": 189,
+    "nameplate_mw": 5601.2,
+    "prior": {
+     "year": "2029/30",
+     "low_mw": 274.5,
+     "high_mw": 274.5,
+     "low_share": 0.049,
+     "high_share": 0.049
+    },
+    "latest": {
+     "year": "2030/31",
+     "low_mw": 229.6,
+     "high_mw": 229.6,
+     "low_share": 0.041,
+     "high_share": 0.041
+    }
+   },
+   {
+    "class": "Other Storage",
+    "label": "Battery storage",
+    "projects": 29,
+    "nameplate_mw": 1789.4,
+    "prior": {
+     "year": "2029/30",
+     "low_mw": 254.3,
+     "high_mw": 492.7,
+     "low_share": 0.142,
+     "high_share": 0.275
+    },
+    "latest": {
+     "year": "2030/31",
+     "low_mw": 139.0,
+     "high_mw": 257.2,
+     "low_share": 0.078,
+     "high_share": 0.144
+    }
+   },
+   {
+    "class": "Gas Turbine",
+    "label": "Gas turbines (OCGT, CCGT, gas)",
+    "projects": 10,
+    "nameplate_mw": 1944.0,
+    "prior": {
+     "year": "2029/30",
+     "low_mw": 1559.7,
+     "high_mw": 1559.7,
+     "low_share": 0.802,
+     "high_share": 0.802
+    },
+    "latest": {
+     "year": "2030/31",
+     "low_mw": 1511.2,
+     "high_mw": 1511.2,
+     "low_share": 0.777,
+     "high_share": 0.777
+    }
+   }
+  ],
+  "totals": {
+   "prior": {
+    "year": "2029/30",
+    "low_mw": 2255.8,
+    "high_mw": 2494.2
+   },
+   "latest": {
+    "year": "2030/31",
+    "low_mw": 2036.5,
+    "high_mw": 2154.7
+   }
+  },
+  "gas_share_low": 0.701,
+  "gas_share_high": 0.742,
+  "gas_nameplate_share": 0.162,
+  "left_alone": [
+   {
+    "technology": "Solar + Battery",
+    "mw": 1535.3
+   },
+   {
+    "technology": "Interconnector",
+    "mw": 1204.0
+   },
+   {
+    "technology": "CHP",
+    "mw": 600.0
+   },
+   {
+    "technology": "Wind + Battery",
+    "mw": 496.4
+   },
+   {
+    "technology": "Autoproduce r",
+    "mw": 288.0
+   },
+   {
+    "technology": "Battery + Synchronous Condenser",
+    "mw": 200.0
+   },
+   {
+    "technology": "Gas Fired Reciprocating Engines",
+    "mw": 200.0
+   },
+   {
+    "technology": "Biomass",
+    "mw": 71.9
+   },
+   {
+    "technology": "Wind + Solar",
+    "mw": 54.5
+   },
+   {
+    "technology": "Wave",
+    "mw": 10.0
+   },
+   {
+    "technology": "HVO",
+    "mw": 3.5
+   },
+   {
+    "technology": "Biogas + AD",
+    "mw": 1.7
+   },
+   {
+    "technology": "Biogas",
+    "mw": 1.0
+   },
+   {
+    "technology": "Hydro",
+    "mw": 0.9
+   },
+   {
+    "technology": "LFG",
+    "mw": 0.5
+   }
+  ],
+  "left_alone_mw": 4667.7,
+  "left_alone_share": 0.28,
+  "sources": [
+   {
+    "capacity_year": "2029/30",
+    "name": "2029/2030 T-4 Capacity Auction Initial Auction Information Pack IAIP2930T-4 v1.1 (13 Aug 2025)",
+    "url": "https://www.sem-o.com/sites/semo/files/2025-08/IAIP2930T-4.pdf",
+    "checked_on": "2026-10-29"
+   },
+   {
+    "capacity_year": "2030/31",
+    "name": "2030/2031 T-4 Capacity Auction Initial Auction Information Pack IAIP3031T-4 v1.0 (4 Aug 2026)",
+    "url": "https://www.sem-o.com/sites/semo/files/2026-08/IAIP3031T-4.pdf",
+    "checked_on": "2026-10-29"
+   }
+  ]
  }
 }

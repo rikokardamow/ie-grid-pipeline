@@ -6,8 +6,8 @@ import RootLayout, { metadata } from "@/app/layout";
 import { Dashboard } from "@/components/Dashboard";
 import type { Report } from "@/lib/report";
 
-// The g6 check, for the dashboard: render the page from the report and from two copies
-// with every number moved far (checks._perturb); a number on all three pages was
+// The g6 check, for the dashboard: render the page from the report and from three copies
+// with every number moved far (checks._perturb); a number on all four pages was
 // written by the page, not read from the report. "On the page" is the text, the
 // attributes a reader or screen reader gets (title, aria-label, alt, content), and the
 // page's metadata; style widths are geometry, not text.
@@ -18,12 +18,12 @@ const fixture = (): Report =>
 // Offsets that no real figure lands on: exactly 1000 and 2000 made a day-of-month 21 plus 2000, or
 // two counts 1020 + 1001, read as the year 2021, a coincidence the check mistook for a number the page
 // writes itself.
-const OFFSET = [0, 1371, 2753];
+const OFFSET = [0, 1371, 2753, 4129];
 
 function perturb(x: unknown, k: number): unknown {
   if (typeof x === "boolean" || x === null) return x;
   if (typeof x === "number") {
-    return Number.isInteger(x) ? x + OFFSET[k] : x * (1.37 + 0.11 * k) + 111.1 * k;
+    return Number.isInteger(x) ? x + OFFSET[k] : x * (1.41 + 0.13 * k) + 97.3 * k;
   }
   if (typeof x === "string") return x.replace(/\d+/g, (d) => String(Number(d) + OFFSET[k]));
   if (Array.isArray(x)) return x.map((v) => perturb(v, k));
@@ -60,7 +60,7 @@ const numbers = (report: Report, extra?: React.ReactNode) =>
 
 function numbersNotFromReport(report: Report, extra?: React.ReactNode): string[] {
   const base = numbers(report, extra);
-  const moved = [1, 2].map((k) => new Set(numbers(perturb(report, k) as Report, extra)));
+  const moved = [1, 2, 3].map((k) => new Set(numbers(perturb(report, k) as Report, extra)));
   return [...new Set(base.filter((n) => moved.every((m) => m.has(n))))];
 }
 
@@ -89,6 +89,7 @@ function variants(): [string, Report][] {
   bare.funnel = null;
   bare.errata = null;
   bare.external = null;
+  bare.firm_capacity = null;
   later.runs = { ...later.runs, count: 1, failed: 1, latest: later.runs.latest.slice(0, 1) };
   const fewSlips = fixture();
   if (fewSlips.target_slippage) {
@@ -104,6 +105,15 @@ function variants(): [string, Report][] {
   if (over.external) {
     over.external.checks[0] = { ...over.external.checks[0], diff_mw: 12.5, diff_pct: 0.003, ours_mw: 4548.5 };
   }
+  const noStorage = fixture();
+  if (noStorage.firm_capacity) {
+    noStorage.firm_capacity.classes = noStorage.firm_capacity.classes.filter((c) => c.class !== "Other Storage");
+    noStorage.firm_capacity.gas_share_low = null;
+    noStorage.firm_capacity.gas_share_high = null;
+    noStorage.firm_capacity.left_alone = [];
+    noStorage.firm_capacity.left_alone_share = null;
+    noStorage.firm_capacity.gas_nameplate_share = null;
+  }
   const noPace = fixture();
   if (noPace.delivery_pace) {
     noPace.delivery_pace.distribution = { ...noPace.delivery_pace.distribution, annual: [], cover: [], fastest: [], backtest: { years: 0, methods: [] } };
@@ -118,6 +128,7 @@ function variants(): [string, Report][] {
     ["no tags", noTags],
     ["no errata", noErrata],
     ["total over the published one", over],
+    ["no storage in the queue", noStorage],
     ["few matched targets", fewSlips],
   ];
 }

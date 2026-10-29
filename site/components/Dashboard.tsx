@@ -665,6 +665,55 @@ export function Dashboard({ report }: { report: Report }) {
         </section>
       )}
 
+      {report.firm_capacity && (
+        <section aria-labelledby="firm-capacity">
+          <h2 id="firm-capacity">How much of the queue counts as capacity</h2>
+          {(() => {
+            const f = report.firm_capacity;
+            const range = (lo: number, hi: number) => (lo === hi ? pct(lo) : `${pct(lo)} to ${pct(hi)}`);
+            const gasText =
+              f.gas_nameplate_share !== null && f.gas_share_low !== null && f.gas_share_high !== null
+                ? `; gas turbines are ${pct(f.gas_nameplate_share)} of that nameplate and ${range(f.gas_share_low, f.gas_share_high)} of what counts`
+                : "";
+            const mwRange = (lo: number, hi: number) => (lo === hi ? mw(lo) : `${mw(lo)} to ${mw(hi)}`);
+            return (
+              <Figure
+                id="fig-firm"
+                title={`Of the ${gw(f.applied_mw / 1000)} of the queue with a published factor, ${gw(f.totals.latest.low_mw / 1000)} to ${gw(f.totals.latest.high_mw / 1000)} counts as capacity in the ${f.latest_year} auction${gasText}`}
+                subtitle={`Share of each technology's contracted MW that the capacity auction counts, from the de-rating factors the system operators publish for the ${f.latest_year} auction, applied at each project's size. A battery's duration is not on the lists, so storage is shown for ${f.storage_hours.low} and ${f.storage_hours.high} hours. ${mw(f.left_alone_mw)}${f.left_alone_share === null ? "" : ` (${pct(f.left_alone_share)} of the queue)`} has no factor applied: hybrids such as solar with a battery, interconnectors, combined heat and power, and smaller technologies. This is the auction's rule for what a megawatt is worth, not a forecast that a project connects and not what a megawatt delivers in an hour.`}
+                footer={`Source: ${f.sources.map((x) => `${x.name}, read ${x.checked_on}`).join("; ")}; ${EIRGRID}; ${ESB}`}
+                table={{
+                  headings: ["Technology", "Projects", "Contracted", `Counts, ${f.prior_year}`, `Counts, ${f.latest_year}`, `Share, ${f.latest_year}`],
+                  rows: [
+                    ...f.classes.map((c) => [
+                      c.label, c.projects, mw(c.nameplate_mw),
+                      mwRange(c.prior.low_mw, c.prior.high_mw), mwRange(c.latest.low_mw, c.latest.high_mw),
+                      range(c.latest.low_share, c.latest.high_share),
+                    ]),
+                    ["All with a factor", "", mw(f.applied_mw), mwRange(f.totals.prior.low_mw, f.totals.prior.high_mw),
+                      mwRange(f.totals.latest.low_mw, f.totals.latest.high_mw), ""],
+                    ...f.left_alone.map((l) => [l.technology, "", mw(l.mw), "no factor applied", "no factor applied", ""]),
+                  ],
+                }}
+              >
+                <BarChart
+                  title="Share of contracted MW that counts"
+                  subtitle="Each bar is the share counted; battery storage is drawn at the longer duration"
+                  footer=""
+                  valueHeading="Share counted"
+                  bars={f.classes.map((c) => ({
+                    label: c.label,
+                    value: c.latest.high_share,
+                    text: range(c.latest.low_share, c.latest.high_share),
+                  }))}
+                  scaleMax={1}
+                />
+              </Figure>
+            );
+          })()}
+        </section>
+      )}
+
       {report.errata && (
         <section aria-labelledby="errata">
           <h2 id="errata">Where the lists disagree</h2>

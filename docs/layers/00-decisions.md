@@ -30,6 +30,8 @@ filling the gap.
 
 ## The six questions, asked of every idea
 
+The energy-analyst skill (described in the main README) is the checklist for these questions.
+
 1. **Build**: what exactly, from which data?
 2. **Forecast**: does it say anything about the future, and is that claim earned?
 3. **Validate**: how do we know it's right (a tie, a back-test, a cross-check)?
@@ -225,4 +227,19 @@ out of sample).
 auction (the de-rating curves by technology class) and a readable GCS newer than 2023-2032. Both are public; they need fetching by
 hand from sem-o.com and eirgrid.ie, then the layer is a small join of the lists' technology column to the
 factors with the source and date printed on every figure. Parked in `PARKING.md`.
+
+## Seventh session (29 Oct 2026): firm capacity built (layer 9)
+
+The firm-capacity layer parked in the sixth session was unblocked within the hour: the SEM-O Initial Auction
+Information Packs for the 2029/30 and 2030/31 T-4 auctions are public PDFs and could be read at their source
+(the search tool found their addresses; saved copies were read with a PDF reader). Their Tables 1, 3 and 5 carry
+the factors. Built as `src/iegrid/derating.py`; the finding is in `docs/layers/09-firm-capacity/README.md`:
+of 11.99 GW of the queue that has a factor, 2.04 to 2.15 GW counts in the 2030/31 auction, 70% to 74% of it gas.
+
+Decisions made on the way: hybrids, interconnectors, CHP and the smaller technologies get no factor (4.67 GW,
+listed, not guessed); battery duration is shown as a range because the lists do not give it; the two auctions are
+both shown because the factors fall as more of a technology is contracted. The page's numbers check needed
+two changes: a third perturbed copy of the report (with two, a pace value that landed on the same figure in both
+copies, twice, passed for a number the page writes) and a rule that a missing share is left out of a sentence
+instead of printed as 0%.
 

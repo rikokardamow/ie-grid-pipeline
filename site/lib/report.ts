@@ -172,6 +172,21 @@ export type Report = {
       } | null;
     }[];
   } | null;
+  // the contracted queue counted the way the capacity auction counts it (de-rated)
+  firm_capacity?: {
+    prior_year: string; latest_year: string; storage_hours: { low: number; high: number };
+    contracted_mw: number; applied_mw: number; applied_share: number | null;
+    classes: {
+      class: string; label: string; projects: number; nameplate_mw: number;
+      prior: { year: string; low_mw: number; high_mw: number; low_share: number; high_share: number };
+      latest: { year: string; low_mw: number; high_mw: number; low_share: number; high_share: number };
+    }[];
+    totals: { prior: { year: string; low_mw: number; high_mw: number }; latest: { year: string; low_mw: number; high_mw: number } };
+    gas_share_low: number | null; gas_share_high: number | null; gas_nameplate_share: number | null;
+    left_alone: { technology: string; mw: number }[];
+    left_alone_mw: number; left_alone_share: number | null;
+    sources: { capacity_year: string; name: string; url: string; checked_on: string }[];
+  } | null;
   // where a publisher's list disagrees with itself or another publication (regenerated each report)
   errata?: {
     total: number;

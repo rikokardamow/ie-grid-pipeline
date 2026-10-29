@@ -89,6 +89,14 @@ session. No new step is needed beyond the ones above. On this branch's build:
 | where the lists disagree | 5 rows: 2 node (settled), 1 reused ref (open), 1 moved (partly), 1 restated (settled) |
 | against a published total | -126.1 MW = -69.8 (end-2021) + -56.3 (during 2022) |
 
+## Layer 9: firm capacity (on main)
+
+New: `src/iegrid/derating.py`, `src/iegrid/data/derating.csv`, `tests/test_derating.py`, `docs/layers/09-firm-capacity/README.md`,
+the page's firm-capacity section, `docs/img/firm.png`. Changed: `report.py` (one optional field), `site/lib/report.ts`,
+`Dashboard.tsx`, `site/tests/numbers.test.tsx` (a third perturbed copy), the fixture. Expected on the 29 Oct store:
+`uv run pytest -q` 355 passed; `pnpm test` 24 passed; 11,990 MW of 16,658 MW has a factor; 2.04 to 2.15 GW counts in 2030/31.
+The saved packs live in `data/sources/` (not in git); the CSV is what the report reads, so the weekly run needs no download.
+
 ## Not done, on purpose
 
 Queue vs need (needs the primary EirGrid document), dwell-time survival (leaving a list isn't

@@ -69,7 +69,7 @@ ESB Networks and EirGrid have each confirmed permission to use their lists here.
 
 ## Analysis layers
 
-Built on the record, each with its own README and tests (`docs/layers/`): connected outcomes, delivery pace, target slippage, the ECP funnel, an errata ledger of where the lists disagree, ESB's older lists, an external check against a published wind total, and sourced resolutions of open questions. Start with `docs/layers/00-decisions.md`; `docs/layers/BRING-IN.md` lists the expected numbers.
+Built on the record, each with its own README and tests (`docs/layers/`): connected outcomes, delivery pace, target slippage, the ECP funnel, an errata ledger of where the lists disagree, ESB's older lists, an external check against a published wind total, sourced resolutions of open questions, and how much of the queue counts as capacity under the capacity auction's de-rating factors. Start with `docs/layers/00-decisions.md`; `docs/layers/BRING-IN.md` lists the expected numbers.
 
 **What became of the projects that left.** 86 projects (4.53 GW) left the contracted lists for good. 20 are on EirGrid's connected lists by ref and 8 more connected as phases of one; 5 were refused planning or reorganised into a project that did connect, each with its source; 47 stay unknown rather than being read as not connected.
 
@@ -91,6 +91,21 @@ Built on the record, each with its own README and tests (`docs/layers/`): connec
 **A check against a published total.** The two publishers' wind lists add to 4,410 MW at end-2022 against 4,536 MW published (IEA Wind TCP, from SEAI): 126 MW short, 70 MW of it already there a year earlier.
 
 ![Wind on the lists against the published national total](docs/img/external.png)
+
+**How much of it counts as capacity.** Of 11.99 GW of the queue with a published de-rating factor, 2.04 to 2.15 GW counts in the 2030/31 capacity auction: wind about 6% and solar about 4% of their megawatts, batteries 8% to 14% by duration, gas turbines 78%, so gas is 70% to 74% of what counts.
+
+![Share of contracted MW that counts as capacity](docs/img/firm.png)
+
+## How the layers were chosen
+
+Each candidate layer was put through six questions (build, forecast, validate, propose, give, alpha) using the energy-analyst skill, and built only if it added something checkable. Several were tested and not built; `docs/layers/00-decisions.md` records them. The energy-analyst skill is a reference file for Claude Code. It lives in the owner's own `.claude` folder, which is gitignored, so it is not part of this repository. It was written as a distillation, not a model: about 90 trading manuals,
+textbooks and journal articles (89 PDFs, 85 unique) on oil, gas, LNG, power and risk were read and reduced to
+the rules that cause real errors in energy data work (units, what a benchmark or spread is, how forecasts must
+be scored, why macro figures need vintages), with each rule traceable to a source and disagreements between
+sources recorded instead of settled. On 27 Oct 2026 it was extended with reference files from about 80 further
+PDFs, checked against the project code and the EIA API. Dated market reports were deliberately left out: they are
+data to ingest, not knowledge to encode. It is a checklist applied to each idea (the six questions below), not
+a source of numbers: every figure on the page still comes from a list or from a source read at its source.
 
 ## Layout
 

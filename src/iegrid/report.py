@@ -327,6 +327,12 @@ def _delivery_pace(con) -> tuple[dict | None, list[str]]:
         return None, [f"delivery pace not shown: {exc}"]
 
 
+def _firm_capacity(con) -> dict | None:
+    from iegrid import derating
+
+    return derating.build(con)
+
+
 def _external(con) -> dict | None:
     from iegrid import external
 
@@ -402,6 +408,7 @@ def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
         "funnel": _funnel(con),
         "errata": _errata(con, grid_section, pace),
         "external": _external(con),
+        "firm_capacity": _firm_capacity(con),
         "runs": _runs(con),
         "caveats": _caveats(editions),
     }
