@@ -206,3 +206,23 @@ as they are. What would change this: a connected list published after Aug 2022. 
 checks the page for new files, so the first one is picked up without work, but the non-wind reader would
 then be worth building. Parked in `PARKING.md`.
 
+## Sixth session (29 Oct 2026, "a new layer through energy-analyst"): screened, none built
+
+Three candidates were taken through the six questions and tested against the data and sources in hand.
+The first rule is that a layer must add value, so a layer that cannot be checked is not built.
+
+| candidate | build | what stopped it |
+|---|---|---|
+| **Firm capacity of the queue** (contracted MW de-rated by technology, set against EirGrid's Generation Capacity Statement) | would turn 16.7 GW of nameplate into a security-of-supply figure, the number a system planner uses (energy-analyst section 12: capacity is not energy, and storage and solar de-rate very differently) | the de-rating factors are not in the SEM Committee's 2030/31 parameters decision paper or the 2028/29 provisional auction report (both read in full; they say the factors are set by the system operators and sit in the Information Pack, which was not found), and EirGrid's publications index answers 403, so no GCS newer than the 2023-2032 one was listed. Nothing of the two can be read at its source |
+| **Signed-to-energised lag, distribution** | an empirical "if I sign today" distribution | ESB's lists carry no signing date (signed month is empty on all 1,837 energised rows and the contracted rows), so one project can be timed |
+| **Signed-to-connected lag, transmission wind** | the same, where signing dates exist | 22 projects can be followed (median 71.5 months, quartiles 30 and 93, range 18 to 145), the same wind cohort layer 3 already uses; 22 projects of one technology do not support a rate to quote |
+
+**Decision: no layer this session.** A fourth candidate, a forecast of energisation dates, stays rejected: the
+outcome data is wind only and the claim would not be earned (energy-analyst section 18: beat a named benchmark
+out of sample).
+
+**What would unlock the best one (firm capacity).** The SEM-O Initial Auction Information Pack for a T-4
+auction (the de-rating curves by technology class) and a readable GCS newer than 2023-2032. Both are public; they need fetching by
+hand from sem-o.com and eirgrid.ie, then the layer is a small join of the lists' technology column to the
+factors with the source and date printed on every figure. Parked in `PARKING.md`.
+
