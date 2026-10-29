@@ -395,10 +395,10 @@ export function Dashboard({ report }: { report: Report }) {
           <h3>
             {report.runs.count === 0
               ? "No weekly run logged before this report"
-              : `${report.runs.count} weekly runs since ${report.runs.first?.slice(0, 10) ?? ""}; ${report.runs.with_new_files} brought a new file${report.runs.failed > 0 ? `, ${report.runs.failed} failed` : ""}`}
+              : `Before this report: ${report.runs.count} weekly ${report.runs.count === 1 ? "run" : "runs"} since ${report.runs.first?.slice(0, 10) ?? ""}; ${report.runs.with_new_files} brought a new file${report.runs.failed > 0 ? `, ${report.runs.failed} failed` : ""}`}
           </h3>
           <p className="muted">
-            The weekly job checks both pages for new lists. Most weeks nothing lands: ESB posts quarterly, EirGrid irregularly. The run that wrote this page is logged after it.
+            The weekly job checks both pages for new lists. Most weeks nothing lands: ESB posts quarterly, EirGrid irregularly. The run that wrote this page is logged after it, so a list it found is under This week, not here.
           </p>
           {report.runs.latest.length > 0 && (
             <TableScroll label="Weekly runs">

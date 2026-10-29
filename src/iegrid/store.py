@@ -182,7 +182,9 @@ create table if not exists run_log (
     new_files         integer not null,    -- publications stored by this run
     stored            text not null,       -- what they were, one per line
     parsed            integer not null,
-    problems          text not null,       -- refused editions, unknown links, errors
+    problems          text not null,       -- what made it 'attention' or 'failed'
+    notes             text not null,       -- what it did besides: county build, ECP rows read
+    ecp_read          boolean not null,    -- the ECP batch results were read without a failure
     report_path       text,
     code_version      text not null,       -- git sha, parser version
     error             text

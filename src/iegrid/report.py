@@ -27,13 +27,15 @@ import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 
+import duckdb
+
 from iegrid import parse, store
 
 REPORTS = store.ROOT / "data" / "reports"
 LARGE_MW = 50      # "large" for the stuck list
 TOP = 6            # rows per list on the page
 AT_YEARS = 3       # the burn-down compares batches at this age
-REPORT_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}(T\d{4})?\.json$")
+REPORT_NAME = re.compile(r"^\d{4}-\d{2}-\d{2}(T\d{4}(\d{2})?)?\.json$")
 
 # How each list is named on the page
 LIST_NAMES = {
@@ -289,7 +291,7 @@ def _runs(con) -> dict:
         rows = con.execute(f"""
             select run_id, started_at, status, new_files, stored, parsed from run_log
             order by run_id desc limit {RUNS_SHOWN}""").fetchall()
-    except Exception:  # noqa: BLE001 - a store from before g8 has no run_log
+    except duckdb.CatalogException:  # a store from before g8 has no run_log
         return {"count": 0, "with_new_files": 0, "failed": 0, "first": None, "latest": []}
     return {"count": total, "with_new_files": with_new, "failed": failed,
             "first": first.isoformat(timespec="minutes") if first else None,
@@ -469,8 +471,13 @@ def write(con, out: Path = REPORTS, now: datetime | None = None) -> Path:
     rep["generated_at"] = now.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     stem = f"{now:%Y-%m-%dT%H%M}"  # two runs a day keep both
-    (out / f"{stem}.json").write_text(json.dumps(rep, indent=2))
+    if (out / f"{stem}.json").exists():  # and two in a minute: never overwrite one
+        stem = f"{now:%Y-%m-%dT%H%M%S}"
+    # the page first: if it can't be drawn, no JSON is left for the site or the next run
     render(rep, out / f"{stem}.pdf")
+    tmp = out / f"{stem}.json.part"
+    tmp.write_text(json.dumps(rep, indent=2))
+    tmp.replace(out / f"{stem}.json")
     return out / f"{stem}.json"
 
 

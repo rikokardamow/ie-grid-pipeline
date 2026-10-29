@@ -9,12 +9,12 @@ const fixture = join(import.meta.dirname, "fixtures", "report.json");
 describe("loadReport", () => {
   it("reads the newest <date>[T<HHMM>].json", () => {
     const dir = mkdtempSync(join(tmpdir(), "reports-"));
-    for (const n of ["2026-10-21.json", "2026-10-28.json", "2026-10-28T1946.json"]) {
+    for (const n of ["2026-10-21.json", "2026-10-28.json", "2026-10-28T1946.json", "2026-10-28T194612.json"]) {
       copyFileSync(fixture, join(dir, n));
     }
     writeFileSync(join(dir, "notes.json"), "{}");
     writeFileSync(join(dir, "2026-10-29-draft.json"), "{}");
-    expect(newestReportFile(dir)).toBe(join(dir, "2026-10-28T1946.json"));
+    expect(newestReportFile(dir)).toBe(join(dir, "2026-10-28T194612.json"));
     expect(loadReport(dir).queue.transmission_projects).toBeGreaterThan(0);
   });
 

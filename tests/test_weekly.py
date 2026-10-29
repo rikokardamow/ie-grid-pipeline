@@ -18,11 +18,12 @@ def steps(monkeypatch, tmp_path):
         ingest=SimpleNamespace(stored=[], missing_sources=[], errors=[], unknown_links=[]),
         load=SimpleNamespace(parsed=[], errors=[]),
         report_error=None,
+        ecp_notes=["read 40 rows from ECP-2.5 results", "download https://x/ECP.pdf: timed out"],
     )
 
     def ecp(con, now):
         calls["ecp"] += 1
-        return ["read 40 rows from ECP-2.5 results", "download https://x/ECP.pdf: timed out"]
+        return got.ecp_notes
 
     def write(con, out, now):
         if got.report_error:
@@ -45,18 +46,36 @@ def rows(con):
                        "error from run_log order by run_id").fetchall()
 
 
-def test_a_quiet_week_is_logged_ok_and_the_archive_is_not_read(con, steps):
-    _, calls, tmp = steps
-    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
-    assert run.status == "ok" and calls["ecp"] == 0
-    status, new, stored, parsed, problems, path, error = rows(con)[0]
-    assert (status, new, stored, parsed, error) == ("ok", 0, "", 0, None)
-    assert problems == "counties: build: unchanged"
+def test_a_quiet_week_is_logged_ok_and_the_archive_is_not_read_again(con, steps):
+    got, calls, tmp = steps
+    got.ecp_notes = ["read 40 rows from ECP-2.5 results"]
+    weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)  # the first run reads them
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW + timedelta(weeks=1))
+    assert run.status == "ok" and calls["ecp"] == 1
+    status, new, stored, parsed, problems, path, error = rows(con)[1]
+    assert (status, new, stored, parsed, problems, error) == ("ok", 0, "", 0, "", None)
     assert path.endswith("r.json")
+    assert run.notes == ["counties: build: unchanged"]
+
+
+def test_a_failed_batch_results_read_is_tried_again_next_week(con, steps):
+    # g8 review: it was only read in a week that stored a file
+    got, calls, tmp = steps
+    weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)  # the download fails
+    got.ecp_notes = ["read 40 rows from ECP-2.5 results"]
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW + timedelta(weeks=1))
+    assert calls["ecp"] == 2 and run.status == "ok" and run.ecp_read
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW + timedelta(weeks=2))
+    assert calls["ecp"] == 2  # read cleanly, and nothing new came in since
 
 
 def test_a_week_with_a_new_file_reads_the_batch_results_and_flags_a_failed_download(con, steps):
     got, calls, tmp = steps
+    con.execute("insert into run_log values (99, ?, ?, 'ok', 0, '', 0, '', '', true, null, "
+                "'x', null)", [NOW - timedelta(weeks=1), NOW - timedelta(weeks=1)])
+    con.execute("insert into publication values (1, 'esb.dso_contracted_renewable', 'u', "
+                "'abc', 1, '2026-10-01', ?, 'last-modified', 'estimated', 'r', ?, null, null)",
+                [NOW, NOW])
     got.ingest.stored = ["esb.dso_contracted_renewable as of 2026-10-01 0123456789ab"]
     got.load.parsed = ["esb.dso_contracted_renewable #160: 120 rows"]
     _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
@@ -64,8 +83,8 @@ def test_a_week_with_a_new_file_reads_the_batch_results_and_flags_a_failed_downl
     assert run.status == "attention"  # the ECP download failed; the list itself is in
     status, new, _, parsed, problems, _, _ = rows(con)[0]
     assert (status, new, parsed) == ("attention", 1, 1)
-    assert "ECP results: download https://x/ECP.pdf: timed out" in problems
-    assert "ECP results: read 40 rows from ECP-2.5 results" in problems
+    assert problems == "ECP results: download https://x/ECP.pdf: timed out"
+    assert "ECP results: read 40 rows from ECP-2.5 results" in run.notes
 
 
 def test_a_refused_edition_or_a_new_kind_of_link_needs_a_look_but_does_not_fail(con, steps):
@@ -99,6 +118,7 @@ def test_a_crash_is_logged_as_a_failed_run_with_its_error(con, steps):
 
 def test_main_exits_1_only_for_a_failed_run(steps, monkeypatch, tmp_path, capsys):
     got, _, tmp = steps
+    got.ecp_notes = []
     monkeypatch.setattr(weekly.store, "snapshot", lambda db: tmp / "snap.duckdb")
     db = str(tmp / "w.duckdb")
     assert weekly.main(["--db", db, "--out", str(tmp / "out"), "--raw", str(tmp / "raw")]) == 0
@@ -124,9 +144,41 @@ def test_the_report_shows_earlier_runs_newest_first(con, steps):
     assert runs[-1]["started"] == "2026-11-04T07:00+00:00"
 
 
-def test_a_store_from_before_g8_has_no_runs_to_show():
-    class Old:
-        def execute(self, sql):
-            raise RuntimeError("Catalog Error: Table with name run_log does not exist")
 
-    assert report._runs(Old())["latest"] == []
+
+def test_two_runs_in_a_minute_keep_both_reports(con, tmp_path, monkeypatch):
+    # g8 review: the second overwrote the first, losing a "new" it may have found
+    monkeypatch.setattr(report, "build", lambda con, now, last: {"report_date": "x"})
+    monkeypatch.setattr(report, "render", lambda rep, path: path.write_text("pdf"))
+    a = report.write(con, tmp_path, NOW)
+    b = report.write(con, tmp_path, NOW)
+    assert (a.name, b.name) == ("2026-11-04T0700.json", "2026-11-04T070000.json")
+    assert report.last_report(tmp_path) is not None
+    assert max(p.name for p in tmp_path.glob("*.json")) == b.name
+
+
+def test_a_page_that_cannot_be_drawn_leaves_no_json(con, tmp_path, monkeypatch):
+    # g8 review: the JSON was written first and became next week's last_report
+    monkeypatch.setattr(report, "build", lambda con, now, last: {"report_date": "x"})
+
+    def broken(rep, path):
+        raise ValueError("the page runs over its footer")
+
+    monkeypatch.setattr(report, "render", broken)
+    with pytest.raises(ValueError):
+        report.write(con, tmp_path, NOW)
+    assert list(tmp_path.glob("*.json")) == []
+
+
+def test_a_real_store_without_run_log_shows_no_runs_but_other_errors_surface():
+    import duckdb
+
+    old = duckdb.connect(":memory:")
+    assert report._runs(old)["latest"] == []
+
+    class Broken:
+        def execute(self, sql):
+            raise duckdb.IOException("disk gone")
+
+    with pytest.raises(duckdb.IOException):
+        report._runs(Broken())

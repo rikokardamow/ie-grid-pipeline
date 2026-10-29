@@ -9,14 +9,17 @@ the report says "no new publication": that run is still logged. Status:
 
     ok          every expected list found, every new file stored and parsed
     attention   the run finished but something needs a look: an edition the load
-                refused, a list whose newest edition isn't parsed, or a PDF link of a
-                kind no source covers (a new list on the page)
-    failed      an expected list is missing from its page, a page or file couldn't be
-                fetched, or a step raised; exit code 1
+                refused or couldn't read (retried next run), a list whose newest
+                edition isn't parsed, a PDF link of a kind no source covers (a new
+                list on the page), or the ECP batch results couldn't be fetched
+    failed      an expected list is missing from its page, a page or a list's file
+                couldn't be fetched, or a step raised; exit code 1
 
-The ECP batch results (counties.read_ecp_files) are read only when a new file was
-stored, since they come from the web archive and change once a batch. The OSM grid
-(iegrid.grid) and the archive backfill (iegrid.backfill) stay separate commands.
+The ECP batch results (counties.read_ecp_files) come from the web archive and change
+once a batch, so they are read only when due: a publication has come in since the
+last run that read them without a failure (the first run reads them). A failed read
+stays due, so next week tries again. The OSM grid (iegrid.grid) and the archive
+backfill (iegrid.backfill) stay separate commands.
 """
 
 from __future__ import annotations
@@ -39,6 +42,8 @@ class Run:
     stored: list[str] = field(default_factory=list)
     parsed: int = 0
     problems: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    ecp_read: bool = False
     report_path: str | None = None
     error: str | None = None
 
@@ -58,6 +63,15 @@ def code_version() -> str:
     return f"{sha} parser {parse.PARSER_VERSION}"
 
 
+def ecp_due(con) -> bool:
+    """A publication came in after the last run that read the ECP results cleanly."""
+    last = con.execute("select max(started_at) from run_log where ecp_read").fetchone()[0]
+    if last is None:
+        return True
+    return con.execute("select count(*) from publication where ingested_at >= ?",
+                       [last]).fetchone()[0] > 0
+
+
 def steps(con, run: Run, out: Path, raw: Path, now: datetime, **ingest_kw) -> None:
     got = ingest.run(con, raw, now=now, **ingest_kw)
     run.stored = got.stored
@@ -69,23 +83,24 @@ def steps(con, run: Run, out: Path, raw: Path, now: datetime, **ingest_kw) -> No
     run.parsed = len(loaded.parsed)
     run.flag(loaded.errors, "load", "attention")
 
-    if run.stored:
+    if ecp_due(con):
         notes = counties.read_ecp_files(con, now)
         failed = [n for n in notes if n.startswith(("index ", "download "))]
         run.flag(failed, "ECP results", "attention")
-        run.problems += [f"ECP results: {n}" for n in notes if n not in failed]
-    run.problems.append(f"counties: {counties.build(con, now)}")
+        run.notes += [f"ECP results: {n}" for n in notes if n not in failed]
+        run.ecp_read = not failed
+    run.notes.append(f"counties: {counties.build(con, now)}")
     run.report_path = ingest.stored_path(report.write(con, out, now))
 
 
 def log(con, run: Run, finished_at: datetime) -> int:
     return con.execute("""
         insert into run_log (started_at, finished_at, status, new_files, stored, parsed,
-                             problems, report_path, code_version, error)
-        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning run_id
+                             problems, notes, ecp_read, report_path, code_version, error)
+        values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) returning run_id
     """, [run.started_at, finished_at, run.status, len(run.stored), "\n".join(run.stored),
-          run.parsed, "\n".join(run.problems), run.report_path, code_version(),
-          run.error]).fetchone()[0]
+          run.parsed, "\n".join(run.problems), "\n".join(run.notes), run.ecp_read,
+          run.report_path, code_version(), run.error]).fetchone()[0]
 
 
 def run_weekly(con, out: Path = report.REPORTS, raw: Path = ingest.DEFAULT_RAW,
@@ -114,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"run {run_id}: {run.status}, {len(run.stored)} new files, {run.parsed} parsed")
     for item in run.stored:
         print(f"  stored {item}")
-    for item in run.problems:
+    for item in run.problems + run.notes:
         print(f"  {item}")
     if run.report_path:
         print(f"report: {run.report_path}")

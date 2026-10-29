@@ -110,8 +110,8 @@ export type Report = {
   caveats: string[];
 };
 
-// Same names as report.REPORT_NAME: <date>[T<HHMM>].json
-export const REPORT_NAME = /^\d{4}-\d{2}-\d{2}(T\d{4})?\.json$/;
+// Same names as report.REPORT_NAME: <date>[T<HHMM>[SS]].json
+export const REPORT_NAME = /^\d{4}-\d{2}-\d{2}(T\d{4}(\d{2})?)?\.json$/;
 
 export const REPORTS = process.env.REPORT_DIR ?? join(process.cwd(), "..", "data", "reports");
 
