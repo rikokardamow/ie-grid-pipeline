@@ -38,6 +38,8 @@ def steps(monkeypatch, tmp_path):
     monkeypatch.setattr(counties, "build", lambda con, now: "build: unchanged")
     monkeypatch.setattr(report, "write", write)
     monkeypatch.setattr(weekly, "code_version", lambda: "abc1234 parser 3")
+    monkeypatch.setattr(weekly.connected, "load", lambda con, now: (0, []))
+    monkeypatch.setattr(weekly.esb_legacy, "load", lambda con, now: (0, [], []))
     monkeypatch.setattr(weekly.grid, "queries_for", lambda con: [])
     monkeypatch.setattr(weekly.grid, "fetch_places", lambda q: [])
     return got, calls, tmp_path
@@ -197,3 +199,23 @@ def test_a_failed_place_lookup_needs_a_look(con, steps, monkeypatch):
     _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
     assert run.status == "attention"
     assert "places: nominatim 'pollagh, County Kerry': timed out" in run.problems
+
+
+def test_a_refused_connected_edition_needs_a_look(con, steps, monkeypatch):
+    got, _, tmp = steps
+    got.ecp_notes = []
+    monkeypatch.setattr(weekly.connected, "load", lambda con, now: (
+        0, ["eirgrid.tso_connected_wind 2017-03-01: installed 1316.25 against printed 1286.555"]))
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
+    assert run.status == "attention"
+    assert any(p.startswith("connected lists: eirgrid.tso_connected_wind") for p in run.problems)
+
+
+def test_a_refused_esb_legacy_edition_needs_a_look(con, steps, monkeypatch):
+    got, _, tmp = steps
+    got.ecp_notes = []
+    monkeypatch.setattr(weekly.esb_legacy, "load", lambda con, now: (
+        0, ["esb.dso_energised_wind 2019-06-04: refs on the page not read as rows: ['DG1']"], []))
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
+    assert run.status == "attention"
+    assert any(p.startswith("ESB legacy lists: esb.dso_energised_wind") for p in run.problems)

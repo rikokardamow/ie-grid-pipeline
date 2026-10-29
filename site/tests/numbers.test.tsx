@@ -78,12 +78,42 @@ function variants(): [string, Report][] {
   bare.queue.by_technology = { ...bare.queue.by_technology, groups: [], top_share: null };
   bare.moved.by_year = [];
   bare.runs = { count: 0, with_new_files: 0, failed: 0, first: null, latest: [] };
+  bare.left_outcomes = null;
+  bare.delivery_pace = null;
+  bare.target_slippage = null;
+  bare.funnel = null;
+  bare.errata = null;
+  bare.external = null;
   later.runs = { ...later.runs, count: 1, failed: 1, latest: later.runs.latest.slice(0, 1) };
+  const fewSlips = fixture();
+  if (fewSlips.target_slippage) {
+    fewSlips.target_slippage = { ...fewSlips.target_slippage, enough: false, median_to_completion: null, median_to_first: null, rows: fewSlips.target_slippage.rows.slice(0, 3), matched: 3 };
+  }
+  const noTags = fixture();
+  if (noTags.funnel) {
+    noTags.funnel.batches = noTags.funnel.batches.map((b) => ({ ...b, share_tagged: null, share_found: null, validation: { ...b.validation, precision: null, recall: null }, status: {} }));
+  }
+  const noErrata = fixture();
+  noErrata.errata = { total: 0, entries: [], kinds: [] };
+  const over = fixture();
+  if (over.external) {
+    over.external.checks[0] = { ...over.external.checks[0], diff_mw: 12.5, diff_pct: 0.003, ours_mw: 4548.5 };
+  }
+  const noPace = fixture();
+  if (noPace.delivery_pace) {
+    noPace.delivery_pace.distribution = { ...noPace.delivery_pace.distribution, annual: [], cover: [], fastest: [], backtest: { years: 0, methods: [] } };
+    noPace.delivery_pace.transmission_wind.cover = [{ window: 3, from: 2019, to: 2021, pace_mw: 0, years: null }];
+  }
   const onePoint = fixture();
   onePoint.queue.history = { ...onePoint.queue.history, nonwind: onePoint.queue.history.nonwind.slice(-1), wind: [] };
   return [
     ["first report", fixture()], ["new lists and a warning", later], ["no new list", quiet],
     ["empty", empty], ["no grid and no series", bare], ["one-point history", onePoint],
+    ["no recent pace", noPace],
+    ["no tags", noTags],
+    ["no errata", noErrata],
+    ["total over the published one", over],
+    ["few matched targets", fewSlips],
   ];
 }
 

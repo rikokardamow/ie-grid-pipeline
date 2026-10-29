@@ -172,6 +172,45 @@ create table if not exists parse_result (
     primary key (publication_id, parser_version)
 );
 
+-- Layer: the rows of EirGrid's TSO connected lists (connected.py), one set per edition
+-- that passed its gate. Insert-only.
+create table if not exists connected_row (
+    publication_id    bigint not null references publication (publication_id),
+    row_order         integer not null,
+    project_ref       text not null,
+    name              text not null,
+    mec_mw            decimal(12, 5),
+    installed_mw      decimal(12, 5),
+    connected_month   date,           -- "connected by": a partial project shows its latest increase
+    full_connection   boolean,        -- null in the 2015-16 lines, which don't say
+    kind              text not null,
+    raw               text not null,
+    read_at           timestamptz not null,
+    primary key (publication_id, row_order)
+);
+
+-- Layer: ESB's 2017-2023 lists (esb_legacy.py). Their own table, not project_row: dozens of
+-- queries select `like '%contracted%'`, and these editions in project_row would move every
+-- existing number. Insert-only.
+create table if not exists esb_legacy_row (
+    publication_id    bigint not null references publication (publication_id),
+    row_order         integer not null,
+    project_ref       text not null,
+    name              text not null,
+    technology        text not null,
+    mec_mw            decimal(12, 5),
+    feeding_station   text not null,
+    station_110kv     text not null,
+    offer_type        text not null,
+    status            text not null,
+    date_text         text not null,
+    date_on           date,
+    voltage           text not null,
+    raw               text not null,
+    read_at           timestamptz not null,
+    primary key (publication_id, row_order)
+);
+
 -- g8: one row per weekly run, written when the run ends (a failed run too).
 create sequence if not exists run_log_seq;
 create table if not exists run_log (

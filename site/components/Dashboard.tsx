@@ -6,7 +6,7 @@ import { SplitBars } from "@/components/SplitBars";
 import { Stat } from "@/components/Stat";
 import { TableScroll } from "@/components/TableScroll";
 import { LIST_NAMES, gw, mw, pct, waited } from "@/lib/format";
-import type { Project, Report } from "@/lib/report";
+import type { Pace, Project, Report } from "@/lib/report";
 
 // Rows shown before "show all"; a layout choice, never printed.
 const TOP = 10;
@@ -108,6 +108,56 @@ function New({ report }: { report: Report }) {
   );
 }
 
+// The shares a batch has: both counts when both exist, never a made-up zero or one
+const shares = (b: { share_found: number | null; share_tagged: number | null }) =>
+  [b.share_found, b.share_tagged].filter((v): v is number => v !== null);
+
+const DSO_ENERGISED = ["esb.dso_energised_renewable", "esb.dso_energised_nonrenewable"];
+
+// One grid's delivery pace: MW energised each year, the contracted queue in years of that
+// pace over the window the back-test supports (or doesn't), and the fastest window beside it.
+function PaceFigure({ id, grid, pace, source, note }: {
+  id: string;
+  grid: string;
+  pace: Pace;
+  source: string;
+  note: string;
+}) {
+  const recent = pace.cover[0];
+  const fastest = pace.fastest[0];
+  const last = pace.backtest.methods.find((m) => m.method === "last year");
+  const mean = pace.backtest.methods.find((m) => m.method === "mean of 3");
+  const averageHelps = !!last && !!mean && mean.mae_mw < last.mae_mw;
+  return (
+    <Figure
+      id={id}
+      title={
+        recent && recent.years !== null
+          ? `At the ${recent.from}-${recent.to} pace the ${grid} queue of ${mw(pace.queue_mw)} is ${recent.years} years of delivery${fastest && fastest.years !== null ? `; at the fastest ${fastest.window} years (${fastest.from}-${fastest.to}), ${fastest.years}` : ""}`
+          : `The ${grid} queue of ${mw(pace.queue_mw)} has no recent pace to set against`
+      }
+      subtitle={`MW energised per year, ${grid}, ${pace.annual[0]?.year ?? ""} to ${pace.through}. Years of cover is the contracted MW over the mean pace of the window, not a forecast of when the queue clears: most contracted MW never energises. ${
+        last && mean
+          ? `Back-test over ${pace.backtest.years} years (${pace.backtest.first}-${pace.backtest.through}): ${averageHelps ? `a ${mean.method.replace("mean of ", "")}-year mean beat last year's value in ${mean.beats_last_year} of ${pace.backtest.years} years (${mw(mean.mae_mw)} against ${mw(last.mae_mw)} mean error)` : `last year's value was the better guide (${mw(last.mae_mw)} mean error against ${mw(mean.mae_mw)} for a ${mean.method.replace("mean of ", "")}-year mean), so no averaging claim is made`}.`
+          : ""
+      }`}
+      footer={`Source: ${source}`}
+      table={{
+        headings: ["Window", "Pace (MW a year)", "Years of cover"],
+        rows: [...pace.cover, ...pace.fastest].map((c) => [`${c.from}-${c.to}`, mw(c.pace_mw), c.years === null ? "no pace" : String(c.years)]),
+      }}
+    >
+      <BarChart
+        title="MW energised each year"
+        subtitle={note}
+        footer=""
+        valueHeading="MW"
+        bars={pace.annual.map((a) => ({ label: String(a.year), value: a.mw, text: mw(a.mw) }))}
+      />
+    </Figure>
+  );
+}
+
 export function Dashboard({ report }: { report: Report }) {
   const { queue, moved, stuck, where } = report;
   const tso = moved.transmission;
@@ -121,6 +171,8 @@ export function Dashboard({ report }: { report: Report }) {
   const shown = full[full.length - 1] ?? years[years.length - 1];
   const fresh = report.freshness;
   const grid = report.grid;
+  const count = (outcome: string) =>
+    report.left_outcomes?.by_outcome.find((o) => o.outcome === outcome)?.count ?? 0;
 
   return (
     <>
@@ -274,6 +326,40 @@ export function Dashboard({ report }: { report: Report }) {
             </>
           )}
         </div>
+        {report.left_outcomes && (
+          <Figure
+            id="fig-left"
+            title={`${report.left_outcomes.total} projects (${gw(report.left_outcomes.total_gw)}) have left the contracted lists for good; ${count("connected") + count("connected on the distribution grid")} are on a connected or energised list by ref, ${count("connected as part of a sibling")} more as phases of one`}
+            subtitle={`Each project's final leave from the contracted lists, by what EirGrid's connected lists say (they cover wind only, to ${report.left_outcomes.cover_end}). Leaving the contracted list was within a year of the first connected listing for ${report.left_outcomes.energised_at_leave.within_a_year} of ${report.left_outcomes.energised_at_leave.refs} matched by ref`}
+            footer={`Source: ${EIRGRID}, connected lists from the Internet Archive${asOf(report.editions, TSO_IDS)}`}
+            table={{
+              headings: ["Outcome", "Projects", "GW"],
+              rows: report.left_outcomes.by_outcome.map((o) => [o.outcome, String(o.count), gw(o.gw)]),
+            }}
+          >
+            <BarChart
+              title="Projects by outcome"
+              subtitle="Count of final leavers; 'unknown' is never read as 'not connected'"
+              footer={`Unknown: ${report.left_outcomes.why_unknown.map((w) => `${w.count} ${w.why}`).join("; ")}`}
+              valueHeading="Projects"
+              bars={report.left_outcomes.by_outcome.map((o) => ({
+                label: o.outcome,
+                value: o.count,
+                text: `${o.count} (${gw(o.gw)})`,
+              }))}
+            />
+            {report.left_outcomes.not_listed.length > 0 && (
+              <>
+                <h3>Wind projects on no connected list</h3>
+                <ProjectTable
+                  label="Wind projects that left the contracted lists and are on no connected list"
+                  rows={report.left_outcomes.not_listed.map((n) => ({ ref: n.ref, name: n.name, mw: n.mw, left: n.left }))}
+                  extra={{ heading: "Left", cell: (r) => String(r.left ?? "") }}
+                />
+              </>
+            )}
+          </Figure>
+        )}
         <div className="card">
           <h3>Distribution{span(dso.editions)}</h3>
           <p>
@@ -320,6 +406,105 @@ export function Dashboard({ report }: { report: Report }) {
           />
         </div>
       </section>
+
+      {report.funnel && report.funnel.batches.length > 0 && (
+        <section aria-labelledby="funnel">
+          <h2 id="funnel">From offer to contract</h2>
+          <Figure
+            id="fig-funnel"
+            title={(() => {
+              const all = report.funnel.batches.flatMap((b) => shares(b));
+              return all.length === 0
+                ? "No ECP batch's offers could be followed to a contracted list"
+                : `Of the projects each ECP batch offered, ${pct(Math.min(...all))} to ${pct(Math.max(...all))} have ever appeared on a contracted list`;
+            })()}
+            subtitle="Share of each batch's distinct offers that appear on a contracted or ESB energised list, counted two independent ways: by matching each offer to a list row by name and MEC (strict, so a lower bound), and from the lists' own batch tags. Where they differ, the recall column says how much the matching missed. ESB's contracted lists in the store begin long after the early batches, so a distribution project that signed and withdrew before then leaves no trace: the early batches are undercounted, and the later ones are the cleaner reading."
+            footer={`Source: ECP batch results (joint system-operator publications); ${EIRGRID}; ${ESB}${asOf(report.editions, [...TSO_IDS, ...DSO_CONTRACTED])}`}
+            table={{
+              headings: ["Batch", "Results", "Age (months)", "Offered", "Found by matching", "Counted by tag", "Match precision", "Match recall", "Where the found ones are now"],
+              rows: report.funnel.batches.map((b) => [
+                b.batch,
+                b.results ?? "",
+                String(b.age_months ?? ""),
+                `${b.offered} (${mw(b.offered_mw)})`,
+                `${b.found} (${mw(b.found_mw)})`,
+                String(b.tagged),
+                b.validation.precision === null ? "" : pct(b.validation.precision),
+                b.validation.recall === null ? "" : pct(b.validation.recall),
+                Object.entries(b.status).map(([k, v]) => `${v} ${k}`).join("; "),
+              ]),
+            }}
+          >
+            <SplitBars
+              mode="paired"
+              scaleMax={1}
+              names={["found by matching offers to the lists", "counted from the lists' own batch tags"]}
+              rows={report.funnel.batches.map((b) => ({
+                label: `${b.batch} (${b.results ?? ""})`,
+                a: b.share_found ?? 0,
+                b: b.share_tagged ?? 0,
+                text: shares(b).length === 0 ? "no count" : `${pct(Math.min(...shares(b)))} to ${pct(Math.max(...shares(b)))} of ${b.offered} offers`,
+              }))}
+            />
+          </Figure>
+        </section>
+      )}
+
+      {report.target_slippage && report.target_slippage.matched > 0 && (
+        <section aria-labelledby="slip">
+          <h2 id="slip">Promise against delivery</h2>
+          <Figure
+            id="fig-slippage"
+            title={`${report.target_slippage.late_to_completion} of ${report.target_slippage.matched} wind projects with a published target connected after it${
+              report.target_slippage.enough && report.target_slippage.median_to_completion !== null && report.target_slippage.median_to_first !== null
+                ? `, by a median of ${report.target_slippage.median_to_first} months to first listing and ${report.target_slippage.median_to_completion} to completion`
+                : ""
+            }`}
+            subtitle={`Months between the target connection month EirGrid printed in its earliest lists and the projects' connected-list entries. Wind only, one cohort: ${report.target_slippage.with_target} projects had a target and ${report.target_slippage.matched} can be followed to a connection (${report.target_slippage.unmatched} cannot: still waiting, on the distribution grid, or spelled differently). The lists don't say whether a target meant first energisation or full export, so both are shown. This is a record of what happened to these projects, not a rate to apply to others.`}
+            footer={`Source: ${EIRGRID}, connected lists from the Internet Archive${asOf(report.editions, TSO_IDS)}`}
+            table={{
+              headings: ["Project", "MEC", "Target", "First listed", "Completed", "Months late to first listing", "Months late to completion"],
+              rows: report.target_slippage.rows.map((r) => [`${r.name} (${r.ref})`, mw(r.mw), r.target, r.first_listed, r.completed, String(r.to_first), String(r.to_completion)]),
+            }}
+          >
+            <BarChart
+              title="Months from the target to completion"
+              subtitle="▲ later than the target, ▼ earlier"
+              footer=""
+              valueHeading="Months"
+              bars={report.target_slippage.rows.map((r) => ({
+                label: `${r.name} (${r.ref})`,
+                value: Math.max(0, r.to_completion),
+                text: `${r.to_completion > 0 ? "▲" : r.to_completion < 0 ? "▼" : ""} ${Math.abs(r.to_completion)}`.trim(),
+              }))}
+            />
+          </Figure>
+        </section>
+      )}
+
+      {report.delivery_pace && (
+        <section aria-labelledby="pace">
+          <h2 id="pace">Pace of delivery</h2>
+          <PaceFigure
+            id="fig-pace-dso"
+            grid="distribution"
+            pace={report.delivery_pace.distribution}
+            source={`${ESB}${asOf(report.editions, DSO_ENERGISED)}`}
+            note={`ESB revises its energisation history. Across the ${report.delivery_pace.distribution.stability.editions_compared} editions held, a year's total moves by at most ${mw(report.delivery_pace.distribution.stability.window_change_mw)} inside the pace window (${report.delivery_pace.distribution.stability.window_years[0]}-${report.delivery_pace.distribution.stability.window_years[1]}), but by up to ${mw(report.delivery_pace.distribution.stability.largest_change_mw)} in an earlier year (${report.delivery_pace.distribution.stability.year}; the errata below say why).${
+              report.delivery_pace.distribution.vintage_check
+                ? ` The back-test on the series as first printed in the ${report.delivery_pace.distribution.vintage_check.edition} edition ${report.delivery_pace.distribution.vintage_check.averaging_beats_last_year ? "also finds averaging beats last year's value" : "does not agree that averaging beats last year's value"}.`
+                : ""
+            }`}
+          />
+          <PaceFigure
+            id="fig-pace-tso"
+            grid="transmission wind"
+            pace={report.delivery_pace.transmission_wind}
+            source={`${EIRGRID}, connected list of ${report.delivery_pace.transmission_wind.as_of}`}
+            note={`The connected lists end at ${report.delivery_pace.transmission_wind.as_of}, so this pace is older than the queue it is set against. Transmission non-wind has no pace series (its connected lists carry no dates per project), so it is blank here, not zero. EirGrid restated its own wind history by ${mw(report.delivery_pace.transmission_wind.restatement.largest_mw)} between its ${report.delivery_pace.transmission_wind.restatement.last_edition_before ?? ""} and ${report.delivery_pace.transmission_wind.restatement.first_edition_matching ?? ""} editions.`}
+          />
+        </section>
+      )}
 
       <section aria-labelledby="where">
         <h2 id="where">Where</h2>
@@ -430,6 +615,89 @@ export function Dashboard({ report }: { report: Report }) {
           )}
         </div>
       </section>
+
+      {report.external && report.external.checks.length > 0 && (
+        <section aria-labelledby="external">
+          <h2 id="external">Against a published total</h2>
+          {report.external.checks.map((c) => (
+            <Figure
+              key={c.id}
+              id="fig-external"
+              title={`The two publishers' lists add up to ${mw(c.ours_mw)} of wind; the published national total is ${mw(c.theirs_mw)}: ${mw(Math.abs(c.diff_mw))} (${pct(Math.abs(c.diff_pct))}) ${c.diff_mw < 0 ? "short" : "over"}`}
+              subtitle={`${c.label}, ${c.as_of}. Scope: ${c.scope}. This checks our reading of the lists against a figure published elsewhere (${c.source}); the figure comes from SEAI, which draws on EirGrid and ESB data, so agreement was expected and a gap would have meant a list lost or double-counted. The gap that remains is not explained: ${c.ruled_out.join("; ")}.`}
+              footer={`Source: ${c.source}, checked ${c.checked_on}: "${c.says}"; ${EIRGRID}; ${ESB}`}
+              table={{
+                headings: ["Part", "Edition", "MW"],
+                rows: [
+                  ["EirGrid connected wind (installed)", c.tso_edition, mw(c.tso_mw)],
+                  ["ESB energised wind (MEC), entries dated to the day", c.dso_edition, mw(c.dso_mw)],
+                  ["Our total", "", mw(c.ours_mw)],
+                  ["Published total", c.as_of, mw(c.theirs_mw)],
+                ],
+              }}
+            >
+              <BarChart
+                title="Wind capacity, MW"
+                subtitle={c.notes}
+                footer=""
+                valueHeading="MW"
+                bars={[
+                  { label: "EirGrid connected", value: c.tso_mw, text: mw(c.tso_mw) },
+                  { label: "ESB energised", value: c.dso_mw, text: mw(c.dso_mw) },
+                  { label: "Our total", value: c.ours_mw, text: mw(c.ours_mw) },
+                  { label: "Published total", value: c.theirs_mw, text: mw(c.theirs_mw) },
+                ]}
+                scaleMax={c.theirs_mw}
+              />
+            </Figure>
+          ))}
+        </section>
+      )}
+
+      {report.errata && (
+        <section aria-labelledby="errata">
+          <h2 id="errata">Where the lists disagree</h2>
+          <div className="card" id="fig-errata">
+            <h3>
+              {report.errata.total === 0
+                ? "No disagreement found between the lists"
+                : `${report.errata.total} places where a publisher's list disagrees with itself or another publication`}
+            </h3>
+            <p className="muted">
+              A disagreement is not necessarily an error: each row says what disagrees and what would settle it. The list is rebuilt with every report, so a row goes when a publisher fixes its list.
+              {report.errata.kinds.length > 0 && ` By kind: ${report.errata.kinds.map((k) => `${k.count} ${k.kind}`).join(", ")}.`}
+            </p>
+            {report.errata.entries.length > 0 && (
+              <TableScroll label="Disagreements between the lists">
+                <table className="score-table wrap">
+                  <thead>
+                    <tr>
+                      <th scope="col">Kind</th>
+                      <th scope="col">Project</th>
+                      <th scope="col">One says</th>
+                      <th scope="col">Against</th>
+                      <th scope="col">What would settle it</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.errata.entries.map((e) => (
+                      <tr key={`${e.kind}-${e.ref}-${e.project}`}>
+                        <td>{e.kind}</td>
+                        <td>
+                          {e.ref && <code>{e.ref}</code>} {e.project}
+                        </td>
+                        <td>{e.says}</td>
+                        <td>{e.against}</td>
+                        <td>{e.settles}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </TableScroll>
+            )}
+          </div>
+        </section>
+      )}
 
       <section aria-labelledby="editions">
         <h2 id="editions">Editions used</h2>

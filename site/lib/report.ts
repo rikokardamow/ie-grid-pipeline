@@ -44,6 +44,23 @@ export type Grid = {
 
 export type Point = { as_of: string; gw: number };
 
+export type Cover = { window: number; from: number; to: number; pace_mw: number; years: number | null };
+
+export type Pace = {
+  queue_mw: number;
+  through: number;
+  as_of: string;
+  annual: { year: number; mw: number }[];
+  cover: Cover[];
+  fastest: Cover[];
+  backtest: {
+    years: number;
+    first?: number;
+    through?: number;
+    methods: { method: string; mae_mw: number; beats_last_year: number }[];
+  };
+};
+
 export type Report = {
   report_date: string;
   generated_at?: string;
@@ -111,6 +128,81 @@ export type Report = {
   where: { generation_placed_share: number | null; counties: { county: string; gw: number }[] };
   grid: Grid | null;
   freshness: { list: string; as_of: string; published: string; days: number }[];
+  // the queue against the pace at which capacity actually energises (null until the connected lists are in)
+  delivery_pace?: {
+    distribution: Pace & {
+      stability: {
+        editions_compared: number;
+        first_edition: string | null;
+        window_years: number[];
+        window_change_mw: number;
+        largest_change_mw: number;
+        year: number | null;
+      };
+      vintage_check: { edition: string; through: number; years: number; averaging_beats_last_year: boolean } | null;
+    };
+    transmission_wind: Pace & {
+      restatement: { editions_compared: number; largest_mw: number; last_edition_before: string | null; first_edition_matching: string | null };
+    };
+  } | null;
+  // published target connection months vs when the projects connected (wind, 2015-16 targets)
+  target_slippage?: {
+    with_target: number;
+    matched: number;
+    unmatched: number;
+    enough: boolean;
+    late_to_completion: number;
+    over_a_year_to_completion: number;
+    late_to_first: number;
+    median_to_completion: number | null;
+    median_to_first: number | null;
+    rows: { ref: string; name: string; mw: number; target: string; first_listed: string; completed: string; to_first: number; to_completion: number }[];
+  } | null;
+  // the record against a figure published elsewhere
+  external?: {
+    checks: {
+      id: string; label: string; as_of: string; scope: string; source: string; url: string; says: string;
+      checked_on: string; notes: string; ours_mw: number; theirs_mw: number; diff_mw: number; diff_pct: number;
+      tso_mw: number; tso_edition: string; dso_mw: number; dso_edition: string; dso_rows: number;
+      dso_undated_mw: number; ruled_out: string[];
+    }[];
+  } | null;
+  // where a publisher's list disagrees with itself or another publication (regenerated each report)
+  errata?: {
+    total: number;
+    entries: { kind: string; ref: string; project: string; says: string; against: string; settles: string }[];
+    kinds: { kind: string; count: number }[];
+  } | null;
+  // of the projects each ECP batch offered, how many reach a contracted list, and where they are now
+  funnel?: {
+    batches: {
+      batch: string;
+      results: string | null;
+      age_months: number | null;
+      offered: number;
+      offered_mw: number;
+      offered_by_name: number;
+      found: number;
+      found_mw: number;
+      found_tso: number;
+      tagged: number;
+      share_found: number | null;
+      share_found_mw: number | null;
+      share_tagged: number | null;
+      status: Record<string, number>;
+      validation: { tagged_matches: number; precision: number | null; tagged_refs: number; recall: number | null };
+    }[];
+  } | null;
+  // what became of the projects that left the contracted lists (null until the connected lists are read)
+  left_outcomes?: {
+    cover_end: string;
+    total: number;
+    total_gw: number;
+    by_outcome: { outcome: string; count: number; gw: number }[];
+    why_unknown: { why: string; count: number }[];
+    not_listed: { ref: string; name: string; mw: number; left: string }[];
+    energised_at_leave: { refs: number; within_a_year: number };
+  } | null;
   runs: {
     count: number;
     with_new_files: number;

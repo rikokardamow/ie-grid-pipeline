@@ -203,7 +203,8 @@ def _caveats(editions: dict[str, date]) -> list[str]:
     return [
         (f"Lists as of {tso:%-d %b %Y} (transmission) and {dso:%-d %b %Y} (distribution); "
          f"ESB posts its lists about a month after their as-of date."),
-        "'Left' a list means connected, withdrawn or moved: the contracted lists don't say which.",
+        ("'Left' a list means connected, withdrawn or moved; the connected lists settle it only "
+         "for wind and only to Oct 2022, so the rest are 'unknown', never 'not connected'."),
         "Burn-down shares are of projects still on a list; withdrawn projects are on neither.",
         "Distribution burn-down only: transmission energisations need EirGrid's connected lists.",
         ("Waiting time runs from the earliest signed month printed for the project in any list "
@@ -280,6 +281,76 @@ def _grid(con) -> dict | None:
 RUNS_SHOWN = 12
 
 
+def _left_outcomes(con) -> dict | None:
+    """The layer on the connected lists: what became of the projects that left the
+    contracted lists (their final leave). None until `python -m iegrid.connected` has
+    read the connected editions."""
+    from iegrid import connected
+
+    try:
+        if con.execute("select count(*) from connected_row").fetchone()[0] == 0:
+            return None
+    except duckdb.CatalogException:
+        return None
+    outs = connected.outcomes(con)
+    order = [connected.CONNECTED, connected.DSO_CONNECTED, connected.SIBLING,
+             connected.NOT_LISTED, connected.UNKNOWN]
+    return {
+        "cover_end": str(connected.COVER_END),
+        "total": len(outs),
+        "total_gw": _f(sum(o.mw for o in outs) / 1000),
+        "by_outcome": [{"outcome": k, "count": sum(1 for o in outs if o.outcome == k),
+                        "gw": _f(sum(o.mw for o in outs if o.outcome == k) / 1000)}
+                       for k in order],
+        "why_unknown": [{"why": w, "count": sum(1 for o in outs
+                                                if o.outcome == connected.UNKNOWN and o.why == w)}
+                        for w in sorted({o.why for o in outs if o.outcome == connected.UNKNOWN})],
+        "not_listed": [{"ref": o.ref, "name": o.name, "mw": _f(o.mw, 1), "left": str(o.left_on)}
+                       for o in sorted((o for o in outs if o.outcome == connected.NOT_LISTED),
+                                       key=lambda o: -o.mw)],
+        "energised_at_leave": {  # leaving the contracted list is first energisation (partial first)
+            "refs": sum(1 for o in outs if o.outcome == connected.CONNECTED and o.first_listed),
+            "within_a_year": sum(1 for o in outs if o.outcome == connected.CONNECTED
+                                 and o.first_listed and abs((o.left_on - o.first_listed).days) <= 365),
+        },
+    }
+
+
+def _delivery_pace(con) -> tuple[dict | None, list[str]]:
+    """The delivery-pace layer (iegrid.delivery). A table that fails its tie is reported
+    in the page's warnings and the section left out, never drawn from an unchecked read."""
+    from iegrid import delivery
+
+    try:
+        return delivery.build(con), []
+    except delivery.DeliveryParseError as exc:
+        return None, [f"delivery pace not shown: {exc}"]
+
+
+def _external(con) -> dict | None:
+    from iegrid import external
+
+    return external.build(con)
+
+
+def _errata(con, grid_section: dict | None, pace: dict | None) -> dict | None:
+    from iegrid import errata
+
+    return errata.build(con, (grid_section or {}).get("conflicts", []), pace)
+
+
+def _funnel(con) -> dict | None:
+    from iegrid import funnel
+
+    return funnel.build(con)
+
+
+def _slippage(con) -> dict | None:
+    from iegrid import slippage
+
+    return slippage.build(con)
+
+
 def _runs(con) -> dict:
     """g8: the weekly runs logged before this report: totals, and the latest RUNS_SHOWN
     newest first."""
@@ -310,19 +381,27 @@ def warnings(con) -> list[str]:
 def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
     now = now or datetime.now(UTC)
     editions = _editions(con)
+    pace, pace_warnings = _delivery_pace(con)
+    grid_section = _grid(con)
     return {
         "report_date": str(now.date()),
         "editions": {s: str(d) for s, d in editions.items()},
         "new": _new(editions, last),
-        "warnings": warnings(con),
+        "warnings": warnings(con) + pace_warnings,
         "queue": {**_queue(con), "by_technology": _by_technology(con),
                   "history": _history(con)},
         "moved": {"transmission": _tso_moved(con), "distribution": _dso_energised_since(con),
                   "by_year": _by_year(con)},
         "stuck": _stuck(con),
         "where": _where(con),
-        "grid": _grid(con),
+        "grid": grid_section,
         "freshness": _freshness(con),
+        "left_outcomes": _left_outcomes(con),
+        "delivery_pace": pace,
+        "target_slippage": _slippage(con),
+        "funnel": _funnel(con),
+        "errata": _errata(con, grid_section, pace),
+        "external": _external(con),
         "runs": _runs(con),
         "caveats": _caveats(editions),
     }

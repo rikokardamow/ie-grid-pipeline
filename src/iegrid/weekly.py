@@ -34,7 +34,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from iegrid import counties, grid, ingest, load, parse, report, store
+from iegrid import connected, counties, esb_legacy, grid, ingest, load, parse, report, store
 
 
 @dataclass
@@ -84,6 +84,13 @@ def steps(con, run: Run, out: Path, raw: Path, now: datetime, **ingest_kw) -> No
     loaded = load.run(con, now)
     run.parsed = len(loaded.parsed)
     run.flag(loaded.errors, "load", "attention")
+
+    # the archived connected lists (no longer posted, so this adds nothing once read): the
+    # report's outcome, pace, slippage, funnel and errata sections need them
+    _, connected_problems = connected.load(con, now)
+    run.flag(connected_problems, "connected lists", "attention")
+    _, legacy_problems, _ = esb_legacy.load(con, now)  # ESB's archived 2017-2023 lists, likewise
+    run.flag(legacy_problems, "ESB legacy lists", "attention")
 
     if ecp_due(con):
         notes = counties.read_ecp_files(con, now)

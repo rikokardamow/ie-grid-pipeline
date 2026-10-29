@@ -5,13 +5,15 @@
 
 export type SplitRow = { label: string; a: number; b: number; text: string };
 
-export function SplitBars({ rows, names, mode }: {
+export function SplitBars({ rows, names, mode, scaleMax }: {
   rows: SplitRow[];
   names: [string, string];
   mode: "stacked" | "paired";
+  scaleMax?: number; // shares are drawn against 1 (100%), not against the largest bar
 }) {
   const max =
-    Math.max(...rows.map((r) => (mode === "stacked" ? r.a + r.b : Math.max(r.a, r.b)))) || 1;
+    scaleMax ??
+    (Math.max(...rows.map((r) => (mode === "stacked" ? r.a + r.b : Math.max(r.a, r.b)))) || 1);
   const w = (v: number) => `${(v / max) * 100}%`;
   return (
     <>

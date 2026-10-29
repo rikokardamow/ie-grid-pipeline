@@ -2111,5 +2111,779 @@
     "parsed": 0
    }
   ]
+ },
+ "left_outcomes": {
+  "cover_end": "2022-10-01",
+  "total": 87,
+  "total_gw": 4.587,
+  "by_outcome": [
+   {
+    "outcome": "connected",
+    "count": 21,
+    "gw": 1.035
+   },
+   {
+    "outcome": "connected as part of a sibling",
+    "count": 9,
+    "gw": 0.096
+   },
+   {
+    "outcome": "not on a connected list",
+    "count": 10,
+    "gw": 0.416
+   },
+   {
+    "outcome": "unknown",
+    "count": 47,
+    "gw": 3.04
+   }
+  ],
+  "why_unknown": [
+   {
+    "why": "left too near the end of the connected lists",
+    "count": 9
+   },
+   {
+    "why": "non-wind: the connected lists print no refs",
+    "count": 37
+   },
+   {
+    "why": "ref reused: on a connected list before any contracted list has it",
+    "count": 1
+   }
+  ],
+  "not_listed": [
+   {
+    "ref": "P230",
+    "name": "Castletownmoor",
+    "mw": 120.0,
+    "left": "2021-03-16"
+   },
+   {
+    "ref": "TG103",
+    "name": "Cronacarkfree (1)",
+    "mw": 105.0,
+    "left": "2017-03-01"
+   }
+  ],
+  "energised_at_leave": {
+   "refs": 21,
+   "within_a_year": 16
+  }
+ },
+ "delivery_pace": {
+  "distribution": {
+   "queue_mw": 1963.7,
+   "through": 2025,
+   "annual": [
+    {
+     "year": 2008,
+     "mw": 96.4
+    },
+    {
+     "year": 2009,
+     "mw": 77.2
+    },
+    {
+     "year": 2010,
+     "mw": 77.6
+    },
+    {
+     "year": 2011,
+     "mw": 199.3
+    },
+    {
+     "year": 2012,
+     "mw": 127.5
+    },
+    {
+     "year": 2013,
+     "mw": 112.9
+    },
+    {
+     "year": 2014,
+     "mw": 147.2
+    },
+    {
+     "year": 2015,
+     "mw": 80.4
+    },
+    {
+     "year": 2016,
+     "mw": 205.0
+    },
+    {
+     "year": 2017,
+     "mw": 287.4
+    },
+    {
+     "year": 2018,
+     "mw": 188.0
+    },
+    {
+     "year": 2019,
+     "mw": 300.3
+    },
+    {
+     "year": 2020,
+     "mw": 87.2
+    },
+    {
+     "year": 2021,
+     "mw": 19.9
+    },
+    {
+     "year": 2022,
+     "mw": 132.3
+    },
+    {
+     "year": 2023,
+     "mw": 35.8
+    },
+    {
+     "year": 2024,
+     "mw": 71.1
+    },
+    {
+     "year": 2025,
+     "mw": 200.0
+    }
+   ],
+   "cover": [
+    {
+     "window": 3,
+     "from": 2023,
+     "to": 2025,
+     "pace_mw": 102.3,
+     "years": 19.2
+    },
+    {
+     "window": 5,
+     "from": 2021,
+     "to": 2025,
+     "pace_mw": 91.8,
+     "years": 21.4
+    }
+   ],
+   "fastest": [
+    {
+     "window": 3,
+     "from": 2017,
+     "to": 2019,
+     "pace_mw": 258.6,
+     "years": 7.6
+    }
+   ],
+   "backtest": {
+    "years": 18,
+    "first": 2008,
+    "through": 2025,
+    "methods": [
+     {
+      "method": "last year",
+      "mae_mw": 81.6,
+      "beats_last_year": 0
+     },
+     {
+      "method": "mean of 3",
+      "mae_mw": 59.6,
+      "beats_last_year": 14
+     },
+     {
+      "method": "mean of 5",
+      "mae_mw": 71.0,
+      "beats_last_year": 11
+     }
+    ]
+   },
+   "as_of": "2026-07-01",
+   "stability": {
+    "editions_compared": 8,
+    "first_edition": "2017-09-07",
+    "window_years": [
+     2023,
+     2025
+    ],
+    "window_change_mw": 10.0,
+    "largest_change_mw": 146.6,
+    "year": 2013
+   },
+   "vintage_check": {
+    "edition": "2017-09-07",
+    "through": 2016,
+    "years": 9,
+    "earliest": [
+     {
+      "method": "last year",
+      "mae_mw": 77.8,
+      "beats_last_year": 0
+     },
+     {
+      "method": "mean of 3",
+      "mae_mw": 53.4,
+      "beats_last_year": 7
+     },
+     {
+      "method": "mean of 5",
+      "mae_mw": 50.2,
+      "beats_last_year": 6
+     }
+    ],
+    "latest": [
+     {
+      "method": "last year",
+      "mae_mw": 57.9,
+      "beats_last_year": 0
+     },
+     {
+      "method": "mean of 3",
+      "mae_mw": 37.0,
+      "beats_last_year": 7
+     },
+     {
+      "method": "mean of 5",
+      "mae_mw": 37.6,
+      "beats_last_year": 8
+     }
+    ],
+    "averaging_beats_last_year": true
+   }
+  },
+  "transmission_wind": {
+   "queue_mw": 2053.5,
+   "through": 2021,
+   "annual": [
+    {
+     "year": 2013,
+     "mw": 76.0
+    },
+    {
+     "year": 2014,
+     "mw": 201.3
+    },
+    {
+     "year": 2015,
+     "mw": 106.0
+    },
+    {
+     "year": 2016,
+     "mw": 218.7
+    },
+    {
+     "year": 2017,
+     "mw": 220.2
+    },
+    {
+     "year": 2018,
+     "mw": 182.9
+    },
+    {
+     "year": 2019,
+     "mw": 158.0
+    },
+    {
+     "year": 2020,
+     "mw": 132.3
+    },
+    {
+     "year": 2021,
+     "mw": 9.3
+    }
+   ],
+   "cover": [
+    {
+     "window": 3,
+     "from": 2019,
+     "to": 2021,
+     "pace_mw": 99.9,
+     "years": 20.6
+    },
+    {
+     "window": 5,
+     "from": 2017,
+     "to": 2021,
+     "pace_mw": 140.6,
+     "years": 14.6
+    }
+   ],
+   "fastest": [
+    {
+     "window": 3,
+     "from": 2016,
+     "to": 2018,
+     "pace_mw": 207.3,
+     "years": 9.9
+    }
+   ],
+   "backtest": {
+    "years": 6,
+    "first": 2016,
+    "through": 2021,
+    "methods": [
+     {
+      "method": "last year",
+      "mae_mw": 54.2,
+      "beats_last_year": 0
+     },
+     {
+      "method": "mean of 3",
+      "mae_mw": 64.9,
+      "beats_last_year": 2
+     },
+     {
+      "method": "mean of 5",
+      "mae_mw": 83.0,
+      "beats_last_year": 1
+     }
+    ]
+   },
+   "as_of": "2022-10-01",
+   "restatement": {
+    "editions_compared": 10,
+    "largest_mw": 100.0,
+    "last_edition_before": "2018-08-01",
+    "first_edition_matching": "2018-12-01"
+   }
+  }
+ },
+ "target_slippage": {
+  "with_target": 22,
+  "matched": 16,
+  "unmatched": 6,
+  "enough": true,
+  "late_to_completion": 15,
+  "over_a_year_to_completion": 7,
+  "late_to_first": 15,
+  "median_to_completion": 9.5,
+  "median_to_first": 8.0,
+  "rows": [
+   {
+    "ref": "TG44",
+    "name": "Barnadivane (1)",
+    "mw": 60.0,
+    "target": "2017-04",
+    "first_listed": "2021-02",
+    "completed": "2021-01",
+    "to_first": 46,
+    "to_completion": 45
+   },
+   {
+    "ref": "TG25",
+    "name": "Oweninney Power (1)",
+    "mw": 89.0,
+    "target": "2016-10",
+    "first_listed": "2019-07",
+    "completed": "2019-10",
+    "to_first": 33,
+    "to_completion": 36
+   },
+   {
+    "ref": "TG83",
+    "name": "Clahane (2)",
+    "mw": 13.8,
+    "target": "2015-12",
+    "first_listed": "2018-08",
+    "completed": "2018-08",
+    "to_first": 32,
+    "to_completion": 32
+   },
+   {
+    "ref": "TG34",
+    "name": "Coomataggart",
+    "mw": 62.2,
+    "target": "2017-11",
+    "first_listed": "2020-03",
+    "completed": "2020-04",
+    "to_first": 28,
+    "to_completion": 29
+   },
+   {
+    "ref": "DG191",
+    "name": "Knockalough (1)",
+    "mw": 24.0,
+    "target": "2016-09",
+    "first_listed": "2018-12",
+    "completed": "2019-01",
+    "to_first": 27,
+    "to_completion": 28
+   },
+   {
+    "ref": "TG49",
+    "name": "Keelderry (1)",
+    "mw": 26.9,
+    "target": "2017-04",
+    "first_listed": "2018-12",
+    "completed": "2018-10",
+    "to_first": 20,
+    "to_completion": 18
+   },
+   {
+    "ref": "DG73",
+    "name": "Loughaun North (2)",
+    "mw": 26.9,
+    "target": "2017-04",
+    "first_listed": "2018-12",
+    "completed": "2018-10",
+    "to_first": 20,
+    "to_completion": 18
+   },
+   {
+    "ref": "TG58",
+    "name": "Seecon (1)",
+    "mw": 105.0,
+    "target": "2016-10",
+    "first_listed": "2017-05",
+    "completed": "2017-08",
+    "to_first": 7,
+    "to_completion": 10
+   },
+   {
+    "ref": "DG49",
+    "name": "Cordal (1)",
+    "mw": 35.9,
+    "target": "2017-06",
+    "first_listed": "2018-02",
+    "completed": "2018-03",
+    "to_first": 8,
+    "to_completion": 9
+   },
+   {
+    "ref": "DG272",
+    "name": "Cordal (2)",
+    "mw": 34.0,
+    "target": "2017-06",
+    "first_listed": "2018-02",
+    "completed": "2018-03",
+    "to_first": 8,
+    "to_completion": 9
+   },
+   {
+    "ref": "TG102",
+    "name": "Boggeragh (2)",
+    "mw": 47.7,
+    "target": "2015-10",
+    "first_listed": "2015-12",
+    "completed": "2016-06",
+    "to_first": 2,
+    "to_completion": 8
+   },
+   {
+    "ref": "TG51",
+    "name": "Mulreavy (1)",
+    "mw": 82.0,
+    "target": "2016-07",
+    "first_listed": "2016-12",
+    "completed": "2017-02",
+    "to_first": 5,
+    "to_completion": 7
+   },
+   {
+    "ref": "TG94",
+    "name": "Sliabh Bawn (1)",
+    "mw": 58.0,
+    "target": "2016-06",
+    "first_listed": "2016-12",
+    "completed": "2016-12",
+    "to_first": 6,
+    "to_completion": 6
+   },
+   {
+    "ref": "DG92",
+    "name": "Ugool (1)",
+    "mw": 64.0,
+    "target": "2016-10",
+    "first_listed": "2017-01",
+    "completed": "2017-02",
+    "to_first": 3,
+    "to_completion": 4
+   },
+   {
+    "ref": "TG15",
+    "name": "Moneypoint WF",
+    "mw": 21.9,
+    "target": "2017-03",
+    "first_listed": "2017-09",
+    "completed": "2017-06",
+    "to_first": 6,
+    "to_completion": 3
+   },
+   {
+    "ref": "DG308",
+    "name": "Mulreavy Ext (Meenadreen South (2))",
+    "mw": 5.4,
+    "target": "2016-12",
+    "first_listed": "2016-12",
+    "completed": "2016-10",
+    "to_first": 0,
+    "to_completion": -2
+   }
+  ]
+ },
+ "funnel": {
+  "batches": [
+   {
+    "batch": "ECP-1",
+    "results": "Nov 2018",
+    "age_months": 93,
+    "offered": 139,
+    "offered_mw": 2470.039,
+    "offered_by_name": 134,
+    "found": 47,
+    "found_mw": 1023.7,
+    "found_tso": 13,
+    "tagged": 71,
+    "share_found": 0.338,
+    "share_found_mw": 0.414,
+    "share_tagged": 0.53,
+    "status": {
+     "still contracted": 25,
+     "energised (ESB list)": 11,
+     "on ESB's earlier lists only": 4,
+     "gone from the lists held": 2,
+     "left: unknown": 5,
+     "left: connected": 1
+    },
+    "validation": {
+     "tagged_matches": 47,
+     "precision": 0.957,
+     "tagged_refs": 71,
+     "recall": 0.648
+    }
+   },
+   {
+    "batch": "ECP-2.1",
+    "results": "Nov 2020",
+    "age_months": 69,
+    "offered": 180,
+    "offered_mw": 4919.21,
+    "offered_by_name": 170,
+    "found": 60,
+    "found_mw": 2589.43,
+    "found_tso": 26,
+    "tagged": 59,
+    "share_found": 0.333,
+    "share_found_mw": 0.526,
+    "share_tagged": 0.347,
+    "status": {
+     "still contracted": 48,
+     "energised (ESB list)": 8,
+     "left: unknown": 4,
+     "on ESB's earlier lists only": 1,
+     "gone from the lists held": 1
+    },
+    "validation": {
+     "tagged_matches": 60,
+     "precision": 0.767,
+     "tagged_refs": 59,
+     "recall": 0.78
+    }
+   },
+   {
+    "batch": "ECP-2.2",
+    "results": "Nov 2021",
+    "age_months": 57,
+    "offered": 171,
+    "offered_mw": 4805.41,
+    "offered_by_name": 156,
+    "found": 62,
+    "found_mw": 2385.32,
+    "found_tso": 25,
+    "tagged": 45,
+    "share_found": 0.363,
+    "share_found_mw": 0.496,
+    "share_tagged": 0.288,
+    "status": {
+     "still contracted": 54,
+     "energised (ESB list)": 7,
+     "left: unknown": 1,
+     "gone from the lists held": 1
+    },
+    "validation": {
+     "tagged_matches": 56,
+     "precision": 0.75,
+     "tagged_refs": 45,
+     "recall": 0.933
+    }
+   },
+   {
+    "batch": "ECP-2.3",
+    "results": "Nov 2022",
+    "age_months": 45,
+    "offered": 98,
+    "offered_mw": 4239.35,
+    "offered_by_name": 94,
+    "found": 41,
+    "found_mw": 2094.55,
+    "found_tso": 28,
+    "tagged": 51,
+    "share_found": 0.418,
+    "share_found_mw": 0.494,
+    "share_tagged": 0.543,
+    "status": {
+     "still contracted": 40,
+     "on ESB's earlier lists only": 1
+    },
+    "validation": {
+     "tagged_matches": 40,
+     "precision": 1.0,
+     "tagged_refs": 51,
+     "recall": 0.784
+    }
+   },
+   {
+    "batch": "ECP-2.4",
+    "results": "Jan 2024",
+    "age_months": 31,
+    "offered": 80,
+    "offered_mw": 6066.96,
+    "offered_by_name": 74,
+    "found": 42,
+    "found_mw": 2721.53,
+    "found_tso": 27,
+    "tagged": 46,
+    "share_found": 0.525,
+    "share_found_mw": 0.449,
+    "share_tagged": 0.622,
+    "status": {
+     "still contracted": 41,
+     "energised (ESB list)": 1
+    },
+    "validation": {
+     "tagged_matches": 41,
+     "precision": 0.951,
+     "tagged_refs": 46,
+     "recall": 0.848
+    }
+   },
+   {
+    "batch": "ECP-2.5",
+    "results": "by Feb 2025",
+    "age_months": 18,
+    "offered": 79,
+    "offered_mw": 5913.329,
+    "offered_by_name": 77,
+    "found": 30,
+    "found_mw": 2117.049,
+    "found_tso": 20,
+    "tagged": 39,
+    "share_found": 0.38,
+    "share_found_mw": 0.358,
+    "share_tagged": 0.506,
+    "status": {
+     "still contracted": 29,
+     "left: unknown": 1
+    },
+    "validation": {
+     "tagged_matches": 30,
+     "precision": 0.933,
+     "tagged_refs": 39,
+     "recall": 0.718
+    }
+   }
+  ]
+ },
+ "errata": {
+  "total": 6,
+  "entries": [
+   {
+    "kind": "node",
+    "ref": "TG594",
+    "project": "Fieldstown Extension 2",
+    "says": "EirGrid's contracted list prints the connection station Timoney (Tipperary)",
+    "against": "the county placement from the ECP results and other sources is Dublin",
+    "settles": "the project's grid-connection offer or its planning file"
+   },
+   {
+    "kind": "node",
+    "ref": "TG485",
+    "project": "Kilmorna Energy Storage Facility",
+    "says": "EirGrid's contracted list prints the connection station Kinnegad 110kV",
+    "against": "the ECP batch results print Knockanure 220kV Substation, 185 km away",
+    "settles": "the project's grid-connection offer or its planning file"
+   },
+   {
+    "kind": "gap",
+    "ref": "TG44",
+    "project": "Barnadivane (1)",
+    "says": "left the contracted list in Dec 2018",
+    "against": "first appears on a connected list in Feb 2021: on neither list for 26 months",
+    "settles": "the project's energisation record (a reused ref, or a list that dropped it early)"
+   },
+   {
+    "kind": "reused ref",
+    "ref": "TG22a",
+    "project": "Athea (1)a",
+    "says": "TG22a is on a connected list from 2015-08-31",
+    "against": "on a connected list before any contracted list has it (connected from 2015-08-31, first contracted 2020-06-16)",
+    "settles": "whether the two projects are one (a renaming) or two"
+   },
+   {
+    "kind": "moved",
+    "ref": "TG24",
+    "project": "Knockacummer (1) (Temp)(Glentanemacelligot1)",
+    "says": "ESB's lists carry it from Sep 2017 to May 2018, energised 9 Nov 2013",
+    "against": "EirGrid's lists carry it from Dec 2018, connected Jul 2015. EirGrid's own note in its 2018-12-01 edition says the project switched from TSO to DSO, the opposite of the order the lists show",
+    "settles": "which publisher the project is connected to, and when it was energised"
+   },
+   {
+    "kind": "restated",
+    "ref": "",
+    "project": "EirGrid's wind capacity history",
+    "says": "cumulative wind MW by year, in the editions up to 2018-08-01",
+    "against": "the 2018-12-01 edition and every later one print the same years up to +100 MW different: the size of TG24 Knockacummer (1) (Temp)(Glentanemacelligot1), which moved between ESB's lists and EirGrid's (see 'moved')",
+    "settles": "EirGrid saying what the change was"
+   }
+  ],
+  "kinds": [
+   {
+    "kind": "gap",
+    "count": 1
+   },
+   {
+    "kind": "moved",
+    "count": 1
+   },
+   {
+    "kind": "node",
+    "count": 2
+   },
+   {
+    "kind": "restated",
+    "count": 1
+   },
+   {
+    "kind": "reused ref",
+    "count": 1
+   }
+  ]
+ },
+ "external": {
+  "checks": [
+   {
+    "id": "wind_end_2022",
+    "label": "Total installed wind capacity of the Republic of Ireland",
+    "as_of": "2022-12-31",
+    "scope": "Republic of Ireland, onshore and offshore (offshore 25.2 MW), net installed",
+    "source": "IEA Wind TCP Annual Report 2022, Ireland chapter by the national team",
+    "url": "https://iea-wind.org/wp-content/uploads/2023/12/Ireland_2022.pdf",
+    "says": "Total (net) installed wind power capacity 4.536 GW; Total offshore capacity .0252 GW",
+    "checked_on": "2026-10-29",
+    "notes": "The report's table prints decommissioned capacity as 0.631 GW while its text says 63 MW; the capacity totals are not affected. The figure comes from SEAI, which draws on EirGrid and ESB data, so this checks our reading of the lists, not the lists themselves",
+    "ours_mw": 4409.9,
+    "theirs_mw": 4536.0,
+    "diff_mw": -126.1,
+    "diff_pct": -0.0278,
+    "tso_mw": 2117.25,
+    "tso_edition": "2022-10-01",
+    "dso_mw": 2292.631,
+    "dso_edition": "2023-04-20",
+    "dso_rows": 261,
+    "dso_undated_mw": 0.0,
+    "ruled_out": [
+     "Arklow Bank (25.2 MW offshore) is on ESB's list, so it is in our total",
+     "EirGrid's connected list prints installed and MEC totals 0.3% apart, far short of the gap"
+    ]
+   }
+  ]
  }
 }
