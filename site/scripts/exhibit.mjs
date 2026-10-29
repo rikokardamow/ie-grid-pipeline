@@ -8,7 +8,7 @@ import { chromium } from "playwright";
 const base = process.env.IEGRID_SITE_URL ?? "http://127.0.0.1:3100";
 const root = join(import.meta.dirname, "..", "..");
 const out = join(root, "data", "exhibits");
-const img = join(root, "docs", "img");
+const img = join(out, "site");
 mkdirSync(out, { recursive: true });
 mkdirSync(img, { recursive: true });
 
