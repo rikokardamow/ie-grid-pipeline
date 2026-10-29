@@ -582,11 +582,45 @@ def firm(rep):
     return fig
 
 
+# ---------------------------------------------------------------- the queue against the plan
+
+def plan(rep):
+    q = rep["queue_vs_plan"]
+    g, s, n = q["gas"], q["storage"], q["need"]
+    bars = [
+        ("Gas turbines on the contracted lists", g["queue_mw"], NAVY),
+        (f"Gas: awarded in auctions, not operating yet ({g['year']})", g["awarded_mw"], BLUE),
+        (f"Gas: expected to deliver ({g['year']})", g["expected_mw"], BLUE),
+        ("Batteries on the contracted lists", s["queue_mw"], NAVY),
+        (f"Storage added, {s['from_year']} to {s['to_year']}", s["added_mw"], BLUE),
+    ]
+    fig, ax = _fig(10, 4.2)
+    y = list(range(len(bars)))
+    for yi, (_, mw, colour) in zip(y, bars, strict=True):
+        ax.barh(yi, mw, height=0.6, color=colour)
+        ax.text(mw + 25, yi, f"{mw:,.0f} MW", va="center", fontsize=9, color=TEXT)
+    ax.set_yticks(y, [b[0] for b in bars])
+    ax.invert_yaxis()
+    ax.set_xlim(0, max(b[1] for b in bars) * 1.18)
+    ax.set_xlabel("MW (dark: the contracted lists; light: what the assessment assumes)", color=MUTED, fontsize=9.5)
+    fig.subplots_adjust(left=0.40, right=0.97)
+    title = (f"The adequacy assessment expects {g['expected_mw']:,.0f} MW of new gas and adds "
+             f"{s['added_mw']:,.0f} MW of storage; the lists hold {g['queue_mw']:,.0f} MW and "
+             f"{s['queue_mw']:,.0f} MW")
+    _frame(fig, title,
+           f"Its stated secure-case deficit, around {n['deficit_start_mw']:,.0f} MW to over "
+           f"{n['deficit_end_mw']:,.0f} MW in {n['deficit_end_year']}, is {n['deficit_share_low']:.0%} to "
+           f"{n['deficit_share_high']:.0%} of what the queue counts for. The assessment's deliveries come "
+           "from the same projects the lists hold, so the two are not additive.",
+           f"Source: {q['source']['name']}, read {q['source']['checked_on']}; {LISTS_CREDIT} · {_as_of(rep)}")
+    return fig
+
+
 CHARTS = {
     "technology": technology, "history": history, "flows": flows, "burndown": burndown,
     "map": grid_map, "counties": counties, "freshness": freshness, "left": left,
     "pace-dso": pace_dso, "pace-tso": pace_tso, "slippage": slippage, "funnel": funnel,
-    "external": external, "firm": firm,
+    "external": external, "firm": firm, "plan": plan,
 }
 
 

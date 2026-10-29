@@ -187,6 +187,18 @@ export type Report = {
     left_alone_mw: number; left_alone_share: number | null;
     sources: { capacity_year: string; name: string; url: string; checked_on: string }[];
   } | null;
+  // the contracted queue against what the adequacy assessment assumes will be built
+  queue_vs_plan?: {
+    source: { name: string; url: string; checked_on: string };
+    gas: { queue_mw: number; awarded_mw: number; expected_mw: number; not_expected_mw: number; year: number; queue_share_of_expected: number } | null;
+    storage: { queue_mw: number; from_year: number; to_year: number; from_mw: number; to_mw: number; added_mw: number; pumped_mw: number; implied_share: number } | null;
+    need: {
+      standard_hours: number; base_outside: number[]; secure_outside: number[];
+      deficit_start_mw: number; deficit_end_mw: number; deficit_end_year: number;
+      queue_derated_low_mw: number; queue_derated_high_mw: number; queue_year: string;
+      deficit_share_low: number; deficit_share_high: number;
+    };
+  } | null;
   // where a publisher's list disagrees with itself or another publication (regenerated each report)
   errata?: {
     total: number;

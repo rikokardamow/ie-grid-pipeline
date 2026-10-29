@@ -60,6 +60,10 @@ Under the capacity auction's de-rating factors, about 2.1 GW of the 12 GW with a
 
 ![Share of contracted MW that counts as capacity](docs/img/firm.png)
 
+Against the system operator's own plan: EirGrid and SONI's resource adequacy assessment expects 1,900 MW of new gas and adds 660 MW of storage by 2029, while the contracted lists hold 1,944 MW of gas turbines and 1,789 MW of batteries. Its stated deficit is a fifth or less of what the queue counts for, so how much of the queue gets built matters more than its size.
+
+![The queue against the adequacy assessment's assumptions](docs/img/plan.png)
+
 ## Running it
 
     uv sync
@@ -83,7 +87,7 @@ The dashboard is a static Next.js page built from the report and served locally:
 
 `src/iegrid/` is the code: ingest, parse, load, place, report, the charts, and the analysis layers. Small cited tables (stations, external checks, resolutions) live in `src/iegrid/data/`. `tests/` ties every edition to its printed total. `site/` is the dashboard, with tests that check every number on the page against the report. `ops/` is the weekly run. `data/` holds the raw PDFs, the DuckDB store and the reports, and is not in git.
 
-Nine further studies sit on top of the record in `docs/layers/`, each with its own README and tests: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, where the lists disagree, ESB's older lists, the external check, sourced answers to open questions, and firm capacity. `docs/layers/00-decisions.md` says which were built, which were tried and dropped, and why. `docs/README.md` explains the rest of the documents and the stage numbering used in them.
+Ten further studies sit on top of the record in `docs/layers/`, each with its own README and tests: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, where the lists disagree, ESB's older lists, the external check, sourced answers to open questions, firm capacity, and the queue against the adequacy assessment. `docs/layers/00-decisions.md` says which were built, which were tried and dropped, and why. `docs/README.md` explains the rest of the documents and the stage numbering used in them.
 
 ## Data and licence
 

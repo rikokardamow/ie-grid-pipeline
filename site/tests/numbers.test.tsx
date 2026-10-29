@@ -90,6 +90,7 @@ function variants(): [string, Report][] {
   bare.errata = null;
   bare.external = null;
   bare.firm_capacity = null;
+  bare.queue_vs_plan = null;
   later.runs = { ...later.runs, count: 1, failed: 1, latest: later.runs.latest.slice(0, 1) };
   const fewSlips = fixture();
   if (fewSlips.target_slippage) {
@@ -114,6 +115,12 @@ function variants(): [string, Report][] {
     noStorage.firm_capacity.left_alone_share = null;
     noStorage.firm_capacity.gas_nameplate_share = null;
   }
+  const noParts = fixture();
+  if (noParts.queue_vs_plan) {
+    noParts.queue_vs_plan.gas = null;
+    noParts.queue_vs_plan.storage = null;
+    noParts.queue_vs_plan.need.base_outside = [];
+  }
   const noPace = fixture();
   if (noPace.delivery_pace) {
     noPace.delivery_pace.distribution = { ...noPace.delivery_pace.distribution, annual: [], cover: [], fastest: [], backtest: { years: 0, methods: [] } };
@@ -129,6 +136,7 @@ function variants(): [string, Report][] {
     ["no errata", noErrata],
     ["total over the published one", over],
     ["no storage in the queue", noStorage],
+    ["no gas or storage in the plan comparison", noParts],
     ["few matched targets", fewSlips],
   ];
 }

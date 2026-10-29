@@ -243,3 +243,17 @@ two changes: a third perturbed copy of the report (with two, a pace value that l
 copies, twice, passed for a number the page writes) and a rule that a missing share is left out of a sentence
 instead of printed as 0%.
 
+## Eighth session (29 Oct 2026): the need figure found, layer 10 built
+
+"Queue vs need" was parked as source-blocked. The blocker was a name and a host: EirGrid's Generation Capacity
+Statement is now the All-Island Resource Adequacy Assessment, and its PDFs are served from `www.eirgrid.ie`
+(the `cms.eirgrid.ie` index page answers 403, the files redirect to `www`). The 2026-2035 Ireland chapter was
+read in full (172 pages). Layer 10 (`docs/layers/10-queue-vs-plan/README.md`) sets the lists against its
+assumed new gas and storage and its stated secure-case deficit.
+
+Decisions: the comparison is of the lists with the plan's assumptions, never "need on top of the plan",
+because the plan's expected deliveries come from the same projects; the deficit is kept as the document's
+words (a chart carries the year-by-year values, and charts are not read); variable generation is left out for
+the same reason. It was built in its own worktree and branch (`layer-queue-vs-plan`) and opened as a PR,
+because the shared checkout was in use by the README-charts work.
+
