@@ -94,6 +94,17 @@ The dashboard is a static Next.js page built from the report, served locally onl
 
 Nine studies built on the record, each with its own README, tests and expected numbers in `docs/layers/`: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, an errata ledger of where the lists disagree, ESB's older lists, the external check against a published wind total, sourced resolutions of open questions, and firm capacity under the auction's de-rating factors. `docs/layers/00-decisions.md` records which studies were built, which were tested and dropped, and why.
 
+## How the layers were chosen
+
+Each candidate layer was put through six questions (build, forecast, validate, propose, give, alpha) using the energy-analyst skill, and built only if it added something checkable. Several were tested and not built; `docs/layers/00-decisions.md` records them. The energy-analyst skill is a reference file for Claude Code. It lives in the owner's own `.claude` folder, which is gitignored, so it is not part of this repository. It was written as a distillation, not a model: about 90 trading manuals,
+textbooks and journal articles (89 PDFs, 85 unique) on oil, gas, LNG, power and risk were read and reduced to
+the rules that cause real errors in energy data work (units, what a benchmark or spread is, how forecasts must
+be scored, why macro figures need vintages), with each rule traceable to a source and disagreements between
+sources recorded instead of settled. On 27 Oct 2026 it was extended with reference files from about 80 further
+PDFs, checked against the project code and the EIA API. Dated market reports were deliberately left out: they are
+data to ingest, not knowledge to encode. It is a checklist applied to each idea (the six questions below), not
+a source of numbers: every figure on the page still comes from a list or from a source read at its source.
+
 ## Layout
 
 | Path | What it holds |
