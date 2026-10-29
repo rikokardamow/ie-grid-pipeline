@@ -61,5 +61,4 @@ EirGrid and SONI, *All-Island Resource Adequacy Assessment 2026-2035* (Ireland c
 ## Files
 
 `src/iegrid/adequacy.py`, `src/iegrid/data/adequacy.csv`, `tests/test_adequacy.py`, the page's "The queue against
-the system's own plan" section, `docs/img/plan.png`. The README chart for it (`readme_charts.py`) follows the
-README PR.
+the system's own plan" section, `docs/img/plan.png` (drawn by `readme_charts.py`, also shown in the main README).

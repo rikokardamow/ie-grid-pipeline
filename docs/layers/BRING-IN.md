@@ -102,8 +102,7 @@ The saved packs live in `data/sources/` (not in git); the CSV is what the report
 New: `src/iegrid/adequacy.py`, `src/iegrid/data/adequacy.csv`, `tests/test_adequacy.py`, `docs/layers/10-queue-vs-plan/README.md`,
 `docs/img/plan.png`, the page section. Changed: `report.py` (one optional field), `site/lib/report.ts`, `Dashboard.tsx`,
 `numbers.test.tsx`, the fixture. On the 29 Oct store: gas 1,944 MW against 1,900 MW expected; storage +660 MW (37% of
-1,789 MW); stated deficit 9% to 20% of the de-rated queue. The top-level README and the matplotlib README chart for it
-are left to follow the README PR, which rewrote that file.
+1,789 MW); stated deficit 9% to 20% of the de-rated queue. The chart is drawn by `readme_charts.py` and shown in the main README.
 
 ## Not done, on purpose
 
