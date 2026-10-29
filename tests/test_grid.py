@@ -240,3 +240,66 @@ def test_mw_still_sums_with_an_ecp_placement_and_a_conflict(tmp_path):
     assert placed + unplaced == pytest.approx(318.6)
     assert [c["ref"] for c in out["conflicts"]] == ["TG485"]
     assert out["nodes"][0]["match"] == "ecp"
+
+
+def townland(name, county, lon, lat):
+    return {"category": "boundary", "type": "administrative", "name": name,
+            "lon": str(lon), "lat": str(lat), "address": {"county": f"County {county}"}}
+
+
+def test_a_new_station_is_drawn_at_its_one_townland_in_the_projects_county():
+    got = grid.site("townland", "pollagh", "Kerry", [townland("Pollagh", "Kerry", -9.44, 52.50)])
+    assert (got.name, got.lon, got.lat) == ("Pollagh (townland)", -9.44, 52.50)
+    # one in another county says nothing (the g4 review's Barnakyle)
+    assert grid.site("townland", "pollagh", "Kerry",
+                     [townland("Pollagh", "Galway", -8.5, 53.2)]) is None
+    # two of the name in the county: which one isn't known
+    assert grid.site("townland", "bellewstown", "Meath", [
+        townland("Bellewstown", "Meath", -6.35, 53.65),
+        townland("Bellewstown", "Meath", -6.86, 53.54)]) is None
+    # a village or a cafe of the name isn't a townland
+    cafe = {**townland("Southbank", "Dublin", -6.27, 53.33), "category": "amenity"}
+    assert grid.site("townland", "southbank", "Dublin", [cafe]) is None
+
+
+def test_a_cited_site_is_its_first_answer_in_the_cited_county():
+    plant = {"category": "landuse", "type": "industrial", "name": "Poolbeg Power Station",
+             "lon": "-6.185", "lat": "53.340", "address": {"city": "Dublin"}}
+    got = grid.site("cited", "southbank", "Dublin", [plant])
+    assert got.name == "Southbank (cited site)" and got.kv == 0
+
+
+def test_every_cited_station_names_a_source():
+    for node, r in grid.cited_stations().items():
+        assert node and r["county"] and r["place_query"]
+        assert r["source_url"].startswith("https://") and r["source_says"]
+
+
+def test_place_queries_skip_conflicts_and_projects_without_a_county():
+    P = grid.Placement
+    pls = [P("TG1", "A", True, 10, "Pollagh", None, "none"),
+           P("TG2", "B", True, 10, "Kinnegad (list) or Knockanure (ECP results)", None,
+             "conflict"),
+           P("TG3", "C", True, 10, "Nowhere", None, "none"),
+           P("TG4", "D", True, 10, "Southbank", None, "none"),
+           P("TG5", "E", True, 10, "Cashla", S("Cashla", 220, -8.8, 53.3), "exact")]
+    cited = {"southbank": {"county": "Dublin", "place_query": "Poolbeg power station"}}
+    got = grid.place_queries(pls, {"TG1": "Kerry", "TG4": "Dublin"}, cited)
+    assert got == {"pollagh, County Kerry": ("townland", "pollagh", "Kerry"),
+                   "Poolbeg power station": ("cited", "southbank", "Dublin")}
+
+
+def test_places_are_asked_once_and_a_failure_is_asked_again(tmp_path, monkeypatch):
+    monkeypatch.setattr(grid.time, "sleep", lambda s: None)
+    cache, asked = tmp_path / "places.json", []
+
+    def search(q):
+        asked.append(q)
+        if q == "bad":
+            raise OSError("timed out")
+        return [{"q": q}]
+
+    assert grid.fetch_places(["a", "bad"], cache, search) == ["nominatim 'bad': timed out"]
+    assert grid.fetch_places(["a", "bad"], cache, search) == ["nominatim 'bad': timed out"]
+    assert asked == ["a", "bad", "bad"]
+    assert json.loads(cache.read_text()) == {"a": [{"q": "a"}]}
