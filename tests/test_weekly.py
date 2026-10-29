@@ -191,7 +191,9 @@ def test_a_failed_place_lookup_needs_a_look(con, steps, monkeypatch):
     got.ecp_notes = []
     monkeypatch.setattr(weekly.grid, "fetch_places",
                         lambda q: ["nominatim 'pollagh, County Kerry': timed out"])
-    monkeypatch.setattr(weekly.grid.CACHE.__class__, "exists", lambda self: True)
+    cache = tmp / "grid.json"
+    cache.write_text("{}")
+    monkeypatch.setattr(weekly.grid, "CACHE", cache)
     _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
     assert run.status == "attention"
     assert "places: nominatim 'pollagh, County Kerry': timed out" in run.problems

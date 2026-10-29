@@ -334,17 +334,36 @@ def cited_stations(path: Path = CITED_STATIONS) -> dict[str, dict[str, str]]:
 
 
 def counties_of(con) -> dict[str, str]:
-    """{project_ref: county} from g4's latest build, placed rows only."""
+    """{project_ref: county} from g4's latest build, placed rows only; a ref on two lists
+    takes its newest publication's row."""
     try:
         return dict(con.execute("""
             select project_ref, county from project_county
             where build_id = (select max(build_id) from region_build) and county is not null
+            order by publication_id, row_order
         """).fetchall())
     except Exception:  # noqa: BLE001 - a store without g4's tables places no townlands
         return {}
 
 
-def place_queries(pls: list[Placement], county_of: dict[str, str],
+def node_counties(pls: list[Placement], county_of: dict[str, str]
+                  ) -> tuple[dict[str, str], dict[str, str]]:
+    """The county of each station still not found, from all its projects (g7b review:
+    per project, a station was drawn for some and unplaced for the rest). Where its
+    projects disagree, the county with most of the MW is the station's, and each project
+    in another county is returned as a conflict: {ref: its own county}."""
+    mw: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for p in pls:
+        if p.at is None and p.how != "conflict" and (c := county_of.get(p.ref)):
+            mw[region.norm_node(p.label)][c] += p.mw
+    node_county = {n: max(cs, key=lambda c: (cs[c], c)) for n, cs in mw.items()}
+    odd = {p.ref: county_of[p.ref] for p in pls
+           if p.at is None and p.how != "conflict" and p.ref in county_of
+           and node_county.get(region.norm_node(p.label)) not in (None, county_of[p.ref])}
+    return node_county, odd
+
+
+def place_queries(pls: list[Placement], node_county: dict[str, str],
                   cited: dict[str, dict[str, str]]) -> dict[str, tuple[str, str, str]]:
     """{query: (kind, node, county)} for the stations still not found."""
     out = {}
@@ -355,7 +374,7 @@ def place_queries(pls: list[Placement], county_of: dict[str, str],
         if node in cited:
             r = cited[node]
             out[r["place_query"]] = ("cited", node, r["county"])
-        elif node and (county := county_of.get(p.ref)):
+        elif node and (county := node_county.get(node)):
             out[f"{node}, County {county}"] = ("townland", node, county)
     return out
 
@@ -379,8 +398,10 @@ def fetch_places(queries, cache: Path = PLACES, search=None) -> list[str]:
     return notes
 
 
-def site(kind: str, node: str, county: str, results: list[dict]) -> Substation | None:
-    """Where a cited site or a townland is, if the answers settle it."""
+def site(kind: str, node: str, county: str, results: list[dict],
+         query_place: str = "") -> Substation | None:
+    """Where a cited site or a townland is, if the answers settle it. For a cited site,
+    query_place is the place the query names (its part before a comma)."""
     from iegrid import counties
 
     def at(r):
@@ -388,7 +409,10 @@ def site(kind: str, node: str, county: str, results: list[dict]) -> Substation |
 
     in_county = [r for r in results if counties._county_of(r) == county]
     if kind == "cited":
-        hits = in_county[:1]
+        # the answer must be the place the source names, not anything in the county
+        named = set(region.key(query_place))
+        hits = [r for r in in_county if named and named <= set(region.key(r.get("name", "")))
+                ][:1]
     else:
         hits = [r for r in in_county if r.get("category") == "boundary"
                 and r.get("type") == "administrative"
@@ -398,8 +422,8 @@ def site(kind: str, node: str, county: str, results: list[dict]) -> Substation |
     if not hits:
         return None
     lon, lat = at(hits[0])
-    return Substation(f"{node.title()} ({'cited site' if kind == 'cited' else 'townland'})",
-                      0, lon, lat)
+    label = "cited site" if kind == "cited" else f"townland, {county}"
+    return Substation(f"{node.title()} ({label})", 0, lon, lat)
 
 
 def nodes(con, cache: Path = CACHE, ecp: dict | None = None,
@@ -411,9 +435,19 @@ def nodes(con, cache: Path = CACHE, ecp: dict | None = None,
     pls = placements(con, idx, ecp)
     answers = json.loads(places.read_text()) if places.exists() else {}
     county_of, cited = counties_of(con), cited_stations()
+    node_county, odd = node_counties(pls, county_of)
     for i, p in enumerate(pls):
-        for q, (kind, node, county) in place_queries([p], county_of, cited).items():
-            if (s := site(kind, node, county, answers.get(q, []))) is not None:
+        if p.ref in odd:  # its station's other projects are in another county
+            c = node_county[region.norm_node(p.label)]
+            pls[i] = Placement(p.ref, p.name, p.tso, p.mw,
+                               f"{p.label} (list, {c}) or {odd[p.ref]} (county)", None,
+                               "conflict", {"ref": p.ref, "name": p.name,
+                                            "mw": round(p.mw, 1), "list_node": p.label,
+                                            "list_node_county": c, "county": odd[p.ref]})
+            continue
+        for q, (kind, node, county) in place_queries([p], node_county, cited).items():
+            where = q.split(",")[0] if kind == "cited" else ""
+            if (s := site(kind, node, county, answers.get(q, []), where)) is not None:
                 pls[i] = Placement(p.ref, p.name, p.tso, p.mw, p.label, s, kind)
     at: dict[str, dict] = {}
     unplaced: dict[str, float] = defaultdict(float)
@@ -473,7 +507,8 @@ def queries_for(con) -> list[str]:
     """The Nominatim queries the map needs for stations still not found."""
     _, subs, _ = load()
     pls = placements(con, _index(subs), ecp_nodes(con))
-    return list(place_queries(pls, counties_of(con), cited_stations()))
+    node_county, _ = node_counties(pls, counties_of(con))
+    return list(place_queries(pls, node_county, cited_stations()))
 
 
 def main(argv: list[str] | None = None) -> int:
