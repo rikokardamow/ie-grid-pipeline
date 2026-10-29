@@ -71,6 +71,27 @@ ESB Networks and EirGrid have each confirmed permission to use their lists here.
 
 Built on the record, each with its own README and tests (`docs/layers/`): connected outcomes, delivery pace, target slippage, the ECP funnel, an errata ledger of where the lists disagree, ESB's older lists, an external check against a published wind total, and sourced resolutions of open questions. Start with `docs/layers/00-decisions.md`; `docs/layers/BRING-IN.md` lists the expected numbers.
 
+**What became of the projects that left.** 86 projects (4.53 GW) left the contracted lists for good. 20 are on EirGrid's connected lists by ref and 8 more connected as phases of one; 5 were refused planning or reorganised into a project that did connect, each with its source; 47 stay unknown rather than being read as not connected.
+
+![What became of the projects that left the contracted lists](docs/img/left.png)
+
+**How long the queue would take at past paces.** At the 2023-25 pace the 1.96 GW distribution queue is 19.2 years of delivery, at the fastest three years (2017-19) 7.6; it is not a forecast, because most contracted MW never energises.
+
+![MW energised each year, distribution](docs/img/pace-dso.png)
+![MW energised each year, transmission wind](docs/img/pace-tso.png)
+
+**Promises against delivery.** 15 of 16 followable wind projects connected after the target EirGrid first printed, by a median 8 months to first listing.
+
+![Months from the target connection month to completion](docs/img/slippage.png)
+
+**From offer to list.** 29% to 62% of what each ECP batch offered has ever appeared on a contracted list, counted two independent ways.
+
+![Share of each ECP batch's offers found on the lists](docs/img/funnel.png)
+
+**A check against a published total.** The two publishers' wind lists add to 4,410 MW at end-2022 against 4,536 MW published (IEA Wind TCP, from SEAI): 126 MW short, 70 MW of it already there a year earlier.
+
+![Wind on the lists against the published national total](docs/img/external.png)
+
 ## Layout
 
     src/iegrid/     ingest, parse, load, report and the layer modules
