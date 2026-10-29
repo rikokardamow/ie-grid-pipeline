@@ -565,7 +565,7 @@ def firm(rep):
         else:
             note = f"{lo:.0%}"
         ax.text(hi + 0.01, yi, f"{note} · {c['nameplate_mw'] / 1000:.2f} GW on the lists, "
-                f"{c['projects']} projects", va="center", fontsize=9, color=TEXT)
+                f"{c['projects']} project{'' if c['projects'] == 1 else 's'}", va="center", fontsize=9, color=TEXT)
     ax.set_yticks(y, [c["label"] for c in classes])
     ax.invert_yaxis()
     ax.set_xlim(0, 1.45)
@@ -575,7 +575,7 @@ def firm(rep):
     fig.subplots_adjust(left=0.25, right=0.97)
     _frame(fig, title, f"The de-rating factors the system operators publish, applied at each "
            f"project's size. {finding} {f['left_alone_mw'] / 1000:.2f} GW "
-           f"({f['left_alone_share']:.0%} of the queue) has no factor: hybrids, interconnectors, "
+           f"({f['left_alone_share']:.0%} of the queue) has no factor: hybrids, the interconnector to France, "
            "combined heat and power and smaller technologies.",
            f"Source: {LISTS_CREDIT}; SEM capacity auction de-rating factors for {f['latest_year']} · "
            f"{_as_of(rep)}")

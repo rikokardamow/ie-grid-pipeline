@@ -257,3 +257,13 @@ words (a chart carries the year-by-year values, and charts are not read); variab
 the same reason. It was built in its own worktree and branch (`layer-queue-vs-plan`) and opened as a PR,
 because the shared checkout was in use by the README-charts work.
 
+## Ninth session (29 Oct 2026): the interconnector gets a factor
+
+The pack's footnotes settled the open interconnector question. Footnote 2: the Great Britain interconnector
+curve "has been adjusted by" an external-market factor (0.65 in 2030/31), so Table 1's printed column is applied
+as it stands, to Greenlink (504 MW: 296 MW counts, 59%). Footnote 3: an interconnector to another EU state is
+expected to be non-participating in the 2030/31 auction, so Celtic (700 MW, to France) keeps no factor and stays in
+the listed remainder. Effect on layer 9: with a factor 11,990 to 12,494 MW; counts 2.04 to 2.15 GW becomes 2.33
+to 2.45 GW; gas's share of it 70% to 74% becomes 62% to 65%. Layer 10's deficit share becomes 8% to 17% of the
+de-rated queue (it was 9% to 20%). Earlier figures in this file are left as the record of what was said then.
+

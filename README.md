@@ -56,7 +56,7 @@ As a check, the two publishers' wind lists add up to within 3% of the national t
 
 ![Wind capacity on the lists against the published national total](docs/img/external.png)
 
-Under the capacity auction's de-rating factors, about 2.1 GW of the 12 GW with a published factor counts as firm capacity, and gas turbines make up about 70% of that.
+Under the capacity auction's de-rating factors, about 2.4 GW of the 12.5 GW with a published factor counts as firm capacity, and gas turbines make up about 62% to 65% of that.
 
 ![Share of contracted MW that counts as capacity](docs/img/firm.png)
 

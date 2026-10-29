@@ -2971,8 +2971,8 @@
    "high": 4
   },
   "contracted_mw": 16658.2,
-  "applied_mw": 11990.5,
-  "applied_share": 0.72,
+  "applied_mw": 12494.5,
+  "applied_share": 0.75,
   "classes": [
    {
     "class": "Wind",
@@ -3053,31 +3053,51 @@
      "low_share": 0.777,
      "high_share": 0.777
     }
+   },
+   {
+    "class": "Interconnector",
+    "label": "Interconnector to Great Britain",
+    "projects": 1,
+    "nameplate_mw": 504.0,
+    "prior": {
+     "year": "2029/30",
+     "low_mw": 266.1,
+     "high_mw": 266.1,
+     "low_share": 0.528,
+     "high_share": 0.528
+    },
+    "latest": {
+     "year": "2030/31",
+     "low_mw": 295.8,
+     "high_mw": 295.8,
+     "low_share": 0.587,
+     "high_share": 0.587
+    }
    }
   ],
   "totals": {
    "prior": {
     "year": "2029/30",
-    "low_mw": 2255.8,
-    "high_mw": 2494.2
+    "low_mw": 2521.9,
+    "high_mw": 2760.3
    },
    "latest": {
     "year": "2030/31",
-    "low_mw": 2036.5,
-    "high_mw": 2154.7
+    "low_mw": 2332.4,
+    "high_mw": 2450.6
    }
   },
-  "gas_share_low": 0.701,
-  "gas_share_high": 0.742,
-  "gas_nameplate_share": 0.162,
+  "gas_share_low": 0.617,
+  "gas_share_high": 0.648,
+  "gas_nameplate_share": 0.156,
   "left_alone": [
    {
     "technology": "Solar + Battery",
     "mw": 1535.3
    },
    {
-    "technology": "Interconnector",
-    "mw": 1204.0
+    "technology": "Celtic Interconnector",
+    "mw": 700.0
    },
    {
     "technology": "CHP",
@@ -3132,8 +3152,8 @@
     "mw": 0.5
    }
   ],
-  "left_alone_mw": 4667.7,
-  "left_alone_share": 0.28,
+  "left_alone_mw": 4163.7,
+  "left_alone_share": 0.25,
   "sources": [
    {
     "capacity_year": "2029/30",
@@ -3193,11 +3213,11 @@
    "deficit_start_mw": 200.0,
    "deficit_end_mw": 400.0,
    "deficit_end_year": 2034,
-   "queue_derated_low_mw": 2036.5,
-   "queue_derated_high_mw": 2154.7,
+   "queue_derated_low_mw": 2332.4,
+   "queue_derated_high_mw": 2450.6,
    "queue_year": "2030/31",
-   "deficit_share_low": 0.093,
-   "deficit_share_high": 0.196
+   "deficit_share_low": 0.082,
+   "deficit_share_high": 0.171
   }
  }
 }

@@ -15,11 +15,11 @@ and the date it was read.
 |---|---|---|
 | new gas | 1,944 MW of gas turbines (OCGT, CCGT, gas) | 2,450 MW successful in capacity auctions and not yet operating, of which 1,900 MW expected to deliver |
 | storage | 1,789 MW of batteries | storage rises from 1,140 MW (2026) to 1,800 MW (2029): +660 MW, 37% of the battery queue |
-| need | queue counts for 2.04 to 2.15 GW in the 2030/31 auction (layer 9) | outside the 3-hour standard in 2026-28 (base) and 2026-30 and 2033-35 (secure); stated secure deficit around 200 MW rising to over 400 MW in 2034 |
+| need | queue counts for 2.33 to 2.45 GW in the 2030/31 auction (layer 9) | outside the 3-hour standard in 2026-28 (base) and 2026-30 and 2033-35 (secure); stated secure deficit around 200 MW rising to over 400 MW in 2034 |
 
 So the gas on the contracted lists is the size of the assessment's whole expectation for new gas (1.02 times),
 and the assessment already assumes about a third of the battery queue arrives. The stated deficit, around 200
-to over 400 MW, is 9% to 20% of what the queue counts for. Read plainly: the system's remaining gap is small
+to over 400 MW, is 8% to 17% of what the queue counts for. Read plainly: the system's remaining gap is small
 next to the queue, so how fast and how much of the queue converts, not its size, decides adequacy.
 
 ## The six questions
