@@ -24,6 +24,20 @@ a transmission project whose own node isn't on the map is drawn at the results' 
 ('ecp'), and one whose two nodes are both on the map but more than CONFLICT_KM apart
 is not drawn at all (Kilmorna Energy Storage: Kinnegad on the list, Knockanure in
 Kerry in the results) and is listed as a conflict.
+
+A station still not found is a new one OSM doesn't have. Two more ways place it, both
+approximate and labelled so on the map:
+
+    cited     data/cited_stations.csv gives the site, with the source that says so
+              (Southbank: the Poolbeg power station)
+    townland  EirGrid names a new station after its townland, so it is drawn at the
+              one townland of that name in the project's county (g4's latest build,
+              from the ECP results, a cited source or other projects at the node).
+              Two townlands of the name in the county (Bellewstown, Meath) place
+              nothing: the g4 review showed a same-named place elsewhere is no evidence
+
+The places are looked up in Nominatim by `python -m iegrid.grid --places` (and by the
+weekly run, for names not yet asked) and cached in data/osm/places.json.
 Distance is from the substation to the nearest line of BACKBONE_KV, all-island (the
 north's backbone is 275 kV): how far the queued MW sits from the transmission
 backbone. It is not the length of the project's own cable.
@@ -48,6 +62,8 @@ from pathlib import Path
 from iegrid import parse, region, store
 
 CACHE = Path(__file__).resolve().parents[2] / "data" / "osm" / "grid.json"
+PLACES = CACHE.parent / "places.json"
+CITED_STATIONS = Path(__file__).parent / "data" / "cited_stations.csv"
 BBOX = (51.3, -10.8, 55.5, -5.9)  # the island: the grid is all-island
 ENDPOINTS = ("https://overpass-api.de/api/interpreter",
              "https://maps.mail.ru/osm/tools/overpass/api/interpreter")
@@ -308,16 +324,136 @@ def placements(con, idx: dict[str, list[Substation]], ecp: dict) -> list[Placeme
     return out
 
 
-def nodes(con, cache: Path = CACHE, ecp: dict | None = None) -> dict:
+# --- new stations: cited sites and townlands -------------------------------------------
+
+def cited_stations(path: Path = CITED_STATIONS) -> dict[str, dict[str, str]]:
+    import csv
+
+    with path.open(newline="") as f:
+        return {region.norm_node(r["node"]): r for r in csv.DictReader(f)}
+
+
+def counties_of(con) -> dict[str, str]:
+    """{project_ref: county} from g4's latest build, placed rows only; a ref on two lists
+    takes its newest publication's row."""
+    try:
+        return dict(con.execute("""
+            select project_ref, county from project_county
+            where build_id = (select max(build_id) from region_build) and county is not null
+            order by publication_id, row_order
+        """).fetchall())
+    except Exception:  # noqa: BLE001 - a store without g4's tables places no townlands
+        return {}
+
+
+def node_counties(pls: list[Placement], county_of: dict[str, str]
+                  ) -> tuple[dict[str, str], dict[str, str]]:
+    """The county of each station still not found, from all its projects (g7b review:
+    per project, a station was drawn for some and unplaced for the rest). Where its
+    projects disagree, the county with most of the MW is the station's, and each project
+    in another county is returned as a conflict: {ref: its own county}."""
+    mw: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    for p in pls:
+        if p.at is None and p.how != "conflict" and (c := county_of.get(p.ref)):
+            mw[region.norm_node(p.label)][c] += p.mw
+    node_county = {n: max(cs, key=lambda c: (cs[c], c)) for n, cs in mw.items()}
+    odd = {p.ref: county_of[p.ref] for p in pls
+           if p.at is None and p.how != "conflict" and p.ref in county_of
+           and node_county.get(region.norm_node(p.label)) not in (None, county_of[p.ref])}
+    return node_county, odd
+
+
+def place_queries(pls: list[Placement], node_county: dict[str, str],
+                  cited: dict[str, dict[str, str]]) -> dict[str, tuple[str, str, str]]:
+    """{query: (kind, node, county)} for the stations still not found."""
+    out = {}
+    for p in pls:
+        if p.at is not None or p.how == "conflict":
+            continue
+        node = region.norm_node(p.label)
+        if node in cited:
+            r = cited[node]
+            out[r["place_query"]] = ("cited", node, r["county"])
+        elif node and (county := node_county.get(node)):
+            out[f"{node}, County {county}"] = ("townland", node, county)
+    return out
+
+
+def fetch_places(queries, cache: Path = PLACES, search=None) -> list[str]:
+    """Ask Nominatim for the queries not yet cached (one a second, its usage policy)."""
+    from iegrid import counties
+
+    search = search or counties._nominatim
+    answers = json.loads(cache.read_text()) if cache.exists() else {}
+    notes = []
+    for q in sorted(set(queries) - set(answers)):
+        time.sleep(counties.NOMINATIM_PAUSE_S)
+        try:
+            answers[q] = search(q)
+        except Exception as exc:  # noqa: BLE001 - reported, asked again next run
+            notes.append(f"nominatim {q!r}: {exc}")
+            continue
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text(json.dumps(answers))
+    return notes
+
+
+def site(kind: str, node: str, county: str, results: list[dict],
+         query_place: str = "") -> Substation | None:
+    """Where a cited site or a townland is, if the answers settle it. For a cited site,
+    query_place is the place the query names (its part before a comma)."""
+    from iegrid import counties
+
+    def at(r):
+        return float(r["lon"]), float(r["lat"])
+
+    in_county = [r for r in results if counties._county_of(r) == county]
+    if kind == "cited":
+        # the answer must be the place the source names, not anything in the county
+        named = set(region.key(query_place))
+        hits = [r for r in in_county if named and named <= set(region.key(r.get("name", "")))
+                ][:1]
+    else:
+        hits = [r for r in in_county if r.get("category") == "boundary"
+                and r.get("type") == "administrative"
+                and region.norm_node(r.get("name", "")) == node]
+        if any(km_between(at(r), at(hits[0])) > SAME_PLACE_KM for r in hits):
+            return None  # two townlands of the name in the county
+    if not hits:
+        return None
+    lon, lat = at(hits[0])
+    label = "cited site" if kind == "cited" else f"townland, {county}"
+    return Substation(f"{node.title()} ({label})", 0, lon, lat)
+
+
+def nodes(con, cache: Path = CACHE, ecp: dict | None = None,
+          places: Path = PLACES) -> dict:
     lines, subs, fetched_at = load(cache)
     idx = _index(subs)
     backbone = [ln for ln in lines if ln.kv in BACKBONE_KV]
     ecp = ecp_nodes(con) if ecp is None else ecp
+    pls = placements(con, idx, ecp)
+    answers = json.loads(places.read_text()) if places.exists() else {}
+    county_of, cited = counties_of(con), cited_stations()
+    node_county, odd = node_counties(pls, county_of)
+    for i, p in enumerate(pls):
+        if p.ref in odd:  # its station's other projects are in another county
+            c = node_county[region.norm_node(p.label)]
+            pls[i] = Placement(p.ref, p.name, p.tso, p.mw,
+                               f"{p.label} (list, {c}) or {odd[p.ref]} (county)", None,
+                               "conflict", {"ref": p.ref, "name": p.name,
+                                            "mw": round(p.mw, 1), "list_node": p.label,
+                                            "list_node_county": c, "county": odd[p.ref]})
+            continue
+        for q, (kind, node, county) in place_queries([p], node_county, cited).items():
+            where = q.split(",")[0] if kind == "cited" else ""
+            if (s := site(kind, node, county, answers.get(q, []), where)) is not None:
+                pls[i] = Placement(p.ref, p.name, p.tso, p.mw, p.label, s, kind)
     at: dict[str, dict] = {}
     unplaced: dict[str, float] = defaultdict(float)
     conflicts: list[dict] = []
     total = 0.0
-    for pl in placements(con, idx, ecp):
+    for pl in pls:
         total += pl.mw
         if pl.conflict:
             conflicts.append(pl.conflict)
@@ -367,7 +503,25 @@ def nodes(con, cache: Path = CACHE, ecp: dict | None = None) -> dict:
     }
 
 
+def queries_for(con) -> list[str]:
+    """The Nominatim queries the map needs for stations still not found."""
+    _, subs, _ = load()
+    pls = placements(con, _index(subs), ecp_nodes(con))
+    node_county, _ = node_counties(pls, counties_of(con))
+    return list(place_queries(pls, node_county, cited_stations()))
+
+
 def main(argv: list[str] | None = None) -> int:
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--places", action="store_true",
+                        help="look up new stations' cited sites and townlands (not the grid)")
+    args = parser.parse_args(argv)
+    if args.places:
+        notes = fetch_places(queries_for(store.connect_read_only()))
+        print(f"places: {PLACES}" + "".join(f"\n  {n}" for n in notes))
+        return 1 if notes else 0
     path = fetch()
     lines, subs, at = load(path)
     print(f"grid: {len(lines)} lines, {len(subs)} named substations, fetched {at} -> {path}")

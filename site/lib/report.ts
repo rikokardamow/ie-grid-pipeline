@@ -26,7 +26,17 @@ export type Grid = {
     match: string;
     km_backbone: number | null;
   }[];
-  conflicts?: { ref: string; name: string; mw: number; list_node: string; results_node: string; km: number }[];
+  // list node vs ECP-results node (km apart), or a project whose station's other projects are in another county
+  conflicts?: {
+    ref: string;
+    name: string;
+    mw: number;
+    list_node: string;
+    results_node?: string;
+    km?: number;
+    list_node_county?: string;
+    county?: string;
+  }[];
   unplaced: { node: string; mw: number }[];
   lines: { kv: number; path: number[][] }[];
   outline: number[][][];

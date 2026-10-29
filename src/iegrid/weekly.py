@@ -18,7 +18,9 @@ the report says "no new publication": that run is still logged. Status:
 The ECP batch results (counties.read_ecp_files) come from the web archive and change
 once a batch, so they are read only when due: a publication has come in since the
 last run that read them without a failure (the first run reads them). A failed read
-stays due, so next week tries again. The OSM grid (iegrid.grid) and the archive
+stays due, so next week tries again. New stations still missing from the map are
+looked up as cited sites or townlands (grid.fetch_places, cached: only names not yet
+asked go to Nominatim). The OSM grid itself (`python -m iegrid.grid`) and the archive
 backfill (iegrid.backfill) stay separate commands.
 """
 
@@ -32,7 +34,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
-from iegrid import counties, ingest, load, parse, report, store
+from iegrid import counties, grid, ingest, load, parse, report, store
 
 
 @dataclass
@@ -90,6 +92,8 @@ def steps(con, run: Run, out: Path, raw: Path, now: datetime, **ingest_kw) -> No
         run.notes += [f"ECP results: {n}" for n in notes if n not in failed]
         run.ecp_read = not failed
     run.notes.append(f"counties: {counties.build(con, now)}")
+    if grid.CACHE.exists():  # new stations on the map: Nominatim is asked only new names
+        run.flag(grid.fetch_places(grid.queries_for(con)), "places", "attention")
     run.report_path = ingest.stored_path(report.write(con, out, now))
 
 

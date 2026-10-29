@@ -38,6 +38,8 @@ def steps(monkeypatch, tmp_path):
     monkeypatch.setattr(counties, "build", lambda con, now: "build: unchanged")
     monkeypatch.setattr(report, "write", write)
     monkeypatch.setattr(weekly, "code_version", lambda: "abc1234 parser 3")
+    monkeypatch.setattr(weekly.grid, "queries_for", lambda con: [])
+    monkeypatch.setattr(weekly.grid, "fetch_places", lambda q: [])
     return got, calls, tmp_path
 
 
@@ -182,3 +184,16 @@ def test_a_real_store_without_run_log_shows_no_runs_but_other_errors_surface():
 
     with pytest.raises(duckdb.IOException):
         report._runs(Broken())
+
+
+def test_a_failed_place_lookup_needs_a_look(con, steps, monkeypatch):
+    got, _, tmp = steps
+    got.ecp_notes = []
+    monkeypatch.setattr(weekly.grid, "fetch_places",
+                        lambda q: ["nominatim 'pollagh, County Kerry': timed out"])
+    cache = tmp / "grid.json"
+    cache.write_text("{}")
+    monkeypatch.setattr(weekly.grid, "CACHE", cache)
+    _, run = weekly.run_weekly(con, tmp / "out", tmp / "raw", NOW)
+    assert run.status == "attention"
+    assert "places: nominatim 'pollagh, County Kerry': timed out" in run.problems

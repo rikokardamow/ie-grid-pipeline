@@ -345,7 +345,7 @@ export function Dashboard({ report }: { report: Report }) {
             <Figure
               id="fig-map"
               title={`${gw(grid.far_gw)} waits at ${grid.far_nodes} substations ${grid.far_km} km or more from the ${grid.backbone_kv.join("/")} kV network`}
-              subtitle={`Contracted MW by connection substation (circle area) on OpenStreetMap's lines, all-island; ${gw(grid.placed_gw)}${grid.placed_share === null ? "" : ` (${pct(grid.placed_share)})`} of the queue is at a substation on the map; a new station OpenStreetMap doesn't have yet is drawn at the existing station its ECP results name. Distance is from the substation, not the project's site`}
+              subtitle={`Contracted MW by connection substation (circle area) on OpenStreetMap's lines, all-island; ${gw(grid.placed_gw)}${grid.placed_share === null ? "" : ` (${pct(grid.placed_share)})`} of the queue is on the map. A new station OpenStreetMap doesn't have yet is drawn at the existing station its ECP results name, at a site a cited source gives, or at the townland it is named after (marked so in the table). Distance is from the substation, not the project's site`}
               footer={`Source: ${EIRGRID}; ${ESB}; lines and ${OSM}, fetched ${grid.osm_fetched_at.slice(0, 10)}; coast Natural Earth${asOf(report.editions, [...TSO_IDS, ...DSO_CONTRACTED])}`}
               table={{
                 headings: ["Substation", "kV", "Contracted", "Projects", `To ${grid.backbone_kv.join("/")} kV`],

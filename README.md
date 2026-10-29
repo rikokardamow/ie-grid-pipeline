@@ -14,7 +14,7 @@ From the report of 28 Oct 2026, with lists as of 5 Aug 2026 (transmission) and 1
 - 14.69 GW is contracted on transmission (158 projects) and 1.96 GW on distribution (177), not yet energised.
 - Three years after its results, ECP-1 had 10% of its distribution MW energised; no later batch passed 1%.
 - Offaly holds the most contracted generation (1.68 GW); 95% of generation MW is placed in a county.
-- 1.36 GW waits at 39 substations 20 km or more from the all-island 220/275/400 kV network; 6.28 GW is under 2 km from it.
+- 1.36 GW waits at 39 substations 20 km or more from the all-island 220/275/400 kV network; 7.07 GW is under 2 km from it.
 
 The charts below are from the dashboard (`site/`), each with its finding as the title.
 
@@ -31,7 +31,7 @@ The charts below are from the dashboard (`site/`), each with its finding as the 
 
 ![Share of each ECP batch energised three years after its results](docs/img/burndown.png)
 
-**Where.** Each circle is a connection substation, sized by the MW waiting there, on OpenStreetMap's 110 kV and higher lines. 84% of contracted MW is on the map: at a substation OpenStreetMap names, or for a new station, at the existing station its ECP results name. The rest is listed under the map.
+**Where.** Each circle is a connection substation, sized by the MW waiting there, on OpenStreetMap's 110 kV and higher lines. 96% of contracted MW is on the map: at a substation OpenStreetMap names, or for a new station, at the existing station its ECP results name, a site a cited source gives (`src/iegrid/data/cited_stations.csv`), or the townland it is named after. The rest is listed under the map.
 
 ![Contracted MW by substation on the grid, with distance to the 220/275/400 kV network](docs/img/map.png)
 ![Contracted GW by county](docs/img/counties.png)
@@ -52,6 +52,7 @@ or step by step:
     uv run python -m iegrid.load       # parse what's new, each edition tied to its printed total
     uv run python -m iegrid.counties   # place projects in counties
     uv run python -m iegrid.grid       # OpenStreetMap lines and substations into data/osm (once, or to refresh)
+    uv run python -m iegrid.grid --places   # new stations' cited sites and townlands (the weekly run does this too)
     uv run python -m iegrid.report     # the weekly page: data/reports/<date>T<HHMM>.json and .pdf
     uv run pytest
 
