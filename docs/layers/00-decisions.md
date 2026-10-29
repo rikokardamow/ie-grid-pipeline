@@ -191,16 +191,17 @@ non-renewable list updated 1 Aug 2022), which print a name, node and MEC but no 
 non-wind unknown leavers by name and MEC. Prototyped before any code was kept: a leaver matched when its
 distinctive name words all appear on a line and a number on that line is within 3% of its MEC.
 
-**Result: 2 of 37 match, and the rest cannot.** Lisdrumdoagh (TG320, 60 MW) is on the 2022 list as
+**Result: 2 of 37 match; 18 cannot be tested and 17 did not match.** Lisdrumdoagh (TG320, 60 MW) is on the 2022 list as
 "Lisdrumdoagh LH1 Battery", 60 MW, 30 Jan 2022, and Porterstown (TG336, 30 MW) as "Porterstown PN1 Battery",
-27 Feb 2022. Of the other 35, 33 left the contracted list after the last connected non-wind list (Aug 2022),
-so no list we hold can say whether they connected; the remaining two (Aghada BESS 01, Kelwin Power Plant
-Phase 2 and its sibling) did not match by name. EirGrid's connected non-renewable file is still the Aug 2022
+27 Feb 2022. Of the other 35, 18 left the contracted list after the last connected non-wind list (Aug 2022),
+so no list we hold can say whether they connected. The other 17 left before it and are not on it under a
+name and MEC we match; that is weak evidence they never connected (a rename or a changed MEC would also hide
+one), so it is not read as an outcome. EirGrid's connected non-renewable file is still the Aug 2022
 one on its site (checked 29 Oct 2026 by search; the file page itself was not read), so the evidence does not exist in a
 public list yet.
 
-**Decision: no-go.** A parser for nine PDFs to move two projects (90 MW) from "unknown" would add a store table
-and a matching gate for no change to the picture. The two matches are recorded here; the outcomes are left
+**Decision: no-go.** A parser for nine PDFs to move two projects (90 MW) from "unknown", with 17 more that
+can only be read as "not found", would add a store table and a matching gate for little change to the picture. The two matches are recorded here; the outcomes are left
 as they are. What would change this: a connected list published after Aug 2022. The weekly run already
 checks the page for new files, so the first one is picked up without work, but the non-wind reader would
 then be worth building. Parked in `PARKING.md`.
