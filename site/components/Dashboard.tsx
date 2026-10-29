@@ -389,6 +389,46 @@ export function Dashboard({ report }: { report: Report }) {
         )}
       </section>
 
+      <section aria-labelledby="runs">
+        <h2 id="runs">Run log</h2>
+        <div className="card" id="fig-runs">
+          <h3>
+            {report.runs.count === 0
+              ? "No weekly run logged before this report"
+              : `${report.runs.count} weekly runs since ${report.runs.first?.slice(0, 10) ?? ""}; ${report.runs.with_new_files} brought a new file${report.runs.failed > 0 ? `, ${report.runs.failed} failed` : ""}`}
+          </h3>
+          <p className="muted">
+            The weekly job checks both pages for new lists. Most weeks nothing lands: ESB posts quarterly, EirGrid irregularly. The run that wrote this page is logged after it.
+          </p>
+          {report.runs.latest.length > 0 && (
+            <TableScroll label="Weekly runs">
+              <table className="score-table wrap">
+                <thead>
+                  <tr>
+                    <th scope="col">Run</th>
+                    <th scope="col">Started (UTC)</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">New files</th>
+                    <th scope="col">Parsed</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {report.runs.latest.map((r) => (
+                    <tr key={r.run}>
+                      <td>{r.run}</td>
+                      <td>{r.started.replace("T", " ").slice(0, 16)}</td>
+                      <td>{r.status}</td>
+                      <td>{r.stored.length > 0 ? r.stored.join("; ") : String(r.new_files)}</td>
+                      <td>{r.parsed}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScroll>
+          )}
+        </div>
+      </section>
+
       <section aria-labelledby="editions">
         <h2 id="editions">Editions used</h2>
         <TableScroll label="Editions used">

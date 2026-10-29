@@ -100,6 +100,13 @@ export type Report = {
   where: { generation_placed_share: number | null; counties: { county: string; gw: number }[] };
   grid: Grid | null;
   freshness: { list: string; as_of: string; published: string; days: number }[];
+  runs: {
+    count: number;
+    with_new_files: number;
+    failed: number;
+    first: string | null;
+    latest: { run: number; started: string; status: string; new_files: number; stored: string[]; parsed: number }[];
+  };
   caveats: string[];
 };
 
@@ -120,6 +127,7 @@ const REQUIRED: [string, (r: Report) => unknown][] = [
   ["moved.by_year", (r) => r.moved?.by_year],
   ["grid", (r) => r.grid],
   ["freshness", (r) => r.freshness],
+  ["runs.latest", (r) => r.runs?.latest],
 ];
 
 function reportFiles(dir: string): string[] {

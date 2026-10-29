@@ -275,6 +275,29 @@ def _grid(con) -> dict | None:
     return out
 
 
+RUNS_SHOWN = 12
+
+
+def _runs(con) -> dict:
+    """g8: the weekly runs logged before this report: totals, and the latest RUNS_SHOWN
+    newest first."""
+    try:
+        total, with_new, failed, first = con.execute("""
+            select count(*), count(*) filter (where new_files > 0),
+                   count(*) filter (where status = 'failed'), min(started_at)
+            from run_log""").fetchone()
+        rows = con.execute(f"""
+            select run_id, started_at, status, new_files, stored, parsed from run_log
+            order by run_id desc limit {RUNS_SHOWN}""").fetchall()
+    except Exception:  # noqa: BLE001 - a store from before g8 has no run_log
+        return {"count": 0, "with_new_files": 0, "failed": 0, "first": None, "latest": []}
+    return {"count": total, "with_new_files": with_new, "failed": failed,
+            "first": first.isoformat(timespec="minutes") if first else None,
+            "latest": [{"run": r, "started": s.isoformat(timespec="minutes"), "status": st,
+                        "new_files": n, "stored": [x for x in stored.split("\n") if x],
+                        "parsed": p} for r, s, st, n, stored, p in rows]}
+
+
 def warnings(con) -> list[str]:
     """A list whose newest edition the load refused: the page shows the edition before."""
     from iegrid import load
@@ -298,6 +321,7 @@ def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
         "where": _where(con),
         "grid": _grid(con),
         "freshness": _freshness(con),
+        "runs": _runs(con),
         "caveats": _caveats(editions),
     }
 
@@ -437,20 +461,27 @@ def last_report(out_dir: Path = REPORTS) -> dict | None:
     return None
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--out", default=str(REPORTS))
-    args = parser.parse_args(argv)
-    out = Path(args.out)
-    now = datetime.now(UTC)
-    con = store.connect_read_only()
+def write(con, out: Path = REPORTS, now: datetime | None = None) -> Path:
+    """Build the report against the last one written in out, and write it there as
+    <date>T<HHMM>.json and .pdf. Returns the JSON's path."""
+    now = now or datetime.now(UTC)
     rep = build(con, now, last_report(out))
     rep["generated_at"] = now.isoformat()
     out.mkdir(parents=True, exist_ok=True)
     stem = f"{now:%Y-%m-%dT%H%M}"  # two runs a day keep both
     (out / f"{stem}.json").write_text(json.dumps(rep, indent=2))
     render(rep, out / f"{stem}.pdf")
-    print(f"report: {out / stem}.json and .pdf")
+    return out / f"{stem}.json"
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--out", default=str(REPORTS))
+    parser.add_argument("--db", default=None, help="read this store instead of the snapshot")
+    args = parser.parse_args(argv)
+    con = store.connect_read_only(args.db)
+    path = write(con, Path(args.out))
+    print(f"report: {path} and .pdf")
     return 0
 
 

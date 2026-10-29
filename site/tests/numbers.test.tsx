@@ -77,6 +77,7 @@ function variants(): [string, Report][] {
   bare.queue.history = { nonwind: [], wind: [], batches: [] };
   bare.queue.by_technology = { ...bare.queue.by_technology, groups: [], top_share: null };
   bare.moved.by_year = [];
+  bare.runs = { count: 0, with_new_files: 0, failed: 0, first: null, latest: [] };
   const onePoint = fixture();
   onePoint.queue.history = { ...onePoint.queue.history, nonwind: onePoint.queue.history.nonwind.slice(-1), wind: [] };
   return [

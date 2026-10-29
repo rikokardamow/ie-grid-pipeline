@@ -2069,5 +2069,47 @@
   "The transmission total includes interconnectors; the county list leaves them out.",
   "Not for publication: ESB Networks' terms forbid republishing its lists without written permission (PARKING.md)."
  ],
- "generated_at": "2026-10-28T20:46:51.208482+00:00"
+ "generated_at": "2026-10-28T20:46:51.208482+00:00",
+ "runs": {
+  "count": 4,
+  "with_new_files": 1,
+  "failed": 0,
+  "first": "2026-11-04T07:00+00:00",
+  "latest": [
+   {
+    "run": 4,
+    "started": "2026-11-25T07:00+00:00",
+    "status": "ok",
+    "new_files": 0,
+    "stored": [],
+    "parsed": 0
+   },
+   {
+    "run": 3,
+    "started": "2026-11-18T07:00+00:00",
+    "status": "attention",
+    "new_files": 1,
+    "stored": [
+     "esb.dso_contracted_renewable as of 2026-10-01 0123456789ab"
+    ],
+    "parsed": 1
+   },
+   {
+    "run": 2,
+    "started": "2026-11-11T07:00+00:00",
+    "status": "ok",
+    "new_files": 0,
+    "stored": [],
+    "parsed": 0
+   },
+   {
+    "run": 1,
+    "started": "2026-11-04T07:00+00:00",
+    "status": "ok",
+    "new_files": 0,
+    "stored": [],
+    "parsed": 0
+   }
+  ]
+ }
 }
