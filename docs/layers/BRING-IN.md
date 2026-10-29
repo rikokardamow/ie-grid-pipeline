@@ -3,7 +3,7 @@
 Everything described under `docs/layers/` was built in `~/Projects/ie-grid-pipeline-connected`,
 a git worktree (branch `layer-connected`) with its own copy of `data/`, then committed on that branch
 and fast-forwarded into main (it was at `b94a77c`). A later fix and layer 8 are on the branch
-`fix-declared-renames`, not merged: see "Layer 8 and the flows fix" at the end. The main checkout's store, `data/reports` and
+`fix-declared-renames`, now merged into main: see "Layer 8 and the flows fix" at the end. The main checkout's store, `data/reports` and
 notebooks were not touched by the build: **the new sections appear only once you run the steps below
 against your own store.**
 
@@ -71,7 +71,7 @@ Not to bring: anything under the worktree's `data/` (a copy; the main store has 
   Cronacarkfree (nothing found), the 70 MW level difference at end-2021, and the voltage for TG485.
   TG44, TG594, TG485 and the restatement are answered; so are five of the ten unmatched wind projects.
 
-## Layer 8 and the flows fix (branch `fix-declared-renames`, not merged)
+## Layer 8 and the flows fix (branch `fix-declared-renames`, merged into main)
 
 | | files |
 |---|---|

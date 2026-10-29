@@ -178,7 +178,7 @@ The open gaps were answered from data and from sources read at the source, and t
 **The correction to merged work.** The flows fix changes figures already on main (g3b): 2018 left
 1.45 to 1.30 GW and joined 1.68 to 1.53 GW; 2019 left 0.27 to 0.07 GW and joined 0.32 to 0.27 GW;
 2023 left 1.17 to 1.12 GW and joined 3.03 to 2.98 GW; 2025 is unchanged. Layer 1 now has 86 leavers, not
-87. This work is on the branch `fix-declared-renames`, not merged.
+87. This work was on the branch `fix-declared-renames` and is merged into main.
 
 What the numbers check caught while building these: a hard-coded year in my wording (twice), a
 count taken from an array's length instead of the report, and, most seriously, a fallback that
