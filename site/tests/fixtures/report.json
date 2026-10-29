@@ -3148,5 +3148,56 @@
     "checked_on": "2026-10-29"
    }
   ]
+ },
+ "queue_vs_plan": {
+  "source": {
+   "name": "EirGrid and SONI, All-Island Resource Adequacy Assessment 2026-2035 (Ireland; data freeze 30 June 2025)",
+   "url": "https://www.eirgrid.ie/sites/default/files/publications/AIRAA-2026-2035_Ireland.pdf",
+   "checked_on": "2026-10-29"
+  },
+  "gas": {
+   "queue_mw": 1944.0,
+   "awarded_mw": 2450.0,
+   "expected_mw": 1900.0,
+   "not_expected_mw": 550.0,
+   "year": 2030,
+   "queue_share_of_expected": 1.023
+  },
+  "storage": {
+   "queue_mw": 1789.4,
+   "from_year": 2026,
+   "to_year": 2029,
+   "from_mw": 1140.0,
+   "to_mw": 1800.0,
+   "added_mw": 660.0,
+   "pumped_mw": 290.0,
+   "implied_share": 0.369
+  },
+  "need": {
+   "standard_hours": 3.0,
+   "base_outside": [
+    2026,
+    2027,
+    2028
+   ],
+   "secure_outside": [
+    2026,
+    2027,
+    2028,
+    2029,
+    2030,
+    2033,
+    2034,
+    2035
+   ],
+   "deficit_start_mw": 200.0,
+   "deficit_end_mw": 400.0,
+   "deficit_end_year": 2034,
+   "queue_derated_low_mw": 2036.5,
+   "queue_derated_high_mw": 2154.7,
+   "queue_year": "2030/31",
+   "deficit_share_low": 0.093,
+   "deficit_share_high": 0.196
+  }
  }
 }

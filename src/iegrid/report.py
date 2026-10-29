@@ -333,6 +333,12 @@ def _firm_capacity(con) -> dict | None:
     return derating.build(con)
 
 
+def _queue_vs_plan(con) -> dict | None:
+    from iegrid import adequacy
+
+    return adequacy.build(con)
+
+
 def _external(con) -> dict | None:
     from iegrid import external
 
@@ -409,6 +415,7 @@ def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
         "errata": _errata(con, grid_section, pace),
         "external": _external(con),
         "firm_capacity": _firm_capacity(con),
+        "queue_vs_plan": _queue_vs_plan(con),
         "runs": _runs(con),
         "caveats": _caveats(editions),
     }

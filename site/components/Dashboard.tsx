@@ -714,6 +714,45 @@ export function Dashboard({ report }: { report: Report }) {
         </section>
       )}
 
+      {report.queue_vs_plan && (
+        <section aria-labelledby="queue-vs-plan">
+          <h2 id="queue-vs-plan">The queue against the system&apos;s own plan</h2>
+          {(() => {
+            const q = report.queue_vs_plan;
+            const years = (ys: number[]) => (ys.length === 0 ? "none" : ys.join(", "));
+            const bars = [
+              ...(q.gas
+                ? [
+                    { label: "Gas turbines on the contracted lists", value: q.gas.queue_mw, text: mw(q.gas.queue_mw) },
+                    { label: "New plant awarded in capacity auctions, not yet operating (the assessment)", value: q.gas.awarded_mw, text: mw(q.gas.awarded_mw) },
+                    { label: "Of that, expected to deliver (the assessment)", value: q.gas.expected_mw, text: mw(q.gas.expected_mw) },
+                  ]
+                : []),
+              ...(q.storage
+                ? [
+                    { label: "Batteries on the contracted lists", value: q.storage.queue_mw, text: mw(q.storage.queue_mw) },
+                    { label: `Storage the assessment adds, ${q.storage.from_year} to ${q.storage.to_year}`, value: q.storage.added_mw, text: mw(q.storage.added_mw) },
+                  ]
+                : []),
+            ];
+            return (
+              <Figure
+                id="fig-plan"
+                title={`${q.gas ? `The adequacy assessment expects ${mw(q.gas.expected_mw)} of new gas; the contracted lists hold ${mw(q.gas.queue_mw)}. ` : ""}${q.storage ? `It adds ${mw(q.storage.added_mw)} of storage by ${q.storage.to_year}, ${pct(q.storage.implied_share)} of the ${mw(q.storage.queue_mw)} of batteries on the lists. ` : ""}Its stated deficit is ${pct(q.need.deficit_share_low)} to ${pct(q.need.deficit_share_high)} of the queue's de-rated capacity`}
+                subtitle={`EirGrid and SONI's resource adequacy assessment says how much new capacity it assumes is delivered and how far the system sits from the reliability standard of ${q.need.standard_hours} hours of expected lost load a year. Base case outside the standard in: ${years(q.need.base_outside)}. Secure case outside it in: ${years(q.need.secure_outside)}. The secure case's stated deficit runs from around ${mw(q.need.deficit_start_mw)} to over ${mw(q.need.deficit_end_mw)} in ${q.need.deficit_end_year}, against ${mw(q.need.queue_derated_low_mw)} to ${mw(q.need.queue_derated_high_mw)} that the queue counts for in the ${q.need.queue_year} capacity auction. The assessment's expected deliveries come from the same projects the lists hold, so the two are not additive: this reads the plan against the queue, and does not say how much more is needed on top of it.`}
+                footer={`Source: ${q.source.name}, read ${q.source.checked_on}; ${EIRGRID}; ${ESB}`}
+                table={{
+                  headings: ["Measure", "MW"],
+                  rows: bars.map((b) => [b.label, b.text]),
+                }}
+              >
+                <BarChart title="Megawatts" subtitle="Contracted lists against what the assessment assumes" footer="" valueHeading="MW" bars={bars} />
+              </Figure>
+            );
+          })()}
+        </section>
+      )}
+
       {report.errata && (
         <section aria-labelledby="errata">
           <h2 id="errata">Where the lists disagree</h2>

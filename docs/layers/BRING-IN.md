@@ -97,6 +97,14 @@ the page's firm-capacity section, `docs/img/firm.png`. Changed: `report.py` (one
 `uv run pytest -q` 355 passed; `pnpm test` 24 passed; 11,990 MW of 16,658 MW has a factor; 2.04 to 2.15 GW counts in 2030/31.
 The saved packs live in `data/sources/` (not in git); the CSV is what the report reads, so the weekly run needs no download.
 
+## Layer 10: queue vs plan (branch `layer-queue-vs-plan`, PR)
+
+New: `src/iegrid/adequacy.py`, `src/iegrid/data/adequacy.csv`, `tests/test_adequacy.py`, `docs/layers/10-queue-vs-plan/README.md`,
+`docs/img/plan.png`, the page section. Changed: `report.py` (one optional field), `site/lib/report.ts`, `Dashboard.tsx`,
+`numbers.test.tsx`, the fixture. On the 29 Oct store: gas 1,944 MW against 1,900 MW expected; storage +660 MW (37% of
+1,789 MW); stated deficit 9% to 20% of the de-rated queue. The top-level README and the matplotlib README chart for it
+are left to follow the README PR, which rewrote that file.
+
 ## Not done, on purpose
 
 Queue vs need (needs the primary EirGrid document), dwell-time survival (leaving a list isn't
