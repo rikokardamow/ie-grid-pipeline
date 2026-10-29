@@ -60,7 +60,10 @@ BACKBONE_KV = (220, 275, 400)
 MIN_SUBSTATION_KV = 38
 TSO_MIN_KV = 110
 PARENT_KM = 40          # a feeding station hangs off a 110 kV station nearby
-CONFLICT_KM = 40        # list node and ECP-results node this far apart: one is wrong
+# list node and ECP-results node this far apart: one is wrong. Real long connections
+# reach 39 km (Lyrenacarriga: Knockraha on the list, Woodhouse in the results); the one
+# wrong node found is 185 km out (Kilmorna), so the line sits well clear of both
+CONFLICT_KM = 80
 PREFIX_MIN = 6
 SAME_PLACE_KM = 2.0     # two OSM objects of one name this close are one substation
 FAR_KM = 20             # "far from the backbone", printed with the number it gives
@@ -255,7 +258,11 @@ def results_node(name: str, mw, ecp: dict) -> str | None:
     """The one node the ECP results give this project (same name key, close MEC)."""
     found = {region.norm_node(n) for n, m in ecp.get(region.key(name), [])
              if region.mec_close(m, Decimal(str(mw)))}
-    return found.pop() if len(found) == 1 else None
+    # two readings of one node ("mount" / "mount lucas"): the shorter, if it starts the rest
+    if found and (short := min(found, key=len)) and all(
+            f == short or f.startswith(short + " ") for f in found):
+        return short
+    return None
 
 
 # --- what the report shows ----------------------------------------------------------
