@@ -1,122 +1,92 @@
 # ie-grid-pipeline
 
-Point-in-time record of Ireland's grid connection queue, read from the PDF lists EirGrid and ESB Networks publish: what is waiting, what moved, what is stuck, where, and what became of projects that left the lists.
+A record of Ireland's grid connection queue, kept from the PDF lists that EirGrid and ESB Networks publish: how much generation is waiting to connect, what moved, what is stuck, and where.
 
-## Question
+The two grid companies each publish a list of projects that have signed a connection agreement but are not yet connected, EirGrid for the transmission grid and ESB Networks for the distribution grid. Each new edition replaces the last, so the history disappears unless somebody keeps it. This repository keeps it. Every edition is stored as published with the date it describes, the date it went up and the date it was fetched, and older editions back to 2015 are recovered from the Internet Archive. An edition is only accepted once it ties to itself: the same project references as the page text, and total MW within 1 MW of the printed total.
 
-How much generation is waiting to connect to Ireland's grid, what moved this week, what is stuck, and where?
+From that store it builds a weekly report (PDF, JSON and a static web page) and the charts below. It does not forecast anything. The one "years of delivery" figure is a ratio and is labelled as one.
 
-## Method
+## What the lists say
 
-EirGrid (transmission) and ESB Networks (distribution) publish their contracted and energised project lists as PDFs. Each edition is kept as published, with its as-of date, publication time and ingest time. Archived editions back to 2015 come from the Wayback Machine. Each edition is parsed and loaded only if it ties to the list itself: the same refs as the page text and MW within 1 MW of the printed total. Projects are placed in counties from the ECP batch results, a cited table and OpenStreetMap substations. A weekly report (PDF and JSON) is built from the store, and a static page is built from the JSON. Every number on both is checked to come from the report. Details are in `docs/spec.md` and the open questions in `PARKING.md`.
+Report of 29 October 2026, with lists as of 5 August 2026 (transmission) and 1 July 2026 (distribution). Each chart is drawn from the report with `uv run python -m iegrid.readme_charts`.
 
-## Result
+16.66 GW has signed to connect and is not yet energised. Solar is a third of it.
 
-From the report of 28 Oct 2026, with lists as of 5 Aug 2026 (transmission) and 1 Jul 2026 (distribution):
-- 14.69 GW is contracted on transmission (158 projects) and 1.96 GW on distribution (177), not yet energised.
-- Three years after its results, ECP-1 had 10% of its distribution MW energised; no later batch passed 1%.
-- Offaly holds the most contracted generation (1.68 GW); 95% of generation MW is placed in a county.
-- 1.36 GW waits at 39 substations 20 km or more from the all-island 220/275/400 kV network; 7.07 GW is under 2 km from it.
+![Generation contracted to connect, by technology](docs/img/technology.png)
 
-The charts below are from the dashboard (`site/`), each with its finding as the title.
+![Contracted capacity on the transmission grid, every list since 2015](docs/img/history.png)
 
-**What is waiting.** Solar is a third of the 16.66 GW signed to connect, and non-wind on transmission grew from 0.40 GW in 2015 to 12.64 GW.
+2025 was the biggest year for joining the transmission lists.
 
-![Contracted GW by technology](docs/img/technology.png)
-![Non-wind and wind contracted on transmission, every edition since 2015](docs/img/history.png)
+![Capacity joining and leaving the transmission lists, by year](docs/img/flows.png)
 
-**What moved.** 2025 was the biggest year for joining: 4.28 GW joined the transmission lists and 0.33 GW left.
+Compared at the same age, the oldest connection batch connected fastest, and no later batch has passed 1% three years after its results.
 
-![GW joining and leaving the transmission lists each year](docs/img/flows.png)
+![Share of each connection batch energised three years after its results](docs/img/burndown.png)
 
-**What's stuck.** At equal age, the older batch connected faster: three years after its results ECP-1 had 10% of its distribution MW energised, and no later batch passed 1%.
+Each circle below is a connection substation, sized by the MW waiting there, drawn on OpenStreetMap's lines. The blue ones are 20 km or more from the 220, 275 and 400 kV network.
 
-![Share of each ECP batch energised three years after its results](docs/img/burndown.png)
+![Contracted capacity by connection substation](docs/img/map.png)
 
-**Where.** Each circle is a connection substation, sized by the MW waiting there, on OpenStreetMap's 110 kV and higher lines. 96% of contracted MW is on the map: at a substation OpenStreetMap names, or for a new station, at the existing station its ECP results name, a site a cited source gives (`src/iegrid/data/cited_stations.csv`), or the townland it is named after. The rest is listed under the map.
+![Contracted generation by county](docs/img/counties.png)
 
-![Contracted MW by substation on the grid, with distance to the 220/275/400 kV network](docs/img/map.png)
-![Contracted GW by county](docs/img/counties.png)
-
-**How fresh.** EirGrid posts its lists about 5 days after their as-of date and ESB about 29, so the distribution side runs a month behind.
+EirGrid posts its lists about five days after the date they describe, ESB Networks about a month, so the distribution side of any weekly report runs a month behind.
 
 ![Days from each list's as-of date to its publication](docs/img/freshness.png)
 
-
-## How to run
-
-    ops/weekly.sh                      # the weekly run: new lists in, report out, page rebuilt, one run_log row
-
-or step by step:
-
-    uv sync
-    uv run python -m iegrid.ingest     # fetch every current list into data/
-    uv run python -m iegrid.load       # parse what's new, each edition tied to its printed total
-    uv run python -m iegrid.counties   # place projects in counties
-    uv run python -m iegrid.grid       # OpenStreetMap lines and substations into data/osm (once, or to refresh)
-    uv run python -m iegrid.grid --places   # new stations' cited sites and townlands (the weekly run does this too)
-    uv run python -m iegrid.report     # the weekly page: data/reports/<date>T<HHMM>.json and .pdf
-    uv run pytest
-
-    cd site && pnpm install
-    pnpm test                          # every number on the page comes from the report
-    pnpm build                         # static export of the newest report into site/out
-    pnpm serve                         # http://127.0.0.1:3100, local only
-    pnpm a11y                          # WCAG 2.2 AA, both modes, desktop and phone
-    pnpm exhibit                       # screenshots into data/exhibits, charts into docs/img
-
-ESB Networks and EirGrid have each confirmed permission to use their lists here. Credit lines stay on every exhibit; see `NOTICE`. The dashboard is served locally (127.0.0.1), not hosted.
-
-## Analysis layers
-
-Built on the record, each with its own README and tests (`docs/layers/`): connected outcomes, delivery pace, target slippage, the ECP funnel, an errata ledger of where the lists disagree, ESB's older lists, an external check against a published wind total, sourced resolutions of open questions, and how much of the queue counts as capacity under the capacity auction's de-rating factors. Start with `docs/layers/00-decisions.md`; `docs/layers/BRING-IN.md` lists the expected numbers.
-
-**What became of the projects that left.** 86 projects (4.53 GW) left the contracted lists for good. 20 are on EirGrid's connected lists by ref and 8 more connected as phases of one; 5 were refused planning or reorganised into a project that did connect, each with its source; 47 stay unknown rather than being read as not connected.
+86 projects have left the contracted lists for good. Where a connected list exists it says what happened to them; where it does not, the outcome is left as unknown rather than read as "not connected".
 
 ![What became of the projects that left the contracted lists](docs/img/left.png)
 
-**How long the queue would take at past paces.** At the 2023-25 pace the 1.96 GW distribution queue is 19.2 years of delivery, at the fastest three years (2017-19) 7.6; it is not a forecast, because most contracted MW never energises.
+Dividing the contracted MW by the MW energised each year gives a sense of scale, not a forecast, because most contracted MW never energises.
 
 ![MW energised each year, distribution](docs/img/pace-dso.png)
+
 ![MW energised each year, transmission wind](docs/img/pace-tso.png)
 
-**Promises against delivery.** 15 of 16 followable wind projects connected after the target EirGrid first printed, by a median 8 months to first listing.
+Of the wind projects whose target connection month EirGrid printed, 15 of 16 connected after it.
 
 ![Months from the target connection month to completion](docs/img/slippage.png)
 
-**From offer to list.** 29% to 62% of what each ECP batch offered has ever appeared on a contracted list, counted two independent ways.
+Between a third and a half of what each connection batch offered has ever appeared on a contracted list, counted two independent ways.
 
-![Share of each ECP batch's offers found on the lists](docs/img/funnel.png)
+![Share of each connection batch's offers that reached a contracted list](docs/img/funnel.png)
 
-**A check against a published total.** The two publishers' wind lists add to 4,410 MW at end-2022 against 4,536 MW published (IEA Wind TCP, from SEAI): 126 MW short, 70 MW of it already there a year earlier.
+As a check, the two publishers' wind lists add up to within 3% of the national total published for the end of 2022.
 
-![Wind on the lists against the published national total](docs/img/external.png)
+![Wind capacity on the lists against the published national total](docs/img/external.png)
 
-**How much of it counts as capacity.** Of 11.99 GW of the queue with a published de-rating factor, 2.04 to 2.15 GW counts in the 2030/31 capacity auction: wind about 6% and solar about 4% of their megawatts, batteries 8% to 14% by duration, gas turbines 78%, so gas is 70% to 74% of what counts.
+Under the capacity auction's de-rating factors, about 2.1 GW of the 12 GW with a published factor counts as firm capacity, and gas turbines make up about 70% of that.
 
 ![Share of contracted MW that counts as capacity](docs/img/firm.png)
 
-## How the layers were chosen
+## Running it
 
-Each candidate layer was put through six questions (build, forecast, validate, propose, give, alpha) using the energy-analyst skill, and built only if it added something checkable. Several were tested and not built; `docs/layers/00-decisions.md` records them. The energy-analyst skill is a reference file for Claude Code. It lives in the owner's own `.claude` folder, which is gitignored, so it is not part of this repository. It was written as a distillation, not a model: about 90 trading manuals,
-textbooks and journal articles (89 PDFs, 85 unique) on oil, gas, LNG, power and risk were read and reduced to
-the rules that cause real errors in energy data work (units, what a benchmark or spread is, how forecasts must
-be scored, why macro figures need vintages), with each rule traceable to a source and disagreements between
-sources recorded instead of settled. On 27 Oct 2026 it was extended with reference files from about 80 further
-PDFs, checked against the project code and the EIA API. Dated market reports were deliberately left out: they are
-data to ingest, not knowledge to encode. It is a checklist applied to each idea (the six questions below), not
-a source of numbers: every figure on the page still comes from a list or from a source read at its source.
+    uv sync
+    ops/weekly.sh          # the weekly run: new lists in, report out, page rebuilt
+
+Or step by step:
+
+    uv run python -m iegrid.ingest         # fetch every current list into data/
+    uv run python -m iegrid.load           # parse what is new, tied to the printed total
+    uv run python -m iegrid.counties       # place projects in counties
+    uv run python -m iegrid.grid           # OpenStreetMap lines and substations
+    uv run python -m iegrid.report         # data/reports/<date>T<HHMM>.json and .pdf
+    uv run python -m iegrid.readme_charts  # the charts above, into docs/img/
+    uv run pytest
+
+The dashboard is a static Next.js page built from the report and served locally:
+
+    cd site && pnpm install && pnpm test && pnpm build && pnpm serve
 
 ## Layout
 
-    src/iegrid/     ingest, parse, load, report and the layer modules
-    src/iegrid/data/ small cited tables (stations, external checks, resolutions)
-    tests/          pytest; every edition is tied to its printed total
-    site/           Next.js static dashboard; its tests check every number against the report
-    ops/            the weekly run
-    docs/           spec, layers, charts
-    data/           raw PDFs, the store and reports (not in git)
+`src/iegrid/` is the code: ingest, parse, load, place, report, the charts, and the analysis layers. Small cited tables (stations, external checks, resolutions) live in `src/iegrid/data/`. `tests/` ties every edition to its printed total. `site/` is the dashboard, with tests that check every number on the page against the report. `ops/` is the weekly run. `data/` holds the raw PDFs, the DuckDB store and the reports, and is not in git.
 
-## Licence and data
+Nine further studies sit on top of the record in `docs/layers/`, each with its own README and tests: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, where the lists disagree, ESB's older lists, the external check, sourced answers to open questions, and firm capacity. `docs/layers/00-decisions.md` says which were built, which were tried and dropped, and why. `docs/README.md` explains the rest of the documents and the stage numbering used in them.
 
-Code: MIT (`LICENSE`). The lists belong to their publishers and are used with their permission, not under this licence; the raw PDFs and the store are not in the repository. Credits and the OpenStreetMap (ODbL) attribution are in `NOTICE`.
+## Data and licence
+
+The code is MIT. The lists belong to their publishers; ESB Networks and EirGrid have each confirmed permission to use them here, credit lines stay on every chart, and the full credits are in `NOTICE`. Grid lines and substations are © OpenStreetMap contributors (ODbL). The raw PDFs and the store are not redistributed.
+
+A few terms, since the lists use them: *contracted* means a signed connection agreement but not yet connected; *energised* means connected and exporting; an *ECP batch* is a group of projects that applied together under the Enduring Connection Policy (ECP-1, ECP-2.1 and so on) and got their offers together; *MEC* is maximum export capacity, the MW a project may export, which is what the lists add up.
