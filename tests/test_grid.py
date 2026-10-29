@@ -90,10 +90,10 @@ def test_every_mw_is_placed_or_listed_as_unplaced(tmp_path, monkeypatch):
             return self
 
         def fetchall(self):
-            return [(True, "Cashla", "", 100), (True, "Cashla 220kV", "", 50),
-                    (False, "Nowhere", "", 25), (False, "", "", 5)]
+            return [(True, "Cashla", "", 100, "TG1", "A"), (True, "Cashla 220kV", "", 50, "TG2", "B"),
+                    (False, "Nowhere", "", 25, "DG1", "C"), (False, "", "", 5, "DG2", "D")]
 
-    out = grid.nodes(Con(), cache)
+    out = grid.nodes(Con(), cache, ecp={})
     placed = sum(n["mw"] for n in out["nodes"])
     unplaced = sum(u["mw"] for u in out["unplaced"])
     assert (placed, unplaced) == (150, 30)
@@ -122,8 +122,121 @@ def test_far_and_the_last_band_are_one_rule(tmp_path):
             return self
 
         def fetchall(self):
-            return [(True, "Edge", "", 10)]
+            return [(True, "Edge", "", 10, "TG1", "Edge Solar")]
 
-    out = grid.nodes(Con(), cache)
+    out = grid.nodes(Con(), cache, ecp={})
     assert out["nodes"][0]["km_backbone"] == 20.0
     assert (out["far_gw"], out["far_nodes"]) == (out["bands"][-1]["gw"], 1)
+
+
+def test_the_ecp_results_node_places_a_new_station_and_catches_a_wrong_one():
+    from decimal import Decimal
+
+    waterford = S("Waterford 110kV Substation", 110, -7.10, 52.25)
+    kinnegad = S("Kinnegad 110kV", 110, -7.14, 53.43)
+    knockanure = S("Knockanure 220kV Substation", 220, -9.40, 52.48)
+    i = idx(waterford, kinnegad, knockanure)
+    ecp = {grid.region.key("Castlebanny Wind Farm"): [("Waterford", Decimal("138.6"))],
+           grid.region.key("Kilmorna Energy Storage Facility"): [("Knockanure", Decimal(170))]}
+
+    class Con:
+        def execute(self, sql):
+            return self
+
+        def fetchall(self):
+            return [(True, "Kilvinoge", "", 138.6, "TG541", "Castlebanny Wind Farm"),
+                    (True, "Kinnegad", "", 170.0, "TG485", "Kilmorna Energy Storage Facility")]
+
+    got = {p.ref: p for p in grid.placements(Con(), i, ecp)}
+    # a new station OSM doesn't have: drawn at the station the results name
+    assert (got["TG541"].at, got["TG541"].how) == (waterford, "ecp")
+    # list and results 185 km apart: one of them is wrong, so it isn't drawn
+    assert (got["TG485"].at, got["TG485"].how) == (None, "conflict")
+    assert got["TG485"].conflict["km"] > grid.CONFLICT_KM
+    assert got["TG485"].label == "Kinnegad (list) or Knockanure (ECP results)"
+
+
+def test_the_results_node_is_refused_when_it_is_not_one_station():
+    from decimal import Decimal
+
+    k = grid.region.key("Milltown Solar")
+    # two stations: no node; MEC far off: no node; two readings of one station: that one
+    assert grid.results_node("Milltown Solar", 115, {k: [("Navan", Decimal(115)),
+                                                         ("Cloon", Decimal(115))]}) is None
+    assert grid.results_node("Milltown Solar", 115, {k: [("Cloon", Decimal(5))]}) is None
+    m = grid.region.key("Mount Lucas Wind Farm")
+    assert grid.results_node("Mount Lucas Wind Farm", 84, {m: [
+        ("Mount", Decimal(84)), ("Mount Lucas", Decimal(84))]}) == "mount"
+
+
+def test_a_long_connection_is_not_a_conflict_and_distribution_rows_ignore_the_results():
+    from decimal import Decimal
+
+    knockraha = S("Knockraha 220kV Substation", 220, -8.35, 51.95)
+    woodhouse = S("Woodhouse 110kV Substation", 110, -7.80, 52.10)  # about 40 km
+    i = idx(knockraha, woodhouse)
+    ecp = {grid.region.key("Lyrenacarriga Windfarm and BESS"): [("Woodhouse", Decimal(145))],
+           grid.region.key("Some Solar"): [("Woodhouse", Decimal(5))]}
+
+    class Con:
+        def execute(self, sql):
+            return self
+
+        def fetchall(self):
+            return [(True, "Knockraha", "", 145.0, "TG577", "Lyrenacarriga Windfarm and BESS"),
+                    (False, "Nowhere", "", 5.0, "DG9", "Some Solar")]
+
+    got = {p.ref: p for p in grid.placements(Con(), i, ecp)}
+    assert grid.km_between((knockraha.lon, knockraha.lat), (woodhouse.lon, woodhouse.lat)) < 80
+    assert (got["TG577"].at, got["TG577"].how) == (knockraha, "exact")
+    assert (got["DG9"].at, got["DG9"].how) == (None, "none")
+
+
+def test_grid_references_are_not_nodes(tmp_path):
+    from decimal import Decimal
+
+    con = grid.store.connect(":memory:")
+    con.execute("insert into ecp_row values ('d', ?, 1, 1, 'Eastmont DC Generators', 'Cork', "
+                "9.5, '174653 071951'), ('d', ?, 2, 1, 'Kilmorna Energy', 'Kerry', 170, "
+                "'Knockanure')", [grid_ecp_version(), grid_ecp_version()])
+    got = grid.ecp_nodes(con)
+    assert dict(got) == {grid.region.key("Kilmorna Energy"): [("Knockanure", Decimal(170))]}
+
+
+def grid_ecp_version():
+    from iegrid import ecp
+
+    return ecp.READER_VERSION
+
+
+def test_mw_still_sums_with_an_ecp_placement_and_a_conflict(tmp_path):
+    from decimal import Decimal
+
+    cache = tmp_path / "grid.json"
+    subs = [("Waterford 110kV", 110, -7.10, 52.25), ("Kinnegad 110kV", 110, -7.14, 53.43),
+            ("Knockanure 220kV", 220, -9.40, 52.48)]
+    cache.write_text(json.dumps({
+        "fetched_at": "x",
+        "lines": [{"tags": {"voltage": "220000"}, "geometry": [
+            {"lon": -9.5, "lat": 52.0}, {"lon": -6.0, "lat": 53.5}]}],
+        "substations": [{"tags": {"name": n, "voltage": f"{kv}000"},
+                         "center": {"lon": x, "lat": y}} for n, kv, x, y in subs],
+    }))
+    ecp = {grid.region.key("Castlebanny Wind Farm"): [("Waterford", Decimal("138.6"))],
+           grid.region.key("Kilmorna Energy Storage Facility"): [("Knockanure", Decimal(170))]}
+
+    class Con:
+        def execute(self, sql):
+            return self
+
+        def fetchall(self):
+            return [(True, "Kilvinoge", "", 138.6, "TG541", "Castlebanny Wind Farm"),
+                    (True, "Kinnegad", "", 170.0, "TG485", "Kilmorna Energy Storage Facility"),
+                    (True, "Nowhere", "", 10.0, "TG1", "Other")]
+
+    out = grid.nodes(Con(), cache, ecp=ecp)
+    placed = sum(n["mw"] for n in out["nodes"])
+    unplaced = sum(u["mw"] for u in out["unplaced"])
+    assert placed + unplaced == pytest.approx(318.6)
+    assert [c["ref"] for c in out["conflicts"]] == ["TG485"]
+    assert out["nodes"][0]["match"] == "ecp"

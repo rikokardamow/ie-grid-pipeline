@@ -16,6 +16,14 @@ over, and a distribution project's feeding station must be within PARENT_KM of i
 110 kV station when that station is on the map. A distribution project whose feeding
 station isn't found is drawn at its 110 kV station ('parent'). A name OSM gives to
 several substations far apart is not placed (ambiguous).
+
+The ECP batch results give a node too, for the projects they list (matched by name and
+MEC, as in region.by_name). It is often the existing station a new one ties into
+(Castlebanny: list node Kilvinoge, results node Waterford), so it is used two ways:
+a transmission project whose own node isn't on the map is drawn at the results' node
+('ecp'), and one whose two nodes are both on the map but more than CONFLICT_KM apart
+is not drawn at all (Kilmorna Energy Storage: Kinnegad on the list, Knockanure in
+Kerry in the results) and is listed as a conflict.
 Distance is from the substation to the nearest line of BACKBONE_KV, all-island (the
 north's backbone is 275 kV): how far the queued MW sits from the transmission
 backbone. It is not the length of the project's own cable.
@@ -33,6 +41,7 @@ import urllib.request
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from decimal import Decimal
 from itertools import pairwise
 from pathlib import Path
 
@@ -51,6 +60,10 @@ BACKBONE_KV = (220, 275, 400)
 MIN_SUBSTATION_KV = 38
 TSO_MIN_KV = 110
 PARENT_KM = 40          # a feeding station hangs off a 110 kV station nearby
+# list node and ECP-results node this far apart: one is wrong. Real long connections
+# reach 39 km (Lyrenacarriga: Knockraha on the list, Woodhouse in the results); the one
+# wrong node found is 185 km out (Kilmorna), so the line sits well clear of both
+CONFLICT_KM = 80
 PREFIX_MIN = 6
 SAME_PLACE_KM = 2.0     # two OSM objects of one name this close are one substation
 FAR_KM = 20             # "far from the backbone", printed with the number it gives
@@ -227,34 +240,97 @@ def place(tso: bool, node: str, station: str,
     return s, how
 
 
+def ecp_nodes(con) -> dict[tuple[str, ...], list[tuple[str, Decimal]]]:
+    """{name key: [(node, MEC)]} from the ECP batch results, rows that name a node
+    (some give a grid reference instead, which isn't a node)."""
+    from iegrid import ecp
+
+    out: dict[tuple[str, ...], list[tuple[str, Decimal]]] = defaultdict(list)
+    for name, node, mw in con.execute(
+            "select name, node, mec_mw from ecp_row where reader_version = ? and node <> ''",
+            [ecp.READER_VERSION]).fetchall():
+        if re.search(r"[a-z]", node, re.IGNORECASE) and (k := region.key(name)):
+            out[k].append((node, mw))
+    return out
+
+
+def results_node(name: str, mw, ecp: dict) -> str | None:
+    """The one node the ECP results give this project (same name key, close MEC)."""
+    found = {region.norm_node(n) for n, m in ecp.get(region.key(name), [])
+             if region.mec_close(m, Decimal(str(mw)))}
+    # two readings of one node ("mount" / "mount lucas"): the shorter, if it starts the rest
+    if found and (short := min(found, key=len)) and all(
+            f == short or f.startswith(short + " ") for f in found):
+        return short
+    return None
+
+
 # --- what the report shows ----------------------------------------------------------
 
-def nodes(con, cache: Path = CACHE) -> dict:
-    lines, subs, fetched_at = load(cache)
-    idx = _index(subs)
-    backbone = [ln for ln in lines if ln.kv in BACKBONE_KV]
+@dataclass(frozen=True)
+class Placement:
+    ref: str
+    name: str
+    tso: bool
+    mw: float
+    label: str                  # the node as the list gives it, for the unplaced table
+    at: Substation | None
+    how: str                    # exact, prefix, parent, ecp; or none, ambiguous, conflict
+    conflict: dict | None = None
+
+
+def placements(con, idx: dict[str, list[Substation]], ecp: dict) -> list[Placement]:
+    """Where each contracted row (interconnectors left out) is drawn, if anywhere."""
     rows = con.execute(f"""
-        select p.source_id like 'eirgrid%', r.node, r.station_110kv, r.mec_mw
+        select p.source_id like 'eirgrid%', r.node, r.station_110kv, r.mec_mw, r.project_ref,
+               r.name
         from project_row r join ({store.LATEST_LIVE}) l using (publication_id)
         join publication p using (publication_id)
         where p.source_id like '%contracted%' and r.parser_version = {int(parse.PARSER_VERSION)}
           and coalesce(r.technology, '') <> 'Interconnector'
     """).fetchall()
+    out = []
+    for tso, node, station, mw, ref, name in rows:
+        label = (node or station or "").strip() or "(no node)"
+        s, how = place(tso, node or "", station or "", idx)
+        conflict = None
+        if tso and (rn := results_node(name or "", mw, ecp)):
+            e, _ = match(rn, idx, TSO_MIN_KV)
+            if s is None and e is not None:
+                s, how = e, "ecp"
+            elif s is not None and e is not None and (
+                    km := km_between((s.lon, s.lat), (e.lon, e.lat))) > CONFLICT_KM:
+                conflict = {"ref": ref, "name": name, "mw": round(float(mw), 1),
+                            "list_node": s.name, "results_node": e.name, "km": round(km)}
+                label = f"{(node or '').strip()} (list) or {rn.title()} (ECP results)"
+                s, how = None, "conflict"
+        out.append(Placement(ref, name or "", bool(tso), float(mw), label, s, how, conflict))
+    return out
+
+
+def nodes(con, cache: Path = CACHE, ecp: dict | None = None) -> dict:
+    lines, subs, fetched_at = load(cache)
+    idx = _index(subs)
+    backbone = [ln for ln in lines if ln.kv in BACKBONE_KV]
+    ecp = ecp_nodes(con) if ecp is None else ecp
     at: dict[str, dict] = {}
     unplaced: dict[str, float] = defaultdict(float)
+    conflicts: list[dict] = []
     total = 0.0
-    for tso, node, station, mw in rows:
-        total += float(mw)
-        s, how = place(tso, node or "", station or "", idx)
+    for pl in placements(con, idx, ecp):
+        total += pl.mw
+        if pl.conflict:
+            conflicts.append(pl.conflict)
+        s = pl.at
         if s is None:
-            unplaced[(node or station or "").strip() or "(no node)"] += float(mw)
+            unplaced[pl.label] += pl.mw
             continue
         n = at.setdefault(s.name, {"node": s.name, "kv": s.kv, "lon": round(s.lon, 4),
                                    "lat": round(s.lat, 4), "mw": 0.0, "projects": 0,
-                                   "tso_mw": 0.0, "match": how})
-        n["mw"] += float(mw)
+                                   "tso_mw": 0.0, "match": pl.how})
+        n["mw"] += pl.mw
         n["projects"] += 1
-        n["tso_mw"] += float(mw) if tso else 0.0
+        n["tso_mw"] += pl.mw if pl.tso else 0.0
     for n in at.values():
         d = km_to_lines((n["lon"], n["lat"]), backbone)
         n["km_backbone"] = round(d, 1) if d is not None else None
@@ -283,6 +359,7 @@ def nodes(con, cache: Path = CACHE) -> dict:
         "far_gw": bands[-1]["gw"],      # the last band: FAR_KM and over
         "far_nodes": bands[-1]["nodes"],
         "nodes": sorted(at.values(), key=lambda n: -n["mw"]),
+        "conflicts": conflicts,
         "unplaced": [{"node": k, "mw": round(v, 1)}
                      for k, v in sorted(unplaced.items(), key=lambda kv: -kv[1])],
         "lines": [{"kv": ln.kv, "path": [[round(x, 3), round(y, 3)] for x, y in simplify(ln.path)]}
