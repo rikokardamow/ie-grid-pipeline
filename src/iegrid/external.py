@@ -61,9 +61,62 @@ def wind_at(con, day: date) -> dict | None:
             "dso_undated_mw": float(undated or 0)}
 
 
+def wind_by_year(con, year: int) -> dict | None:
+    """Our end-of-`year` wind total, for a year the EirGrid list finished (so not its last, year-to-
+    date, one): the cumulative installed MW in the newest connected edition's own year table, plus
+    ESB's energised wind dated to the end of that year. Used to separate a level difference from
+    the effect of the lists ending before the year does."""
+    from iegrid import delivery, store
+
+    edition = con.execute("""
+        select p.as_of, p.raw_path from publication p
+        where p.source_id = 'eirgrid.tso_connected_renewable'
+          and exists (select 1 from connected_row c where c.publication_id = p.publication_id)
+        order by p.as_of desc limit 1""").fetchone()
+    esb = con.execute("""
+        select p.publication_id from publication p
+        where p.source_id = 'esb.dso_energised_wind' and p.as_of > ?
+          and exists (select 1 from esb_legacy_row l where l.publication_id = p.publication_id)
+        order by p.as_of limit 1""", [date(year, 12, 31)]).fetchone()
+    if edition is None or esb is None:
+        return None
+    cumulative = delivery._wind_table((store.ROOT / edition[1]).read_bytes())[0]
+    if year not in cumulative:
+        return None
+    dso = con.execute("""select sum(mec_mw) from esb_legacy_row
+                         where publication_id = ? and mec_mw is not null
+                           and (date_on is null or date_on <= ?)""",
+                      [esb[0], date(year, 12, 31)]).fetchone()[0] or Decimal(0)
+    return {"year": year, "tso_mw": float(cumulative[year]), "dso_mw": float(dso)}
+
+
 def compare(ours: float, theirs: float) -> dict:
     return {"ours_mw": round(ours, 1), "theirs_mw": round(theirs, 1),
             "diff_mw": round(ours - theirs, 1), "diff_pct": round((ours - theirs) / theirs, 4)}
+
+
+def _decompose(con, parts: dict, got: dict, total: dict) -> dict | None:
+    """Split the gap into what existed a year earlier and what the year added. The published net
+    addition steps their total back to the year before; ours steps back to the previous year-end
+    of EirGrid's own year table. If the earlier gap is smaller, the rest is the lists ending before
+    the year does (EirGrid's last list is October): wind that connected in November and December."""
+    year = date.fromisoformat(got["as_of"]).year
+    added = published().get("wind_net_added_2022")
+    before = wind_by_year(con, year - 1)
+    if added is None or before is None:
+        return None
+    theirs_before = float(got["value"]) - float(added["value"])
+    ours_before = before["tso_mw"] + before["dso_mw"]
+    ours_added = total["ours_mw"] - ours_before
+    return {
+        "year": year,
+        "ours_before_mw": round(ours_before, 1), "theirs_before_mw": round(theirs_before, 1),
+        "gap_before_mw": round(ours_before - theirs_before, 1),
+        "gap_before_pct": round((ours_before - theirs_before) / theirs_before, 4),
+        "ours_added_mw": round(ours_added, 1), "theirs_net_added_mw": float(added["value"]),
+        "added_shortfall_mw": round(ours_added - float(added["value"]), 1),
+        "added_source_says": added["source_says"],
+    }
 
 
 def build(con) -> dict | None:
@@ -76,11 +129,13 @@ def build(con) -> dict | None:
     if parts is None:
         return None
     out = compare(parts["tso_mw"] + parts["dso_mw"], float(got["value"]))
+    explained = _decompose(con, parts, got, out)
     return {"checks": [{
         "id": got["id"], "label": got["label"], "as_of": got["as_of"], "scope": got["scope"],
         "source": got["source_name"], "url": got["source_url"], "says": got["source_says"],
         "checked_on": got["checked_on"], "notes": got["notes"], **out, **parts,
         # causes tested and ruled out, so a reader doesn't have to guess
+        "decomposition": explained,
         "ruled_out": [
             "Arklow Bank (25.2 MW offshore) is on ESB's list, so it is in our total",
             ("EirGrid's connected list prints installed and MEC totals 0.3% apart, "

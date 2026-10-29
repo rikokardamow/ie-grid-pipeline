@@ -92,7 +92,7 @@ here as a no-go and nothing is built.
 
 | layer | state | what it found |
 |---|---|---|
-| 1 connected outcomes | built, refreshed with an ESB cross-check | 87 final leavers (4.59 GW): 21 connected by ref, 1 on the distribution grid, 8 as phases, 10 wind on no connected list, 47 unknown. Leaving the contracted list marks first energisation |
+| 1 connected outcomes | built, refreshed with an ESB cross-check; counts revised in the fourth session | 86 final leavers (4.53 GW): 20 connected by ref, 1 on the distribution grid, 8 as phases, 2 reorganised, 3 refused, 5 wind on no connected list, 47 unknown. Leaving the contracted list marks first energisation |
 | 2 delivery pace | built | distribution queue 1.96 GW = 19.2 years at the 2023-25 pace, 7.6 at the fastest (2017-19). The 3-year window beats last year in 14 of 18 back-test years on the distribution series; on transmission wind it does not, and no averaging claim is made. EirGrid restated its wind history once, +100 MW, Aug-Dec 2018 |
 | 3 target slippage | built, small | 15 of 16 followable wind projects connected after their published target (median 8-9.5 months, worst 45) |
 | queue bridge | no-go (tested) | revisions are 3% of gross movement |
@@ -158,6 +158,27 @@ a stability figure measured on four editions that looked steady across eight; an
 `ZG` refs were typos for `DG` (they are a real ESB series); and the date of EirGrid's Knockacummer note
 (I had written Feb 2018; read from the editions, it is Dec 2018, the edition where the project first
 appears). The last is why the errata layer reads that note out of the PDFs instead of quoting it.
+
+## Fourth session (29 Oct 2026, "answer the open gaps yourself"): layer 8, and a bug in merged work
+
+The open gaps were answered from data and from sources read at the source, and the answers are data
+(`src/iegrid/data/resolutions.csv`, layer 8), not prose.
+
+| gap | answer |
+|---|---|
+| TG44 Barnadivane, 26 months on neither list | **our bug, not the publishers'.** A rename "(formerly ...)" on the same ref was counted as a leave plus a join. `flows.py` now treats a declared rename as one project. Five projects, 405 MW of false leaves, gone |
+| TG594, TG485 (which node) | settled: the ECP-2.4 results are right and the contracted list is wrong in both (Finglas; Knockanure, Co. Kerry, by size and place; 110 against 220 kV not resolved) |
+| TG24 Knockacummer (which publisher, which date) | partly: a temporary ESB connection then a permanent one fits ESB's "(Temp)" name; the two dates still disagree and nothing says which event each records |
+| TG22a (one project or two) | open: nothing found separates a list error from a re-contracting |
+| the +100 MW restatement | settled: it is TG24's size |
+| 10 wind leavers on no connected list | 5 sourced (3 refused by An Bord Pleanála, 2 reorganised into a connected project); Dooray (55 MW) and Cronacarkfree (105 MW) searched, nothing found; 3 small extensions unresolved |
+| the 126 MW external gap | split, not explained: -69.8 MW already there at end-2021, -56.3 MW during 2022 |
+| licence, repo name and visibility | no change: ESB's written permission is needed before anything is public. A draft request is for you to send; none was sent |
+
+**The correction to merged work.** The flows fix changes figures already on main (g3b): 2018 left
+1.45 to 1.30 GW and joined 1.68 to 1.53 GW; 2019 left 0.27 to 0.07 GW and joined 0.32 to 0.27 GW;
+2023 left 1.17 to 1.12 GW and joined 3.03 to 2.98 GW; 2025 is unchanged. Layer 1 now has 86 leavers, not
+87. This work is on the branch `fix-declared-renames`, not merged.
 
 What the numbers check caught while building these: a hard-coded year in my wording (twice), a
 count taken from an array's length instead of the report, and, most seriously, a fallback that

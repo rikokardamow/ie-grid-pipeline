@@ -2,7 +2,8 @@
 
 Everything described under `docs/layers/` was built in `~/Projects/ie-grid-pipeline-connected`,
 a git worktree (branch `layer-connected`) with its own copy of `data/`, then committed on that branch
-and fast-forwarded into main (it was at `b94a77c`). The main checkout's store, `data/reports` and
+and fast-forwarded into main (it was at `b94a77c`). A later fix and layer 8 are on the branch
+`fix-declared-renames`, not merged: see "Layer 8 and the flows fix" at the end. The main checkout's store, `data/reports` and
 notebooks were not touched by the build: **the new sections appear only once you run the steps below
 against your own store.**
 
@@ -66,11 +67,27 @@ Not to bring: anything under the worktree's `data/` (a copy; the main store has 
 - **Licence**: the new sections show list-derived numbers and project names, as the page
   already does. Nothing here changes the position that the page stays private until ESB
   Networks answers (`PARKING.md`).
-- **The six errata rows** are for you to settle with sources: TG485 and TG594 (which node),
-  TG44 (the 26-month gap), TG22a (one project or two), TG24 Knockacummer (which publisher, which
-  date, and what EirGrid's TSO-to-DSO note means).
-- **The 10 wind projects on no connected list** (Castletownmoor 120 MW, Cronacarkfree 105 MW,
-  Dooray 55 MW...) are an open question, not a finding.
+- **Still open after layer 8**: TG22a (one project or two), TG24's two dates, Dooray and
+  Cronacarkfree (nothing found), the 70 MW level difference at end-2021, and the voltage for TG485.
+  TG44, TG594, TG485 and the restatement are answered; so are five of the ten unmatched wind projects.
+
+## Layer 8 and the flows fix (branch `fix-declared-renames`, not merged)
+
+| | files |
+|---|---|
+| new | `src/iegrid/resolutions.py`, `src/iegrid/data/resolutions.csv`, `tests/test_resolutions.py`, `docs/layers/08-resolutions/README.md` |
+| changed | `src/iegrid/flows.py` (declared renames) and `tests/test_flows.py`, `connected.py` (two sourced outcomes), `errata.py` (answers), `external.py` and `external_checks.csv` (year split), `report.py`, the site's `Dashboard.tsx` `report.ts` and tests |
+
+**It moves already-merged numbers** (g3b by year, layer 1's counts): see `00-decisions.md`, fourth
+session. No new step is needed beyond the ones above. On this branch's build:
+
+| check | expected |
+|---|---|
+| `uv run pytest -q` | 341 passed, 1 skipped (the worktree's data copy) |
+| `pnpm test` in `site/` | 23 passed |
+| left the contracted lists | 86 projects, 4.53 GW: 20 connected, 1 distribution, 8 phases, 2 reorganised, 3 refused, 5 wind unmatched, 47 unknown |
+| where the lists disagree | 5 rows: 2 node (settled), 1 reused ref (open), 1 moved (partly), 1 restated (settled) |
+| against a published total | -126.1 MW = -69.8 (end-2021) + -56.3 (during 2022) |
 
 ## Not done, on purpose
 

@@ -5,19 +5,26 @@ connected lists show: connected, connected as a phase of another project, connec
 distribution grid, on no connected list, or unknown, with the reason. It replaces the page's
 oldest caveat ("'left' means connected, withdrawn or moved: the lists don't say which").
 
-**Why it's worth having.** Until now a project leaving the queue was a dead end: 87 projects
-(4.59 GW) have left the contracted lists since 2015 and the page couldn't say what became of
-any. The store already held 19 archived EirGrid connected lists that nothing read.
+**Why it's worth having.** Until now a project leaving the queue was a dead end: 86 projects
+(4.53 GW) have left the contracted lists for good since 2015 and the page couldn't say what became of
+any. (It said 87 and 4.59 GW until a bug in `flows.py` was fixed: see "A bug this layer found" below.) The store already held 19 archived EirGrid connected lists that nothing read.
 
 ## Result (store of 29 Oct 2026)
 
 | outcome | projects | GW |
 |---|---|---|
-| connected (its ref is on a TSO connected list) | 21 | 1.04 |
+| connected (its ref is on a TSO connected list) | 20 | 0.98 |
 | connected on the distribution grid (its ref is on an ESB energised list) | 1 | 0.01 |
 | connected as a phase of a connected project (same name, different ref) | 8 | 0.09 |
-| wind, on no connected list | 10 | 0.42 |
+| reorganised into a project that connected (sourced: the parts add back exactly) | 2 | 0.05 |
+| not connected: planning refused (sourced) | 3 | 0.19 |
+| wind, on no connected list, nothing found | 5 | 0.18 |
 | unknown | 47 | 3.04 |
+
+The three refused are Castletownmoor (An Bord Pleanála, June 2017, upheld in the High Court) and the two
+parts of Carrickaduff (An Bord Pleanála, March 2016). Both answers come from `src/iegrid/data/resolutions.csv`,
+with the source, its words, and the date read (layer 8). Dooray (55 MW) and Cronacarkfree (105 MW) are
+searched-and-unresolved: no public record was found under either name.
 
 Unknown is 37 non-wind projects (the non-wind connected lists print no refs), 9 that left
 within six months of the lists ending (Oct 2022), and 1 whose ref was reused. **Unknown is
@@ -26,7 +33,7 @@ never read as "not connected".**
 Side finding: leaving the contracted list marks **first energisation**, not completion. The
 projects that seemed to leave "before they connected" first appear on the connected list as
 a *partial* connection in the same edition (Seecon (1): 5 MW of 105 MW listed May 2017,
-complete Aug 2017). For 16 of the 21 matched by ref, leaving and first appearing connected
+complete Aug 2017). For 16 of the 20 matched by ref, leaving and first appearing connected
 were within a year.
 
 ## How it works
@@ -61,13 +68,27 @@ every classification rule, and idempotent loading.
   "Glantaunyalkeen Windfarm", energised Sept 2018. The name rule had called it a phase of
   Cloghboola; the ESB cross-check fixed it, and ranks above the name rule.
 
+## A bug this layer found, in work already merged
+
+TG44 "left" in Dec 2018 and "first appeared connected" 26 months later. Tracing it showed one
+continuous project: "Barnadivane (1)" renamed "Carrigdangan (formerly Barnadivine)" on the same ref at
+the same 60 MW, which stayed on the contracted list to May 2022 while its first phase (54.3 MW) connected
+in Jan 2021. `flows.py` counted the rename as a leave and a join because the key function strips
+parentheses, so the old and new names shared no words (and the old name's spelling differs from the
+"formerly" anyway). Five projects were counted this way (TG44, TG49, DG1012, TG71, TG282), 405 MW of false
+leaves. The rule now: a continuing ref whose new name declares "(formerly ...)" or "(previously ...)" is a
+rename, whatever the spelling or MEC. It moves the already-published g3b figures: 2018 left 1.45 to 1.30 GW,
+joined 1.68 to 1.53 GW; 2019 left 0.27 to 0.07 GW (TG71 alone was 199 MW), joined 0.32 to 0.27 GW; 2023 left
+1.17 to 1.12 GW, joined 3.03 to 2.98 GW. 2025 is unchanged. `tests/test_flows.py` has the cases.
+
 ## What it doesn't prove
 
-- It can't say the 10 "on no connected list" projects were withdrawn: they may be spelled
-  differently (Oweninney / Oweninny), or connected somewhere the lists don't show.
+- It can't say the 5 "on no connected list" projects were withdrawn: they may be spelled
+  differently, or connected somewhere the lists don't show. Three are small extensions (Cordal (3),
+  two Mulreavy extensions, 19 MW together); two are Dooray and Cronacarkfree.
 - Sibling matches rest on a name, not a ref or an MW check: lower confidence, a separate row.
-- TG44 Barnadivane left the contracted list in Dec 2018 and is first listed connected in Feb
-  2021: unexplained.
+- (TG44 Barnadivane looked like a project that left in Dec 2018 and was first connected in Feb 2021.
+  It was a bug in `flows.py`, not a gap: see below.)
 - Nothing about non-wind. That's 12.6 GW of the queue and 37 of the 47 unknowns.
 
 ## To bring it into the project

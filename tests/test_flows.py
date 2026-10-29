@@ -45,3 +45,27 @@ def test_a_reused_ref_is_a_leave_and_a_join(monkeypatch):
 
 def test_the_first_edition_is_stock_not_joins(monkeypatch):
     assert run(monkeypatch, [(date(2015, 8, 31), {"TG1": ("Athea", D(18))})]) == []
+
+
+def test_a_rename_the_new_name_declares_is_the_same_project_whatever_the_spelling_or_mec(monkeypatch):
+    # five real cases were counted as a leave and a join (151 MW in 2018, 199 MW in 2019);
+    # TG44's old name is spelt differently from the "formerly" in the new one
+    cases = [("TG44", "Barnadivane (1)", D(60), "Carrigdangan (formerly Barnadivine)", D(60)),
+             ("TG49", "Keelderry (1)", D("26.88"), "Knockalassa (formerly Keelderry)", D("26.88")),
+             ("DG1012", "Buffy Wind Farm", D("64.2"), "Ardderoo 2 (Formerly Buffy)", D("64.2")),
+             ("TG71", "Oweninny (5)**", D("198.9"), "Oweninny 3 (Previously Oweninny 5)", D(50))]
+    for ref, old, old_mw, new, new_mw in cases:
+        got = run(monkeypatch, [(date(2018, 1, 1), {ref: (old, old_mw)}),
+                                (date(2019, 1, 1), {ref: (new, new_mw)})])
+        assert got == [], ref
+
+
+def test_a_formerly_in_the_old_name_or_no_formerly_at_all_is_still_a_reuse(monkeypatch):
+    # the marker has to be on the NEW name, announcing a rename; without it a changed name on a
+    # continuing ref is a different project (TG166), and a project already carrying the marker
+    # that changes again is not a rename
+    for old, new in (("Cahernagh Mid Merit", "Kelwin Power Plant Phase 2"),
+                     ("Carrigdangan (formerly Barnadivine)", "Quarry Solar")):
+        got = run(monkeypatch, [(date(2018, 1, 1), {"TG166": (old, D(101))}),
+                                (date(2019, 1, 1), {"TG166": (new, D(20))})])
+        assert [k for k, *_ in got] == ["left", "joined"], (old, new)

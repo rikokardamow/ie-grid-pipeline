@@ -294,7 +294,7 @@ def _left_outcomes(con) -> dict | None:
         return None
     outs = connected.outcomes(con)
     order = [connected.CONNECTED, connected.DSO_CONNECTED, connected.SIBLING,
-             connected.NOT_LISTED, connected.UNKNOWN]
+             connected.REORGANISED, connected.REFUSED, connected.NOT_LISTED, connected.UNKNOWN]
     return {
         "cover_end": str(connected.COVER_END),
         "total": len(outs),

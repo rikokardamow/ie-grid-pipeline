@@ -207,6 +207,8 @@ GRACE_DAYS = 183                # left within this of the cover's end: too late 
 CONNECTED = "connected"                     # its ref is on a TSO connected list
 DSO_CONNECTED = "connected on the distribution grid"  # its ref is on an ESB energised list
 SIBLING = "connected as part of a sibling"  # its name is a connected project's; its ref isn't
+REFUSED = "not connected: planning refused (sourced)"        # a source says it was refused
+REORGANISED = "reorganised into a project that connected (sourced)"  # parts add back, one connected
 NOT_LISTED = "not on a connected list"      # wind, left in time, not found by ref or name
 UNKNOWN = "unknown"                         # the lists can't say (see Outcome.why)
 
@@ -238,7 +240,8 @@ class Outcome:
 
 def classify(left, history: dict[str, History], cover_end: date = COVER_END,
              first_contracted: dict[str, date] | None = None,
-             dso_energised: dict[str, tuple[str, date | None]] | None = None) -> list[Outcome]:
+             dso_energised: dict[str, tuple[str, date | None]] | None = None,
+             resolutions: dict[str, dict[str, str]] | None = None) -> list[Outcome]:
     """left: flows.Flow 'left' events, already reduced to each ref's final leave.
     connected: {ref: its row on the newest connected edition that lists it}.
 
@@ -280,6 +283,11 @@ def classify(left, history: dict[str, History], cover_end: date = COVER_END,
             name, on = dso_energised[f.ref]
             out.append(Outcome(f.ref, f.name, f.mw, f.source_id, f.as_of, DSO_CONNECTED,
                                f"on ESB's energised list as {name!r}", on, on))
+        elif resolutions and f.ref in resolutions:
+            r = resolutions[f.ref]
+            out.append(Outcome(f.ref, f.name, f.mw, f.source_id, f.as_of,
+                               REFUSED if r["verdict"] == "refused" else REORGANISED,
+                               f"sourced: {r['source_name']}"))
         elif wind and region.key(f.name) and len(sib := by_key.get(region.key(f.name), ())) == 1:
             h = history[next(iter(sib))]
             out.append(Outcome(f.ref, f.name, f.mw, f.source_id, f.as_of, SIBLING,
@@ -356,8 +364,11 @@ def dso_energised(con) -> dict[str, tuple[str, date | None]]:
 
 
 def outcomes(con) -> list[Outcome]:
+    from iegrid import resolutions
+
     return classify(final_leavers(con), connected_history(con),
-                    first_contracted=first_contracted(con), dso_energised=dso_energised(con))
+                    first_contracted=first_contracted(con), dso_energised=dso_energised(con),
+                    resolutions=resolutions.for_leavers())
 
 
 def main(argv: list[str] | None = None) -> int:

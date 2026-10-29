@@ -624,7 +624,11 @@ export function Dashboard({ report }: { report: Report }) {
               key={c.id}
               id="fig-external"
               title={`The two publishers' lists add up to ${mw(c.ours_mw)} of wind; the published national total is ${mw(c.theirs_mw)}: ${mw(Math.abs(c.diff_mw))} (${pct(Math.abs(c.diff_pct))}) ${c.diff_mw < 0 ? "short" : "over"}`}
-              subtitle={`${c.label}, ${c.as_of}. Scope: ${c.scope}. This checks our reading of the lists against a figure published elsewhere (${c.source}); the figure comes from SEAI, which draws on EirGrid and ESB data, so agreement was expected and a gap would have meant a list lost or double-counted. The gap that remains is not explained: ${c.ruled_out.join("; ")}.`}
+              subtitle={`${c.label}, ${c.as_of}. Scope: ${c.scope}. This checks our reading of the lists against a figure published elsewhere (${c.source}); the figure comes from SEAI, which draws on EirGrid and ESB data, so agreement was expected and a gap would have meant a list lost or double-counted. ${
+                c.decomposition
+                  ? `Stepping both totals back a year with the published net addition, the gap was ${mw(Math.abs(c.decomposition.gap_before_mw))} (${pct(Math.abs(c.decomposition.gap_before_pct))}) at the end of ${c.decomposition.year - 1} and grew by ${mw(Math.abs(c.decomposition.added_shortfall_mw))} in ${c.decomposition.year}: our lists see ${mw(c.decomposition.ours_added_mw)} of added wind that year against ${mw(c.decomposition.theirs_net_added_mw)} net, and EirGrid's last list is from ${c.tso_edition}, so wind connecting after it is not in them. The earlier ${mw(Math.abs(c.decomposition.gap_before_mw))} is a level difference we have not explained; ruled out: ${c.ruled_out.join("; ")}.`
+                  : `The gap is not explained: ${c.ruled_out.join("; ")}.`
+              }`}
               footer={`Source: ${c.source}, checked ${c.checked_on}: "${c.says}"; ${EIRGRID}; ${ESB}`}
               table={{
                 headings: ["Part", "Edition", "MW"],
@@ -633,6 +637,13 @@ export function Dashboard({ report }: { report: Report }) {
                   ["ESB energised wind (MEC), entries dated to the day", c.dso_edition, mw(c.dso_mw)],
                   ["Our total", "", mw(c.ours_mw)],
                   ["Published total", c.as_of, mw(c.theirs_mw)],
+                  ...(c.decomposition
+                    ? [
+                        [`Gap at the end of ${c.decomposition.year - 1}`, "", mw(c.decomposition.gap_before_mw)],
+                        [`Added in ${c.decomposition.year}: ours`, "", mw(c.decomposition.ours_added_mw)],
+                        [`Added in ${c.decomposition.year}: published, net`, "", mw(c.decomposition.theirs_net_added_mw)],
+                      ]
+                    : []),
                 ],
               }}
             >
@@ -677,6 +688,7 @@ export function Dashboard({ report }: { report: Report }) {
                       <th scope="col">One says</th>
                       <th scope="col">Against</th>
                       <th scope="col">What would settle it</th>
+                      <th scope="col">Answer found</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -689,6 +701,21 @@ export function Dashboard({ report }: { report: Report }) {
                         <td>{e.says}</td>
                         <td>{e.against}</td>
                         <td>{e.settles}</td>
+                        <td>
+                          {e.answer ? (
+                            <>
+                              <strong>{e.answer.status}</strong>: {e.answer.verdict}. {e.answer.detail}{" "}
+                              {e.answer.url ? (
+                                <a href={e.answer.url}>{e.answer.source}</a>
+                              ) : (
+                                e.answer.source
+                              )}{" "}
+                              (read {e.answer.checked_on})
+                            </>
+                          ) : (
+                            "Not looked into"
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

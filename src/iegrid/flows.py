@@ -13,6 +13,12 @@ with three corrections the g3b review found the lists need:
              Timahoe North: TG278 -> P275 -> TG278). Neither a join nor a leave.
     reuse    a ref that stays but changes name and MEC is a different project (TG166:
              Cahernagh OCGT to 2018, Kelwin Phase 2 from 2019): one leave, one join.
+             Unless the new name declares the rename ("(formerly ...)", "(previously ...)"):
+             a publisher announcing a rename on a continuing ref is the same project, whatever
+             the spelling or the MEC (TG44 Barnadivane -> "Carrigdangan (formerly Barnadivine)",
+             the old name spelt differently; TG71 Oweninny (5) -> "Oweninny 3 (Previously
+             Oweninny 5)", resized from 198.9 to 50 MW). Counted as a leave and a join these
+             five cases overstated 2018's leaves by 151 MW and 2019's by 199 MW.
     shared   a ref on two rows (a project and its extension, TG44) is one project
              with their MW summed.
 
@@ -22,6 +28,7 @@ for one list on one date (2020-02-10) are read as one: the one published later.
 
 from __future__ import annotations
 
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
@@ -75,6 +82,17 @@ def _same_project(a: tuple[str, Decimal], b: tuple[str, Decimal]) -> bool:
     return ka == kb or (bool(ka & kb) and region.mec_close(a[1], b[1]))
 
 
+# The new name says what it was called before
+FORMERLY = re.compile(r"\b(?:formerly|previously|prev\.?|fka)\b", re.IGNORECASE)
+
+
+def _declared_rename(old: tuple[str, Decimal], new: tuple[str, Decimal]) -> bool:
+    """The same ref, a different name, and the new name says it used to be called something
+    else: the publisher announcing a rename."""
+    return old[0] != new[0] and FORMERLY.search(new[0]) is not None \
+        and FORMERLY.search(old[0]) is None
+
+
 def flows(con) -> list[Flow]:
     out: list[Flow] = []
     for sid, eds in editions(con).items():
@@ -82,7 +100,7 @@ def flows(con) -> list[Flow]:
             gone = {r: v for r, v in prev.items() if r not in cur}
             new = {r: v for r, v in cur.items() if r not in prev}
             for r in set(prev) & set(cur):  # a reused ref: a different project
-                if not _same_project(prev[r], cur[r]):
+                if not (_same_project(prev[r], cur[r]) or _declared_rename(prev[r], cur[r])):
                     gone[r], new[r + "*"] = prev[r], cur[r]
             for g, gv in sorted(gone.items()):
                 # when several share the name (TG319 and TG319a, both "Beenanaspock and

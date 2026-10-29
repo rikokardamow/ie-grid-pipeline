@@ -2114,23 +2114,38 @@
  },
  "left_outcomes": {
   "cover_end": "2022-10-01",
-  "total": 87,
-  "total_gw": 4.587,
+  "total": 86,
+  "total_gw": 4.527,
   "by_outcome": [
    {
     "outcome": "connected",
-    "count": 21,
-    "gw": 1.035
+    "count": 20,
+    "gw": 0.975
+   },
+   {
+    "outcome": "connected on the distribution grid",
+    "count": 1,
+    "gw": 0.01
    },
    {
     "outcome": "connected as part of a sibling",
-    "count": 9,
-    "gw": 0.096
+    "count": 8,
+    "gw": 0.086
+   },
+   {
+    "outcome": "reorganised into a project that connected (sourced)",
+    "count": 2,
+    "gw": 0.051
+   },
+   {
+    "outcome": "not connected: planning refused (sourced)",
+    "count": 3,
+    "gw": 0.186
    },
    {
     "outcome": "not on a connected list",
-    "count": 10,
-    "gw": 0.416
+    "count": 5,
+    "gw": 0.179
    },
    {
     "outcome": "unknown",
@@ -2148,26 +2163,44 @@
     "count": 37
    },
    {
-    "why": "ref reused: on a connected list before any contracted list has it",
+    "why": "ref reused: on a connected list before any contracted list has it (connected from 2015-08-31, first contracted 2020-06-16)",
     "count": 1
    }
   ],
   "not_listed": [
    {
-    "ref": "P230",
-    "name": "Castletownmoor",
-    "mw": 120.0,
-    "left": "2021-03-16"
-   },
-   {
     "ref": "TG103",
     "name": "Cronacarkfree (1)",
     "mw": 105.0,
     "left": "2017-03-01"
+   },
+   {
+    "ref": "TG93",
+    "name": "Dooray Wind Farm",
+    "mw": 55.0,
+    "left": "2015-12-31"
+   },
+   {
+    "ref": "DG273",
+    "name": "Cordal (3)**",
+    "mw": 11.0,
+    "left": "2018-12-14"
+   },
+   {
+    "ref": "DG198",
+    "name": "Mulreavy Ext (Croaghnameal (1))",
+    "mw": 4.2,
+    "left": "2016-12-01"
+   },
+   {
+    "ref": "DG65",
+    "name": "Mulreavy Ext (Meenadreen South (1))",
+    "mw": 3.6,
+    "left": "2016-12-01"
    }
   ],
   "energised_at_leave": {
-   "refs": 21,
+   "refs": 20,
    "within_a_year": 16
   }
  },
@@ -2636,11 +2669,11 @@
     "share_found_mw": 0.414,
     "share_tagged": 0.53,
     "status": {
-     "still contracted": 25,
      "energised (ESB list)": 11,
+     "still contracted": 25,
+     "left: unknown": 5,
      "on ESB's earlier lists only": 4,
      "gone from the lists held": 2,
-     "left: unknown": 5,
      "left: connected": 1
     },
     "validation": {
@@ -2668,8 +2701,8 @@
      "still contracted": 48,
      "energised (ESB list)": 8,
      "left: unknown": 4,
-     "on ESB's earlier lists only": 1,
-     "gone from the lists held": 1
+     "gone from the lists held": 1,
+     "on ESB's earlier lists only": 1
     },
     "validation": {
      "tagged_matches": 60,
@@ -2695,8 +2728,8 @@
     "status": {
      "still contracted": 54,
      "energised (ESB list)": 7,
-     "left: unknown": 1,
-     "gone from the lists held": 1
+     "gone from the lists held": 1,
+     "left: unknown": 1
     },
     "validation": {
      "tagged_matches": 56,
@@ -2783,7 +2816,7 @@
   ]
  },
  "errata": {
-  "total": 6,
+  "total": 5,
   "entries": [
    {
     "kind": "node",
@@ -2791,7 +2824,16 @@
     "project": "Fieldstown Extension 2",
     "says": "EirGrid's contracted list prints the connection station Timoney (Tipperary)",
     "against": "the county placement from the ECP results and other sources is Dublin",
-    "settles": "the project's grid-connection offer or its planning file"
+    "settles": "the project's grid-connection offer or its planning file",
+    "answer": {
+     "status": "settled",
+     "verdict": "the ECP results are right: Finglas, Dublin; the contracted list's Timoney is a slip",
+     "detail": "The ECP-2.4 results print Finglas (Dublin) for Fieldstown Extension No.2, and its two sibling projects on the same list, TG448 Fieldstown Solar and TG530 Fieldstown Solar Farm Ext, connect at Finglas. Timoney is the node of an unrelated project, TG433 Erkina Solar Park.",
+     "source": "ECP-2.4 batch results, joint system-operator publication",
+     "url": "https://www.esbnetworks.ie/docs/default-source/publications/2023-batch-ecp-2-4-results-joint-so-publication.pdf?sfvrsn=d2aed1b_15",
+     "says": "Fieldstown Extension No.2, Dublin, 60 MW, node Finglas",
+     "checked_on": "2026-10-29"
+    }
    },
    {
     "kind": "node",
@@ -2799,15 +2841,16 @@
     "project": "Kilmorna Energy Storage Facility",
     "says": "EirGrid's contracted list prints the connection station Kinnegad 110kV",
     "against": "the ECP batch results print Knockanure 220kV Substation, 185 km away",
-    "settles": "the project's grid-connection offer or its planning file"
-   },
-   {
-    "kind": "gap",
-    "ref": "TG44",
-    "project": "Barnadivane (1)",
-    "says": "left the contracted list in Dec 2018",
-    "against": "first appears on a connected list in Feb 2021: on neither list for 26 months",
-    "settles": "the project's energisation record (a reused ref, or a list that dropped it early)"
+    "settles": "the project's grid-connection offer or its planning file",
+    "answer": {
+     "status": "settled",
+     "verdict": "the ECP results are right: Knockanure, Co. Kerry; the contracted list's Kinnegad is wrong",
+     "detail": "A 170 MW battery project at Knockanure, Co. Kerry, got planning consent in Oct 2025 and a 170 MW grid connection there, matching TG485's 170 MW and the ECP-2.4 results' node. The article does not use the name Kilmorna, so the match is by size, place and technology. The article says 110 kV, the ECP results 220 kV: a voltage difference not resolved.",
+     "source": "Irish Examiner, Kerry battery storage facility is acquired (20 Aug 2026)",
+     "url": "https://www.irishexaminer.com/business/companies/arid-41899045.html",
+     "says": "The project has secured grid connection capacity of 170MW at the neighbouring 110kV Knockanure substation | Having secured planning consent in October 2025, work has started on procurement and delivery planning.",
+     "checked_on": "2026-10-29"
+    }
    },
    {
     "kind": "reused ref",
@@ -2815,7 +2858,16 @@
     "project": "Athea (1)a",
     "says": "TG22a is on a connected list from 2015-08-31",
     "against": "on a connected list before any contracted list has it (connected from 2015-08-31, first contracted 2020-06-16)",
-    "settles": "whether the two projects are one (a renaming) or two"
+    "settles": "whether the two projects are one (a renaming) or two",
+    "answer": {
+     "status": "open",
+     "verdict": "two readings the lists can't separate",
+     "detail": "TG22a Athea (1)a, 34.35 MW, signed 2005 and on EirGrid's connected lists since 2013-14, is on the contracted list for exactly two editions in 2020 (Jun and Nov), when EirGrid had just reorganised the Athea phases into the Beenanaspock and Tobertooreen project (34.15 MW). Either a connected project listed in error, or a re-contracting. A web search found no planning record that tells them apart.",
+     "source": "this record: EirGrid's contracted and connected lists",
+     "url": "",
+     "says": "",
+     "checked_on": "2026-10-29"
+    }
    },
    {
     "kind": "moved",
@@ -2823,7 +2875,16 @@
     "project": "Knockacummer (1) (Temp)(Glentanemacelligot1)",
     "says": "ESB's lists carry it from Sep 2017 to May 2018, energised 9 Nov 2013",
     "against": "EirGrid's lists carry it from Dec 2018, connected Jul 2015. EirGrid's own note in its 2018-12-01 edition says the project switched from TSO to DSO, the opposite of the order the lists show",
-    "settles": "which publisher the project is connected to, and when it was energised"
+    "settles": "which publisher the project is connected to, and when it was energised",
+    "answer": {
+     "status": "partly",
+     "verdict": "the direction the lists show (ESB's, then EirGrid's) fits the sources; the two connection dates still disagree",
+     "detail": "ESB's own entry is named \"Knockacummer (1) (Temp)\", and an archaeology report says a 110 kV cable was built from 2016 to give the wind farm a permanent connection to the national grid: a temporary connection on ESB's lists, then a permanent one. EirGrid's note, that it switched from a TSO to a DSO connection, is the opposite order. ESB's Nov 2013 and EirGrid's Jul 2015 dates both precede the cable, and the lists don't say which event each records.",
+     "source": "Excavations.ie, report 2017: Knockacummer grid connection cable (Co. Cork)",
+     "url": "https://excavations.ie/report/2017/Cork/0026336/",
+     "says": "The purpose of the scheme is to facilitate a permanent connection of Knockacummer Wind Farm to the National Grid. | Construction work commenced on a 110kV grid connection cable route in 2016 \u2013 the Knockacummer grid connection.",
+     "checked_on": "2026-10-29"
+    }
    },
    {
     "kind": "restated",
@@ -2831,14 +2892,19 @@
     "project": "EirGrid's wind capacity history",
     "says": "cumulative wind MW by year, in the editions up to 2018-08-01",
     "against": "the 2018-12-01 edition and every later one print the same years up to +100 MW different: the size of TG24 Knockacummer (1) (Temp)(Glentanemacelligot1), which moved between ESB's lists and EirGrid's (see 'moved')",
-    "settles": "EirGrid saying what the change was"
+    "settles": "EirGrid saying what the change was",
+    "answer": {
+     "status": "settled",
+     "source": "this record: ESB's and EirGrid's lists",
+     "verdict": "the size of TG24, which moved between the publishers",
+     "detail": "TG24 is on ESB's lists to May 2018 and on EirGrid's from Dec 2018; EirGrid's history gains its MW from the edition it joins. See the 'moved' row.",
+     "url": "",
+     "says": "",
+     "checked_on": ""
+    }
    }
   ],
   "kinds": [
-   {
-    "kind": "gap",
-    "count": 1
-   },
    {
     "kind": "moved",
     "count": 1
@@ -2879,6 +2945,17 @@
     "dso_edition": "2023-04-20",
     "dso_rows": 261,
     "dso_undated_mw": 0.0,
+    "decomposition": {
+     "year": 2022,
+     "ours_before_mw": 4332.2,
+     "theirs_before_mw": 4402.0,
+     "gap_before_mw": -69.8,
+     "gap_before_pct": -0.0159,
+     "ours_added_mw": 77.7,
+     "theirs_net_added_mw": 134.0,
+     "added_shortfall_mw": -56.3,
+     "added_source_says": "New wind power capacity installed .197 GW ... 63 MW of wind power capacity was decommissioned in 2022, bringing the net total of new capacity to 134MW"
+    },
     "ruled_out": [
      "Arklow Bank (25.2 MW offshore) is on ESB's list, so it is in our total",
      "EirGrid's connected list prints installed and MEC totals 0.3% apart, far short of the gap"

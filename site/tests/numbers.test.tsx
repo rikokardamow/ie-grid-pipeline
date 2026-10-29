@@ -15,12 +15,17 @@ import type { Report } from "@/lib/report";
 const fixture = (): Report =>
   JSON.parse(readFileSync(join(import.meta.dirname, "fixtures", "report.json"), "utf8"));
 
+// Offsets that no real figure lands on: exactly 1000 and 2000 made a day-of-month 21 plus 2000, or
+// two counts 1020 + 1001, read as the year 2021, a coincidence the check mistook for a number the page
+// writes itself.
+const OFFSET = [0, 1371, 2753];
+
 function perturb(x: unknown, k: number): unknown {
   if (typeof x === "boolean" || x === null) return x;
   if (typeof x === "number") {
-    return Number.isInteger(x) ? x + 1000 * k : x * (1.37 + 0.11 * k) + 111.1 * k;
+    return Number.isInteger(x) ? x + OFFSET[k] : x * (1.37 + 0.11 * k) + 111.1 * k;
   }
-  if (typeof x === "string") return x.replace(/\d+/g, (d) => String(Number(d) + 1000 * k));
+  if (typeof x === "string") return x.replace(/\d+/g, (d) => String(Number(d) + OFFSET[k]));
   if (Array.isArray(x)) return x.map((v) => perturb(v, k));
   if (typeof x === "object") {
     return Object.fromEntries(Object.entries(x).map(([key, v]) => [key, perturb(v, k)]));

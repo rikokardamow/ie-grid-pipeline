@@ -81,8 +81,17 @@ def _switch_notes(con) -> list[tuple[str, dict]]:
     return list(found.items())
 
 
+def _answer(row: dict[str, str] | None) -> dict | None:
+    if row is None:
+        return None
+    return {"status": row["status"], "verdict": row["verdict"], "detail": row["detail"],
+            "source": row["source_name"], "url": row["source_url"], "says": row["source_says"],
+            "checked_on": row["checked_on"]}
+
+
 def from_parts(conflicts: list[dict], outcomes, restatement: dict | None,
-               moved: list[dict] | None = None) -> list[dict]:
+               moved: list[dict] | None = None,
+               answers: dict[str, dict[str, str]] | None = None) -> list[dict]:
     """The ledger from the grid layer's conflicts, the connected layer's outcomes, the wind
     table's restatement check and the projects that changed publisher."""
     from iegrid import connected
@@ -149,6 +158,20 @@ def from_parts(conflicts: list[dict], outcomes, restatement: dict | None,
                           "between ESB's lists and EirGrid's (see 'moved')"
                           if match else "different, with no note"),
             "settles": "EirGrid saying what the change was"})
+    for e in out:  # the answer found elsewhere, if any (resolutions.csv), keyed by the project's ref
+        e["answer"] = _answer((answers or {}).get(e["ref"])) if e["ref"] else None
+    for e in out:  # a restatement the size of a project that moved publisher is explained by it
+        if e["kind"] == "restated" and restatement:
+            match = next((m for m in moved or []
+                          if abs(m["mw"] - restatement["largest_mw"]) <= 1), None)
+            if match:
+                e["answer"] = {
+                    "status": "settled", "source": "this record: ESB's and EirGrid's lists",
+                    "verdict": f"the size of {match['ref']}, which moved between the publishers",
+                    "detail": f"{match['ref']} is on ESB's lists to {match['esb_last']:%b %Y} and "
+                              f"on EirGrid's from {match['eir_first']:%b %Y}; EirGrid's history "
+                              "gains its MW from the edition it joins. See the 'moved' row.",
+                    "url": "", "says": "", "checked_on": ""}
     return out
 
 
@@ -162,7 +185,10 @@ def build(con, conflicts: list[dict], pace: dict | None) -> dict | None:
     except Exception:  # noqa: BLE001 - a store from before the connected layer
         return None
     restatement = pace["transmission_wind"]["restatement"] if pace else None
-    entries = from_parts(conflicts, connected.outcomes(con), restatement, moves(con))
+    from iegrid import resolutions
+
+    entries = from_parts(conflicts, connected.outcomes(con), restatement, moves(con),
+                         resolutions.for_errata())
     kinds: dict[str, int] = {}
     for e in entries:
         kinds[e["kind"]] = kinds.get(e["kind"], 0) + 1

@@ -29,9 +29,21 @@ Tested and ruled out:
 - **Installed against MEC.** EirGrid's list prints installed and MEC totals 0.3% apart (2,117 against
   2,111 MW), far short of 2.8%.
 
-Not identified. Candidates, none of them tested: ESB's side is MEC where the published figure is
-installed; wind the operators' lists don't carry; end-2022 against two list dates 6 months apart (small:
-EirGrid's list added 43 MW in all of 2022). The README does not pick one.
+**Split by year (layer 8).** The same IEA report says 197 MW of wind was installed and 63 MW
+decommissioned in 2022, a net 134 MW, which steps the published total back to 4,402 MW at end-2021.
+Our own year table gives the end-2021 total too, so the gap divides:
+
+| | ours | published | difference |
+|---|---|---|---|
+| level at end-2021 | 4,332 MW | 4,402 MW | **-69.8 MW** |
+| added during 2022 | 78 MW | 134 MW net | **-56.3 MW** |
+| level at end-2022 | 4,410 MW | 4,536 MW | **-126.1 MW** |
+
+About 55% of the gap was already there a year earlier, so it is a level difference in how the lists and
+the national figure count, not something that arose in 2022. The other 45% is the year: EirGrid's last list
+of 2022 is October's, so wind that connected in November and December isn't on a list we hold yet.
+Both halves are arithmetic on printed figures; neither names a project. What the level difference is
+(MEC against installed capacity on the ESB side, wind the lists don't carry) is still untested.
 
 ## What it doesn't prove
 

@@ -165,12 +165,20 @@ export type Report = {
       checked_on: string; notes: string; ours_mw: number; theirs_mw: number; diff_mw: number; diff_pct: number;
       tso_mw: number; tso_edition: string; dso_mw: number; dso_edition: string; dso_rows: number;
       dso_undated_mw: number; ruled_out: string[];
+      decomposition: {
+        year: number; ours_before_mw: number; theirs_before_mw: number; gap_before_mw: number;
+        gap_before_pct: number; ours_added_mw: number; theirs_net_added_mw: number;
+        added_shortfall_mw: number; added_source_says: string;
+      } | null;
     }[];
   } | null;
   // where a publisher's list disagrees with itself or another publication (regenerated each report)
   errata?: {
     total: number;
-    entries: { kind: string; ref: string; project: string; says: string; against: string; settles: string }[];
+    entries: {
+      kind: string; ref: string; project: string; says: string; against: string; settles: string;
+      answer?: { status: string; verdict: string; detail: string; source: string; url: string; says: string; checked_on: string } | null;
+    }[];
     kinds: { kind: string; count: number }[];
   } | null;
   // of the projects each ECP batch offered, how many reach a contracted list, and where they are now
