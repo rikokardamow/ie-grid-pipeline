@@ -24,7 +24,7 @@ next to the queue, so how fast and how much of the queue converts, not its size,
 
 ## The six questions
 
-1. **Build**: the lists' technology totals (layer 9) against nine figures out of the assessment: Table 5.2
+1. **Build**: the lists' technology totals (layer 9) against figures out of the assessment: Table 5.2
    (new conventional plant), Table 5.9 (storage), Tables 6.1, 6.2 and 6.5 (the standard and the hours of lost load
    a year, base and secure) and the executive summary's statement of the secure deficit.
 2. **Forecast**: none of ours. The assessment's own expected deliveries are shown as its assumptions.
