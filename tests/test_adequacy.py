@@ -64,6 +64,8 @@ def test_the_comparison_is_the_lists_against_the_assessments_figures():
     assert need["secure_outside"] == [2026, 2027, 2028, 2029, 2030, 2033, 2034, 2035]   # 2031 and 2032 are within 3 hours
     assert need["deficit_share_low"] < need["deficit_share_high"]
     assert need["deficit_start_mw"] == 200.0 and need["deficit_end_mw"] == 400.0
+    assert need["near_term"] == {"first_year": 2026, "last_year": 2028, "base_first_mw": 1010.0,
+                                 "base_last_mw": 220.0, "secure_first_mw": 1420.0, "secure_last_mw": 730.0}
 
 
 def test_nothing_is_built_without_a_contracted_list():

@@ -15,10 +15,11 @@ much of the queue would count and which technologies carry it.
 | solar | 5,601 MW | 230 MW | 4% | 275 MW |
 | battery storage (2 to 4 hours) | 1,789 MW | 139 to 257 MW | 8% to 14% | 254 to 493 MW |
 | gas turbines (OCGT, CCGT, gas) | 1,944 MW | 1,511 MW | 78% | 1,560 MW |
-| **with a factor** | **11,990 MW** | **2.04 to 2.15 GW** | | 2.26 to 2.49 GW |
-| no factor applied | 4,668 MW | | | |
+| interconnector to Great Britain (Greenlink) | 504 MW | 296 MW | 59% | 266 MW |
+| **with a factor** | **12,494 MW** | **2.33 to 2.45 GW** | | 2.52 to 2.76 GW |
+| no factor applied | 4,164 MW | | | |
 
-Gas turbines are 16% of the nameplate that has a factor and 70% to 74% of what counts. Between the two
+Gas turbines are 16% of the nameplate that has a factor and 62% to 65% of what counts. Between the two
 auctions the factor for a battery fell by about half (a 4-hour battery of 100 MW: 0.275 to 0.143),
 wind by 6% and solar by 16%: the more of a technology is built or contracted, the less each further MW counts.
 
@@ -41,14 +42,20 @@ wind by 6% and solar by 16%: the more of a technology is built or contracted, th
 ## What it applies, and what it leaves alone
 
 Applied: wind and solar (Table 5, one factor each), gas turbines (Table 1's Gas Turbine curve at the
-project's size), battery storage (Table 3, other storage, at 2 and at 4 hours). The factor is the pack's
-marginal factor for a unit of that size, which is how the pack tells an applicant to use it.
+project's size), battery storage (Table 3, other storage, at 2 and at 4 hours), and the interconnector to Great
+Britain (Table 1's Interconnector curve at its size). The factor is the pack's marginal factor for a unit of that
+size, which is how the pack tells an applicant to use it. The pack's footnote says the interconnector curve to
+Great Britain is already adjusted by an external-market factor (0.65 for 2030/31), so it is applied as printed;
+the footnote's own arithmetic agrees (the 0-10 MW value of 0.625 is 0.65 of about 0.96, and 2029/30's 0.572 is
+0.60 of about 0.95).
 
 Left alone, and listed with its MW so nothing disappears: hybrids (solar plus battery, wind plus battery:
-one MEC, and the pack gives no hybrid class, so any factor would be a guess), interconnectors (their factor is
-scaled by an external-market factor that was not read), combined heat and power, reciprocating engines,
-biomass, hydro, wave and synchronous condensers. That is 4.67 GW, 28% of the queue, so the headline is about
-the 72% that has a factor.
+one MEC, and the pack gives no hybrid class, so any factor would be a guess), the Celtic interconnector to
+France (the pack's footnote 3 says an interconnector to another EU state is expected to be non-participating
+capacity in the 2030/31 auction, so it has no auction value, whatever the adequacy assessment counts), combined
+heat and power, reciprocating engines, biomass, hydro, wave and synchronous condensers. That is 4.16 GW, 25% of
+the queue, so the headline is about the 75% that has a factor. Which interconnector is to Great Britain is a
+fact about the project's name, kept as one constant in `derating.py` (Greenlink: Wales; Celtic: France).
 
 ## Risks, and what was done about them
 

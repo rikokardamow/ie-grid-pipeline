@@ -12,7 +12,8 @@ src/iegrid/data/adequacy.csv. Set beside the contracted lists:
     storage       the lists' batteries against the storage the assessment adds between its first year and
                   the year it stops growing (pumped storage is unchanged and left out)
     need          the standard (Ireland, hours of expected loss of load), the years each case is outside
-                  it, and the stated deficit, set against the layer-9 de-rated queue
+                  it, the capacity the document says is required in 2026 and 2028, and the stated
+                  later deficit, set against the layer-9 de-rated queue
 
 What it can and can't say is on the page and in the README: the assessment's expected deliveries are
 drawn from the same projects the lists hold, so the two are not additive and the comparison is a
@@ -97,6 +98,17 @@ def extract(pdf_path: Path) -> list[dict]:
     # the page is two columns, so the sentence's pieces sit on different lines: look for each piece
     if not all(piece in pages[p] for piece in ("a deficit of around 200 MW increasing to", "over 400 MW in 2034")):
         raise AdequacyParseError("the secure-case deficit sentence is not as expected")
+    p = page_of("1,010 MW is required in 2026", 21)
+    # two columns: each sentence's pieces sit on their own lines, so look for the pieces
+    if not all(piece in pages[p] for piece in ("1,010 MW is required in 2026, dropping to", "220 MW by 2028",
+                                              "1,420 MW is required in 2026, dropping to", "730 MW in 2028")):
+        raise AdequacyParseError("the near-term capacity-required sentences are not as expected")
+    for id_, label, y, v in (("need_base", "Capacity required to meet the standard, base case", 2026, 1010.0),
+                              ("need_base", "Capacity required to meet the standard, base case", 2028, 220.0),
+                              ("need_secure", "Capacity required to meet the standard, secure case", 2026, 1420.0),
+                              ("need_secure", "Capacity required to meet the standard, secure case", 2028, 730.0)):
+        rows.append({"id": id_, "year": y, "value": v, "unit": "MW of perfect plant", "label": label,
+                     "qualifier": "", "page": p})
     rows.append({"id": "secure_deficit_start", "year": "", "value": 200.0, "unit": "MW", "qualifier": "around",
                  "label": "Secure-case deficit from 2029, stated as 'around 200 MW'", "page": p})
     rows.append({"id": "secure_deficit_end", "year": 2034, "value": 400.0, "unit": "MW", "qualifier": "over",
@@ -181,7 +193,12 @@ def build(con, rows: list[dict] | None = None) -> dict | None:
             "base_outside": outside("lole_base"), "secure_outside": outside("lole_secure"),
             "deficit_start_mw": d0, "deficit_end_mw": d1, "deficit_end_year": 2034,
             "queue_derated_low_mw": lo, "queue_derated_high_mw": hi, "queue_year": firm["latest_year"],
-            "deficit_share_low": round(d0 / hi, 3), "deficit_share_high": round(d1 / lo, 3)},
+            "deficit_share_low": round(d0 / hi, 3), "deficit_share_high": round(d1 / lo, 3),
+            "near_term": {"first_year": 2026, "last_year": 2028,
+                          "base_first_mw": _get(rows, "need_base", 2026)["value"],
+                          "base_last_mw": _get(rows, "need_base", 2028)["value"],
+                          "secure_first_mw": _get(rows, "need_secure", 2026)["value"],
+                          "secure_last_mw": _get(rows, "need_secure", 2028)["value"]}},
     }
 
 

@@ -110,5 +110,31 @@ def test_the_sum_counts_what_has_a_factor_and_lists_what_does_not():
     assert got["gas_share_low"] == pytest.approx(81.9 / tot["high_mw"], abs=0.002)
 
 
+def add_named(con, pid, order, tech, mw, name):
+    con.execute("insert into project_row values (?, ?, ?, 1, ?, ?, ?, ?, '', '', '', '', '', null, null, '', '', null)",
+                [pid, parse.PARSER_VERSION, order, f"TG{order}", name, tech, mw])
+
+
+def test_the_interconnector_to_great_britain_counts_by_the_printed_curve_and_the_one_to_france_does_not():
+    con = store.connect(":memory:")
+    other = pub(con, "eirgrid.tso_contracted_nonwind", "n")
+    add_named(con, other, 1, "Interconnector", 504.0, "Greenlink Interconnector")
+    add_named(con, other, 2, "Interconnector", 700.0, "Celtic Interconnector")
+    got = derating.build(con)
+    ic = next(c for c in got["classes"] if c["class"] == "Interconnector")
+    assert ic["nameplate_mw"] == 504.0
+    assert ic["latest"]["low_mw"] == round(504.0 * derating.factor(ROWS, "2030/31", "Interconnector", 504.0), 1)
+    assert ic["latest"]["low_share"] == 0.587      # the 500 to 510 MW band of the 2030/31 pack
+    # Celtic is left alone, by name, and its MW is still in the total
+    assert got["left_alone"] == [{"technology": "Celtic Interconnector", "mw": 700.0}]
+    assert got["contracted_mw"] == 1204.0 and got["applied_mw"] == 504.0
+
+
+def test_the_interconnector_curve_never_rises_and_is_adjusted_down_by_the_external_market_factor():
+    for year, top in (("2029/30", 0.572), ("2030/31", 0.625)):
+        assert derating.factor(ROWS, year, "Interconnector", 5.0) == top
+        assert derating.factor(ROWS, year, "Interconnector", 5000.0) < top
+
+
 def test_nothing_is_built_without_a_contracted_list():
     assert derating.build(store.connect(":memory:")) is None

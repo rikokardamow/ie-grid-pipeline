@@ -257,3 +257,26 @@ words (a chart carries the year-by-year values, and charts are not read); variab
 the same reason. It was built in its own worktree and branch (`layer-queue-vs-plan`) and opened as a PR,
 because the shared checkout was in use by the README-charts work.
 
+## Ninth session (29 Oct 2026): the interconnector gets a factor
+
+The pack's footnotes settled the open interconnector question. Footnote 2: the Great Britain interconnector
+curve "has been adjusted by" an external-market factor (0.65 in 2030/31), so Table 1's printed column is applied
+as it stands, to Greenlink (504 MW: 296 MW counts, 59%). Footnote 3: an interconnector to another EU state is
+expected to be non-participating in the 2030/31 auction, so Celtic (700 MW, to France) keeps no factor and stays in
+the listed remainder. Effect on layer 9: with a factor 11,990 to 12,494 MW; counts 2.04 to 2.15 GW becomes 2.33
+to 2.45 GW; gas's share of it 70% to 74% becomes 62% to 65%. Layer 10's deficit share becomes 8% to 17% of the
+de-rated queue (it was 9% to 20%). Earlier figures in this file are left as the record of what was said then.
+
+## Tenth session (30 Oct 2026): the next path, screened with the energy-analyst skill
+
+| # | candidate | build / forecast / validate / propose / give / alpha | verdict |
+|---|---|---|---|
+| 1 | **Score the system operator's own expected delivery** across editions of its adequacy assessment (this one, the 2025-2034 one, the 2023-2032 Generation Capacity Statement): what each edition expected to be built by year, against what was later commissioned (later editions' own "operational" status, the lists) and against a naive benchmark (everything auctioned is delivered in its award year) | builds from three public PDFs already named; evaluates a forecast rather than making one (skill section 18: a named benchmark, out of sample, stability); validates by reading each table at its source and stamping each edition's data-freeze date as a vintage (section 17); proposes whether the plan's delivery assumptions have been over-optimistic; gives the community the first scoring of an official forecast; no alpha | **next** if three comparable editions are readable. With fewer, or tables that changed definition, publish the vintages as a record and claim no skill |
+| 2 | Conversion by technology: one table joining burn-down, funnel, pace and slippage into "share of signed MW energised within N years", by technology and publisher | the benchmark layer 1 needs (the plan's assumption is a conversion rate) | build with or just before 1 |
+| 3 | Let the record accrue: four weekly runs (g8's done-when), ESB's next list (as of 1 Oct), and any EirGrid connected list after Aug 2022 (then the 37 non-wind unknowns can be read) | nothing to build; the weekly run picks them up | the owner's weekly run |
+| 4 | Publish: pick a host and drop the page's noindex | permission is recorded, hosting is the owner's call | owner |
+| - | Storage external check against the assessment's storage table | **rejected on the data**: the TSO connected non-renewable list is not held after Aug 2022 and ESB's energised batteries are 74 MW, so scope cannot be matched | rejected |
+| - | Variable generation against the assessment | chart-only in the document | rejected (not read from charts) |
+| - | Hybrid de-rating | the pack gives no hybrid class | rejected |
+| - | A forecast of energisation dates | the outcome data is wind only; the claim would not be earned | rejected again |
+

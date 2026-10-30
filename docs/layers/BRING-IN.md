@@ -94,7 +94,7 @@ session. No new step is needed beyond the ones above. On this branch's build:
 New: `src/iegrid/derating.py`, `src/iegrid/data/derating.csv`, `tests/test_derating.py`, `docs/layers/09-firm-capacity/README.md`,
 the page's firm-capacity section, `docs/img/firm.png`. Changed: `report.py` (one optional field), `site/lib/report.ts`,
 `Dashboard.tsx`, `site/tests/numbers.test.tsx` (a third perturbed copy), the fixture. Expected on the 29 Oct store:
-`uv run pytest -q` 355 passed; `pnpm test` 24 passed; 11,990 MW of 16,658 MW has a factor; 2.04 to 2.15 GW counts in 2030/31.
+`uv run pytest -q` 355 passed; `pnpm test` 24 passed; (after the interconnector change: 12,494 MW of 16,658 MW has a factor; 2.33 to 2.45 GW counts in 2030/31; first build: 11,990 MW, 2.04 to 2.15 GW).
 The saved packs live in `data/sources/` (not in git); the CSV is what the report reads, so the weekly run needs no download.
 
 ## Layer 10: queue vs plan (branch `layer-queue-vs-plan`, PR)
@@ -102,7 +102,7 @@ The saved packs live in `data/sources/` (not in git); the CSV is what the report
 New: `src/iegrid/adequacy.py`, `src/iegrid/data/adequacy.csv`, `tests/test_adequacy.py`, `docs/layers/10-queue-vs-plan/README.md`,
 `docs/img/plan.png`, the page section. Changed: `report.py` (one optional field), `site/lib/report.ts`, `Dashboard.tsx`,
 `numbers.test.tsx`, the fixture. On the 29 Oct store: gas 1,944 MW against 1,900 MW expected; storage +660 MW (37% of
-1,789 MW); stated deficit 9% to 20% of the de-rated queue. The chart is drawn by `readme_charts.py` and shown in the main README.
+1,789 MW); stated deficit 8% to 17% of the de-rated queue (9% to 20% before the interconnector change). The chart is drawn by `readme_charts.py` and shown in the main README.
 
 ## Not done, on purpose
 

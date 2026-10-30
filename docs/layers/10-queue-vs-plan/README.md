@@ -15,11 +15,11 @@ and the date it was read.
 |---|---|---|
 | new gas | 1,944 MW of gas turbines (OCGT, CCGT, gas) | 2,450 MW successful in capacity auctions and not yet operating, of which 1,900 MW expected to deliver |
 | storage | 1,789 MW of batteries | storage rises from 1,140 MW (2026) to 1,800 MW (2029): +660 MW, 37% of the battery queue |
-| need | queue counts for 2.04 to 2.15 GW in the 2030/31 auction (layer 9) | outside the 3-hour standard in 2026-28 (base) and 2026-30 and 2033-35 (secure); stated secure deficit around 200 MW rising to over 400 MW in 2034 |
+| need | queue counts for 2.33 to 2.45 GW in the 2030/31 auction (layer 9) | outside the 3-hour standard in 2026-28 (base) and 2026-30 and 2033-35 (secure). Near term: 1,010 MW (base) to 1,420 MW (secure) required in 2026, falling to 220 to 730 MW by 2028, to be met by the CRU's Security of Supply measures, not by the queue. Later: stated secure deficit around 200 MW rising to over 400 MW in 2034 |
 
 So the gas on the contracted lists is the size of the assessment's whole expectation for new gas (1.02 times),
 and the assessment already assumes about a third of the battery queue arrives. The stated deficit, around 200
-to over 400 MW, is 9% to 20% of what the queue counts for. Read plainly: the system's remaining gap is small
+to over 400 MW, is 8% to 17% of what the queue counts for. Read plainly: the system's remaining gap is small
 next to the queue, so how fast and how much of the queue converts, not its size, decides adequacy.
 
 ## The six questions
@@ -44,6 +44,7 @@ next to the queue, so how fast and how much of the queue converts, not its size,
   in size, not proof that the same plants are meant. The page says so.
 - **37% is a reading, not a conversion rate.** It is the storage the plan adds divided by the battery queue.
   Some of the plan's 2026 storage may already be operating, and some of the queue is not in the plan.
+- **The near-term need is not a queue question.** The document says the 2026-28 capacity is to come from the CRU's Security of Supply Programme measures (emergency generation and retained units); the queue can only matter from the years a new project can energise. EirGrid also calls the secure case the central scenario for adequacy, so the later deficit is not a side case.
 - **The deficit is a stated range, not a table.** The document prints "around 200 MW increasing to over 400 MW in
   2034" in its summary and the year-by-year values only in a chart; this layer keeps the printed words and does
   not read a chart.

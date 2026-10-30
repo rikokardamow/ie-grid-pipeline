@@ -197,6 +197,7 @@ export type Report = {
       deficit_start_mw: number; deficit_end_mw: number; deficit_end_year: number;
       queue_derated_low_mw: number; queue_derated_high_mw: number; queue_year: string;
       deficit_share_low: number; deficit_share_high: number;
+      near_term: { first_year: number; last_year: number; base_first_mw: number; base_last_mw: number; secure_first_mw: number; secure_last_mw: number };
     };
   } | null;
   // where a publisher's list disagrees with itself or another publication (regenerated each report)

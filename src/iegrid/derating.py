@@ -15,11 +15,14 @@ What it applies, and what it leaves alone, is stated on the page and in the READ
 
     wind, solar        Table 5, one factor each
     gas turbine class  Table 1's Gas Turbine curve at the unit's size (OCGT, CCGT, gas)
+    interconnector     Table 1's Interconnector curve at the unit's size, for an interconnector to Great
+                       Britain (Greenlink). The pack says that curve is already adjusted by its external-market
+                       factor, so it is applied as printed. The pack treats an interconnector to another EU
+                       state (Celtic, to France) as non-participating capacity in the auction: no factor
     battery            Table 3 (other storage) at the unit's size, for 2 and 4 hours of storage:
                        the lists do not say how long a battery lasts, so both are shown
     everything else    no factor applied, listed with its MW: hybrids (a solar-plus-battery
-                       project is one MEC, and the pack gives no hybrid class), interconnectors
-                       (their factor is scaled by an external-market factor not read here),
+                       project is one MEC, and the pack gives no hybrid class), the EU interconnector,
                        biomass, hydro, CHP, reciprocating engines, wave, synchronous condensers
 
 The factor is the pack's marginal factor for the unit's size, which is how the pack tells an
@@ -101,6 +104,7 @@ def extract(pack: Path) -> tuple[list[dict], dict]:
     for page, bands in t1:
         for lo, hi, vals in bands:
             add(1, "Gas Turbine", "", lo, hi, vals[1], page)
+            add(1, "Interconnector", "", lo, hi, vals[4], page)
     t3_all = []
     for p, t in pages.items():
         if p in (7, 8):
@@ -167,6 +171,8 @@ CLASS_OF = {
     "Battery": "Other Storage", "Battery Storage": "Other Storage",
     "OCGT": "Gas Turbine", "CCGT": "Gas Turbine", "Gas": "Gas Turbine", "Nat. Gas": "Gas Turbine",
 }
+# Greenlink joins Wales to Ireland (Great Britain); Celtic joins Cork to France (an EU state)
+GB_INTERCONNECTORS = ("Greenlink",)
 SOURCES = ("eirgrid.tso_contracted_wind", "eirgrid.tso_contracted_nonwind",
            "esb.dso_contracted_renewable", "esb.dso_contracted_nonrenewable")
 
@@ -193,9 +199,12 @@ def build(con) -> dict | None:
     total = sum(float(p[5] or 0) for p in projects)
     classes: dict[str, dict] = {}
     left: dict[str, float] = {}
-    for _src, _asof, _ref, _name, tech, mec in projects:
+    for _src, _asof, _ref, name, tech, mec in projects:
         mw = float(mec or 0)
         cls = CLASS_OF.get(tech)
+        if tech == "Interconnector":
+            cls = "Interconnector" if any(g in name for g in GB_INTERCONNECTORS) else None
+            tech = tech if cls else name
         if cls is None:
             left[tech] = left.get(tech, 0.0) + mw
             continue
@@ -210,7 +219,8 @@ def build(con) -> dict | None:
             else:
                 c["by_year"][y] = c["by_year"].get(y, 0.0) + mw * factor(rows, y, cls, mw)
     labels = {"Wind": "Wind", "Solar": "Solar", "Other Storage": "Battery storage",
-              "Gas Turbine": "Gas turbines (OCGT, CCGT, gas)"}
+              "Gas Turbine": "Gas turbines (OCGT, CCGT, gas)",
+              "Interconnector": "Interconnector to Great Britain"}
 
     def at(c: dict, y: str) -> tuple[float, float]:
         if c["class"] == "Other Storage":
@@ -220,7 +230,7 @@ def build(con) -> dict | None:
     prior, latest = years[-2] if len(years) > 1 else years[-1], years[-1]
     out_classes = []
     totals = {y: [0.0, 0.0] for y in years}
-    for cls in ("Wind", "Solar", "Other Storage", "Gas Turbine"):
+    for cls in ("Wind", "Solar", "Other Storage", "Gas Turbine", "Interconnector"):
         c = classes.get(cls)
         if not c:
             continue
