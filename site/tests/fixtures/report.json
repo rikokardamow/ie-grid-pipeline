@@ -3217,7 +3217,15 @@
    "queue_derated_high_mw": 2450.6,
    "queue_year": "2030/31",
    "deficit_share_low": 0.082,
-   "deficit_share_high": 0.171
+   "deficit_share_high": 0.171,
+   "near_term": {
+    "first_year": 2026,
+    "last_year": 2028,
+    "base_first_mw": 1010.0,
+    "base_last_mw": 220.0,
+    "secure_first_mw": 1420.0,
+    "secure_last_mw": 730.0
+   }
   }
  }
 }
