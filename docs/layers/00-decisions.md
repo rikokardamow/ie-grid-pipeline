@@ -294,3 +294,20 @@ had been quoted as a finding; it was partly an artefact. **FlexGen**: five leave
 Conversion by technology, the second choice, was not needed for the benchmark: the benchmark is printed in the editions' own tables.
 It stays open as its own idea, and is only worth building if it answers something the burn-down and funnel do not.
 
+## Twelfth session (30 Oct 2026): the owner's API sources, screened; no layer built
+
+| source | what it returned for Ireland | verdict |
+|---|---|---|
+| ENTSO-E installed capacity by type and by unit | the same figures for 2024 and 2026, Moneypoint's coal still listed | stale: not a check on the lists |
+| ENTSO-E generation by unit | no new unit appears from 2023 to 2026, and the register shrinks | cannot date a connection, so layer 11's floor stays a floor |
+| ENTSO-E generation by type, load, day-ahead prices | full series, but almost no Irish solar | a wind capture layer was measured locally and **not published** |
+| Ember monthly and yearly generation | wind, solar and others | a possible solar check; rejected for now: it needs an assumed capacity factor, and rooftop solar is not on the lists |
+| Open-Meteo | weather only | no question here needs it without a modelled assumption |
+| Electricity Maps | rejected the stored token | not tested |
+
+**Why the wind layer is not published.** ENTSO-E's list of data for free re-use (last modified 28 Oct 2019) does not include actual generation
+(16.1), actual total load (6.1.a) or day-ahead prices (12.1.d). This repository is public, and the permission recorded covers ESB's and
+EirGrid's lists. It could go ahead with a newer list or the owners' agreement. The list is seven years old, so it is worth rechecking.
+
+**GitHub.** By the owner's choice the repo runs no workflows: `ops/check.sh` runs the same checks on this machine before a merge.
+
