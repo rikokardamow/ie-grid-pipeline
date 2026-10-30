@@ -30,11 +30,11 @@ def load(path: Path = RESOLUTIONS) -> list[dict[str, str]]:
 
 
 def for_leavers(rows: list[dict[str, str]] | None = None) -> dict[str, dict[str, str]]:
-    """{ref: row} for the leaver rows that settle an outcome (refused, reorganised)."""
+    """{ref: row} for the leaver rows that settle an outcome (refused, reorganised, connected)."""
     rows = load() if rows is None else rows
     return {r["ref"]: r for r in rows
             if r["kind"] == "leaver" and r["status"] == "settled"
-            and r["verdict"] in ("refused", "reorganised")}
+            and r["verdict"] in ("refused", "reorganised", "connected")}
 
 
 def for_errata(rows: list[dict[str, str]] | None = None) -> dict[str, dict[str, str]]:

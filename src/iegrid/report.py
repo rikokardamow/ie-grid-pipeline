@@ -294,7 +294,7 @@ def _left_outcomes(con) -> dict | None:
         return None
     outs = connected.outcomes(con)
     order = [connected.CONNECTED, connected.DSO_CONNECTED, connected.SIBLING,
-             connected.REORGANISED, connected.REFUSED, connected.NOT_LISTED, connected.UNKNOWN]
+             connected.CONNECTED_SOURCED, connected.REORGANISED, connected.REFUSED, connected.NOT_LISTED, connected.UNKNOWN]
     return {
         "cover_end": str(connected.COVER_END),
         "total": len(outs),
@@ -337,6 +337,12 @@ def _queue_vs_plan(con) -> dict | None:
     from iegrid import adequacy
 
     return adequacy.build(con)
+
+
+def _plan_score(con) -> dict | None:
+    from iegrid import plan_score
+
+    return plan_score.build(con)
 
 
 def _external(con) -> dict | None:
@@ -416,6 +422,7 @@ def build(con, now: datetime | None = None, last: dict | None = None) -> dict:
         "external": _external(con),
         "firm_capacity": _firm_capacity(con),
         "queue_vs_plan": _queue_vs_plan(con),
+        "plan_score": _plan_score(con),
         "runs": _runs(con),
         "caveats": _caveats(editions),
     }
