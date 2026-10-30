@@ -56,13 +56,17 @@ As a check, the two publishers' wind lists add up to within 3% of the national t
 
 ![Wind capacity on the lists against the published national total](docs/img/external.png)
 
-Under the capacity auction's de-rating factors, about 2.4 GW of the 12.5 GW with a published factor counts as firm capacity, and gas turbines make up about 62% to 65% of that.
+Under the capacity auction's de-rating factors, about 2.1 GW of the 12.1 GW with a published factor counts as firm capacity, and gas turbines make up 56% to 59% of that.
 
 ![Share of contracted MW that counts as capacity](docs/img/firm.png)
 
-Against the system operator's own plan: EirGrid and SONI's resource adequacy assessment expects 1,900 MW of new gas and adds 660 MW of storage by 2029, while the contracted lists hold 1,944 MW of gas turbines and 1,789 MW of batteries. Its stated deficit is a fifth or less of what the queue counts for, so how much of the queue gets built matters more than its size.
+Against the system operator's own plan: EirGrid and SONI's resource adequacy assessment expects 1,900 MW of new gas and adds 660 MW of storage by 2029, while the contracted lists hold 1,524 MW of gas turbines (without emergency units) and 1,789 MW of batteries. Its stated deficit is a fifth or less of what the queue counts for, so how much of the queue gets built matters more than its size.
 
 ![The queue against the adequacy assessment's assumptions](docs/img/plan.png)
+
+And scoring that plan: each edition prints what it expects by year. At least 307 MW of new conventional plant had arrived by the end of 2025, against 310 to 530 MW expected and 980 to 1,510 MW awarded in the auctions. The editions' discount on the auctions has been worth having, and most have still run ahead of delivery. For the end of 2026 they need 495 to 793 MW more.
+
+![New conventional plant expected and arrived](docs/img/score.png)
 
 ## Running it
 
@@ -87,7 +91,7 @@ The dashboard is a static Next.js page built from the report and served locally:
 
 `src/iegrid/` is the code: ingest, parse, load, place, report, the charts, and the analysis layers. Small cited tables (stations, external checks, resolutions) live in `src/iegrid/data/`. `tests/` ties every edition to its printed total. `site/` is the dashboard, with tests that check every number on the page against the report. `ops/` is the weekly run. `data/` holds the raw PDFs, the DuckDB store and the reports, and is not in git.
 
-Ten further studies sit on top of the record in `docs/layers/`, each with its own README and tests: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, where the lists disagree, ESB's older lists, the external check, sourced answers to open questions, firm capacity, and the queue against the adequacy assessment. `docs/layers/00-decisions.md` says which were built, which were tried and dropped, and why. `docs/README.md` explains the rest of the documents and the stage numbering used in them.
+Eleven further studies sit on top of the record in `docs/layers/`, each with its own README and tests: what became of the projects that left, delivery pace, target slippage, the offer-to-list funnel, where the lists disagree, ESB's older lists, the external check, sourced answers to open questions, firm capacity, the queue against the adequacy assessment, and a score of that assessment's own expectations. `docs/layers/00-decisions.md` says which were built, which were tried and dropped, and why. `docs/README.md` explains the rest of the documents and the stage numbering used in them.
 
 ## Data and licence
 

@@ -207,6 +207,7 @@ GRACE_DAYS = 183                # left within this of the cover's end: too late 
 CONNECTED = "connected"                     # its ref is on a TSO connected list
 DSO_CONNECTED = "connected on the distribution grid"  # its ref is on an ESB energised list
 SIBLING = "connected as part of a sibling"  # its name is a connected project's; its ref isn't
+CONNECTED_SOURCED = "connected (sourced)"                     # a source says it is operating
 REFUSED = "not connected: planning refused (sourced)"        # a source says it was refused
 REORGANISED = "reorganised into a project that connected (sourced)"  # parts add back, one connected
 NOT_LISTED = "not on a connected list"      # wind, left in time, not found by ref or name
@@ -286,7 +287,7 @@ def classify(left, history: dict[str, History], cover_end: date = COVER_END,
         elif resolutions and f.ref in resolutions:
             r = resolutions[f.ref]
             out.append(Outcome(f.ref, f.name, f.mw, f.source_id, f.as_of,
-                               REFUSED if r["verdict"] == "refused" else REORGANISED,
+                               {"refused": REFUSED, "connected": CONNECTED_SOURCED}.get(r["verdict"], REORGANISED),
                                f"sourced: {r['source_name']}"))
         elif wind and region.key(f.name) and len(sib := by_key.get(region.key(f.name), ())) == 1:
             h = history[next(iter(sib))]

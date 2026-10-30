@@ -2133,9 +2133,14 @@
     "gw": 0.086
    },
    {
+    "outcome": "connected (sourced)",
+    "count": 3,
+    "gw": 0.191
+   },
+   {
     "outcome": "reorganised into a project that connected (sourced)",
-    "count": 2,
-    "gw": 0.051
+    "count": 4,
+    "gw": 0.191
    },
    {
     "outcome": "not connected: planning refused (sourced)",
@@ -2149,8 +2154,8 @@
    },
    {
     "outcome": "unknown",
-    "count": 47,
-    "gw": 3.04
+    "count": 42,
+    "gw": 2.709
    }
   ],
   "why_unknown": [
@@ -2160,7 +2165,7 @@
    },
    {
     "why": "non-wind: the connected lists print no refs",
-    "count": 37
+    "count": 32
    },
    {
     "why": "ref reused: on a connected list before any contracted list has it (connected from 2015-08-31, first contracted 2020-06-16)",
@@ -2971,8 +2976,8 @@
    "high": 4
   },
   "contracted_mw": 16658.2,
-  "applied_mw": 12494.5,
-  "applied_share": 0.75,
+  "applied_mw": 12074.5,
+  "applied_share": 0.725,
   "classes": [
    {
     "class": "Wind",
@@ -3037,21 +3042,21 @@
    {
     "class": "Gas Turbine",
     "label": "Gas turbines (OCGT, CCGT, gas)",
-    "projects": 10,
-    "nameplate_mw": 1944.0,
+    "projects": 8,
+    "nameplate_mw": 1524.0,
     "prior": {
      "year": "2029/30",
-     "low_mw": 1559.7,
-     "high_mw": 1559.7,
-     "low_share": 0.802,
-     "high_share": 0.802
+     "low_mw": 1218.1,
+     "high_mw": 1218.1,
+     "low_share": 0.799,
+     "high_share": 0.799
     },
     "latest": {
      "year": "2030/31",
-     "low_mw": 1511.2,
-     "high_mw": 1511.2,
-     "low_share": 0.777,
-     "high_share": 0.777
+     "low_mw": 1180.0,
+     "high_mw": 1180.0,
+     "low_share": 0.774,
+     "high_share": 0.774
     }
    },
    {
@@ -3078,18 +3083,18 @@
   "totals": {
    "prior": {
     "year": "2029/30",
-    "low_mw": 2521.9,
-    "high_mw": 2760.3
+    "low_mw": 2180.3,
+    "high_mw": 2418.7
    },
    "latest": {
     "year": "2030/31",
-    "low_mw": 2332.4,
-    "high_mw": 2450.6
+    "low_mw": 2001.1,
+    "high_mw": 2119.3
    }
   },
-  "gas_share_low": 0.617,
-  "gas_share_high": 0.648,
-  "gas_nameplate_share": 0.156,
+  "gas_share_low": 0.557,
+  "gas_share_high": 0.59,
+  "gas_nameplate_share": 0.126,
   "left_alone": [
    {
     "technology": "Solar + Battery",
@@ -3106,6 +3111,10 @@
    {
     "technology": "Wind + Battery",
     "mw": 496.4
+   },
+   {
+    "technology": "Temporary emergency generation (out of market)",
+    "mw": 420.0
    },
    {
     "technology": "Autoproduce r",
@@ -3152,8 +3161,8 @@
     "mw": 0.5
    }
   ],
-  "left_alone_mw": 4163.7,
-  "left_alone_share": 0.25,
+  "left_alone_mw": 4583.7,
+  "left_alone_share": 0.275,
   "sources": [
    {
     "capacity_year": "2029/30",
@@ -3176,12 +3185,12 @@
    "checked_on": "2026-10-29"
   },
   "gas": {
-   "queue_mw": 1944.0,
+   "queue_mw": 1524.0,
    "awarded_mw": 2450.0,
    "expected_mw": 1900.0,
    "not_expected_mw": 550.0,
    "year": 2030,
-   "queue_share_of_expected": 1.023
+   "queue_share_of_expected": 0.802
   },
   "storage": {
    "queue_mw": 1789.4,
@@ -3213,11 +3222,11 @@
    "deficit_start_mw": 200.0,
    "deficit_end_mw": 400.0,
    "deficit_end_year": 2034,
-   "queue_derated_low_mw": 2332.4,
-   "queue_derated_high_mw": 2450.6,
+   "queue_derated_low_mw": 2001.1,
+   "queue_derated_high_mw": 2119.3,
    "queue_year": "2030/31",
-   "deficit_share_low": 0.082,
-   "deficit_share_high": 0.171,
+   "deficit_share_low": 0.094,
+   "deficit_share_high": 0.2,
    "near_term": {
     "first_year": 2026,
     "last_year": 2028,
@@ -3227,5 +3236,145 @@
     "secure_last_mw": 730.0
    }
   }
+ },
+ "plan_score": {
+  "years": [
+   {
+    "year": 2024,
+    "scored": true,
+    "observed_mw": 192.0,
+    "editions": [
+     {
+      "edition": "GCS 2022",
+      "freeze": "2022",
+      "expected_mw": 120.0,
+      "error_mw": -72.0,
+      "still_needs_mw": 0,
+      "naive_mw": null,
+      "naive_error_mw": null
+     },
+     {
+      "edition": "GCS 2023",
+      "freeze": "2023-05",
+      "expected_mw": 330.0,
+      "error_mw": 138.0,
+      "still_needs_mw": 138.0,
+      "naive_mw": 230.0,
+      "naive_error_mw": 38.0
+     }
+    ]
+   },
+   {
+    "year": 2025,
+    "scored": true,
+    "observed_mw": 307.2,
+    "editions": [
+     {
+      "edition": "GCS 2022",
+      "freeze": "2022",
+      "expected_mw": 310.0,
+      "error_mw": 2.8,
+      "still_needs_mw": 2.8,
+      "naive_mw": null,
+      "naive_error_mw": null
+     },
+     {
+      "edition": "GCS 2023",
+      "freeze": "2023-05",
+      "expected_mw": 530.0,
+      "error_mw": 222.8,
+      "still_needs_mw": 222.8,
+      "naive_mw": 1510.0,
+      "naive_error_mw": 1202.8
+     },
+     {
+      "edition": "AIRAA 2025",
+      "freeze": "2024-05-08",
+      "expected_mw": 530.0,
+      "error_mw": 222.8,
+      "still_needs_mw": 222.8,
+      "naive_mw": 980.0,
+      "naive_error_mw": 672.8
+     }
+    ]
+   },
+   {
+    "year": 2026,
+    "scored": false,
+    "observed_mw": 307.2,
+    "editions": [
+     {
+      "edition": "GCS 2022",
+      "freeze": "2022",
+      "expected_mw": 1100.0,
+      "error_mw": 792.8,
+      "still_needs_mw": 792.8,
+      "naive_mw": null,
+      "naive_error_mw": null
+     },
+     {
+      "edition": "GCS 2023",
+      "freeze": "2023-05",
+      "expected_mw": 820.0,
+      "error_mw": 512.8,
+      "still_needs_mw": 512.8,
+      "naive_mw": 1630.0,
+      "naive_error_mw": 1322.8
+     },
+     {
+      "edition": "AIRAA 2025",
+      "freeze": "2024-05-08",
+      "expected_mw": 820.0,
+      "error_mw": 512.8,
+      "still_needs_mw": 512.8,
+      "naive_mw": 1100.0,
+      "naive_error_mw": 792.8
+     },
+     {
+      "edition": "AIRAA 2026",
+      "freeze": "2025-06-30",
+      "expected_mw": 802.0,
+      "error_mw": 494.8,
+      "still_needs_mw": 494.8,
+      "naive_mw": 1092.0,
+      "naive_error_mw": 784.8
+     }
+    ]
+   }
+  ],
+  "start_year": 2024,
+  "as_of": "2026-08-05",
+  "tso_as_of": "2026-08-05",
+  "sourced_mw": 192.0,
+  "dso_units": [
+   {
+    "ref": "TG175",
+    "name": "Ballymakaily RICE",
+    "mw": 115.2,
+    "energised_on": "2025-03-31"
+   }
+  ],
+  "sources": [
+   {
+    "name": "EirGrid and SONI, All-Island Generation Capacity Statement 2022-2031",
+    "url": "https://www.eirgrid.ie/sites/default/files/publications/EirGrid_SONI_Ireland_Capacity_Outlook_2022-2031.pdf",
+    "checked_on": "2026-10-30"
+   },
+   {
+    "name": "EirGrid and SONI, Generation Capacity Statement 2023-2032",
+    "url": "https://www.eirgrid.ie/sites/default/files/publications/19035-EirGrid-Generation-Capacity-Statement-Combined-2023-V5-Jan-2024.pdf",
+    "checked_on": "2026-10-30"
+   },
+   {
+    "name": "EirGrid and SONI, All-Island Resource Adequacy Assessment 2025-2034",
+    "url": "https://www.eirgrid.ie/sites/default/files/publications/AIRAA-2025-2034.pdf",
+    "checked_on": "2026-10-30"
+   },
+   {
+    "name": "EirGrid and SONI, All-Island Resource Adequacy Assessment 2026-2035",
+    "url": "https://www.eirgrid.ie/sites/default/files/publications/AIRAA-2026-2035_Ireland.pdf",
+    "checked_on": "2026-10-30"
+   }
+  ]
  }
 }

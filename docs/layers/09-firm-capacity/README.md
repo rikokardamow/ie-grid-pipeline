@@ -14,12 +14,12 @@ much of the queue would count and which technologies carry it.
 | wind | 2,656 MW | 157 MW | 6% | 167 MW |
 | solar | 5,601 MW | 230 MW | 4% | 275 MW |
 | battery storage (2 to 4 hours) | 1,789 MW | 139 to 257 MW | 8% to 14% | 254 to 493 MW |
-| gas turbines (OCGT, CCGT, gas) | 1,944 MW | 1,511 MW | 78% | 1,560 MW |
+| gas turbines (OCGT, CCGT, gas), without emergency units | 1,524 MW | 1,180 MW | 77% | 1,218 MW |
 | interconnector to Great Britain (Greenlink) | 504 MW | 296 MW | 59% | 266 MW |
-| **with a factor** | **12,494 MW** | **2.33 to 2.45 GW** | | 2.52 to 2.76 GW |
-| no factor applied | 4,164 MW | | | |
+| **with a factor** | **12,074 MW** | **2.00 to 2.12 GW** | | 2.18 to 2.42 GW |
+| no factor applied | 4,584 MW | | | |
 
-Gas turbines are 16% of the nameplate that has a factor and 62% to 65% of what counts. Between the two
+Gas turbines are 13% of the nameplate that has a factor and 56% to 59% of what counts. Between the two
 auctions the factor for a battery fell by about half (a 4-hour battery of 100 MW: 0.275 to 0.143),
 wind by 6% and solar by 16%: the more of a technology is built or contracted, the less each further MW counts.
 
@@ -53,8 +53,9 @@ Left alone, and listed with its MW so nothing disappears: hybrids (solar plus ba
 one MEC, and the pack gives no hybrid class, so any factor would be a guess), the Celtic interconnector to
 France (the pack's footnote 3 says an interconnector to another EU state is expected to be non-participating
 capacity in the 2030/31 auction, so it has no auction value, whatever the adequacy assessment counts), combined
-heat and power, reciprocating engines, biomass, hydro, wave and synchronous condensers. That is 4.16 GW, 25% of
-the queue, so the headline is about the 75% that has a factor. Which interconnector is to Great Britain is a
+heat and power, reciprocating engines, biomass, hydro, wave and synchronous condensers. Temporary emergency
+generation (420 MW named TEG2 on the lists) is also left out: it is "an out of market measure of last resort". That is
+4.58 GW, 28% of the queue, so the headline is about the 72% that has a factor. Which interconnector is to Great Britain is a
 fact about the project's name, kept as one constant in `derating.py` (Greenlink: Wales; Celtic: France).
 
 ## Risks, and what was done about them

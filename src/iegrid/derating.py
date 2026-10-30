@@ -23,6 +23,7 @@ What it applies, and what it leaves alone, is stated on the page and in the READ
                        the lists do not say how long a battery lasts, so both are shown
     everything else    no factor applied, listed with its MW: hybrids (a solar-plus-battery
                        project is one MEC, and the pack gives no hybrid class), the EU interconnector,
+                       temporary emergency generation (out of market, named TEG on the lists),
                        biomass, hydro, CHP, reciprocating engines, wave, synchronous condensers
 
 The factor is the pack's marginal factor for the unit's size, which is how the pack tells an
@@ -173,6 +174,10 @@ CLASS_OF = {
 }
 # Greenlink joins Wales to Ireland (Great Britain); Celtic joins Cork to France (an EU state)
 GB_INTERCONNECTORS = ("Greenlink",)
+# Temporary Emergency Generation: "an out of market measure of last resort" (AIRAA 2025-2034, p.20),
+# so a TEG unit has no capacity-auction value. The lists name them (Tarbert TEG2, Shannonbridge TEG2)
+TEG = re.compile(r"\bTEG\d*\b")
+TEG_LABEL = "Temporary emergency generation (out of market)"
 SOURCES = ("eirgrid.tso_contracted_wind", "eirgrid.tso_contracted_nonwind",
            "esb.dso_contracted_renewable", "esb.dso_contracted_nonrenewable")
 
@@ -205,6 +210,8 @@ def build(con) -> dict | None:
         if tech == "Interconnector":
             cls = "Interconnector" if any(g in name for g in GB_INTERCONNECTORS) else None
             tech = tech if cls else name
+        if TEG.search(name):   # out of market by direction of the regulator, whatever its technology
+            cls, tech = None, TEG_LABEL
         if cls is None:
             left[tech] = left.get(tech, 0.0) + mw
             continue

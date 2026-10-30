@@ -200,6 +200,16 @@ export type Report = {
       near_term: { first_year: number; last_year: number; base_first_mw: number; base_last_mw: number; secure_first_mw: number; secure_last_mw: number };
     };
   } | null;
+  // what each adequacy assessment expected of new conventional plant against what came
+  plan_score?: {
+    start_year: number; as_of: string; tso_as_of: string; sourced_mw: number;
+    dso_units: { ref: string; name: string; mw: number; energised_on: string }[];
+    sources: { name: string; url: string; checked_on: string }[];
+    years: {
+      year: number; scored: boolean; observed_mw: number;
+      editions: { edition: string; freeze: string; expected_mw: number; error_mw: number; still_needs_mw: number; naive_mw: number | null; naive_error_mw: number | null }[];
+    }[];
+  } | null;
   // where a publisher's list disagrees with itself or another publication (regenerated each report)
   errata?: {
     total: number;

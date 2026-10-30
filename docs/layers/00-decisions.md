@@ -280,3 +280,17 @@ de-rated queue (it was 9% to 20%). Earlier figures in this file are left as the 
 | - | Hybrid de-rating | the pack gives no hybrid class | rejected |
 | - | A forecast of energisation dates | the outcome data is wind only; the claim would not be earned | rejected again |
 
+## Eleventh session (30 Oct 2026): layer 11, and two corrections it forced
+
+Built the first choice of the tenth session (`docs/layers/11-plan-score/README.md`). Four editions were readable and
+comparable, so it is a score rather than a record of vintages, with no claim of statistical skill on two scored years.
+
+Reading them corrected earlier work. **Emergency generation**: layers 9 and 10 counted 420 MW named TEG2 as gas. It is out of
+market, so it now has no factor: with a factor 12,494 to 12,074 MW, counts 2.33 to 2.45 GW becomes 2.00 to 2.12 GW, gas's share
+62% to 65% becomes 56% to 59%, and layer 10's "1,944 MW against 1,900 MW" (1.02 times) becomes 1,524 MW (0.80 times). That near-match
+had been quoted as a finding; it was partly an artefact. **FlexGen**: five leavers layer 1 had as unknown are settled
+(three connected, two reorganised under earlier refs), so unknown goes from 47 (3.04 GW) to 42 (2.71 GW).
+
+Conversion by technology, the second choice, was not needed for the benchmark: the benchmark is printed in the editions' own tables.
+It stays open as its own idea, and is only worth building if it answers something the burn-down and funnel do not.
+

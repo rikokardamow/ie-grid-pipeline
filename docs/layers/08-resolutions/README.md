@@ -46,7 +46,7 @@ The external 126 MW gap isn't in the CSV: it is arithmetic on two printed figure
 
 - That a news article is right: the answers are as good as their sources. Each row says what the
   source says, so a reader can disagree with the match.
-- That the unmatched remainder (47 unknown leavers, 3.04 GW) is explained. This layer reached the ones
+- That the unmatched remainder (42 unknown leavers, 2.71 GW) is explained. This layer reached the ones
   with a public record to find.
 
 ## Tests

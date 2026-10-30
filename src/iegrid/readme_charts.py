@@ -575,7 +575,7 @@ def firm(rep):
     fig.subplots_adjust(left=0.25, right=0.97)
     _frame(fig, title, f"The de-rating factors the system operators publish, applied at each "
            f"project's size. {finding} {f['left_alone_mw'] / 1000:.2f} GW "
-           f"({f['left_alone_share']:.0%} of the queue) has no factor: hybrids, the interconnector to France, "
+           f"({f['left_alone_share']:.0%} of the queue) has no factor: hybrids, the interconnector to France, emergency generation, "
            "combined heat and power and smaller technologies.",
            f"Source: {LISTS_CREDIT}; SEM capacity auction de-rating factors for {f['latest_year']} · "
            f"{_as_of(rep)}")
@@ -588,7 +588,7 @@ def plan(rep):
     q = rep["queue_vs_plan"]
     g, s, n = q["gas"], q["storage"], q["need"]
     bars = [
-        ("Gas turbines on the contracted lists", g["queue_mw"], NAVY),
+        ("Gas turbines on the lists, no emergency units", g["queue_mw"], NAVY),
         (f"Gas: awarded in auctions, not operating yet ({g['year']})", g["awarded_mw"], BLUE),
         (f"Gas: expected to deliver ({g['year']})", g["expected_mw"], BLUE),
         ("Batteries on the contracted lists", s["queue_mw"], NAVY),
@@ -616,11 +616,45 @@ def plan(rep):
     return fig
 
 
+# ---------------------------------------------------------------- scoring the plan
+
+def score(rep):
+    p = rep["plan_score"]
+    scored = [y for y in p["years"] if y["scored"] and y["editions"]]
+    y = scored[-1]
+    bars = [(f"Arrived by the end of {y['year']} (a floor)", y["observed_mw"], NAVY)]
+    bars += [(f"{e['edition']} expected", e["expected_mw"], BLUE) for e in y["editions"]]
+    bars += [(f"{e['edition']}: everything awarded, on time", e["naive_mw"], GREY)
+             for e in y["editions"] if e["naive_mw"] is not None]
+    fig, ax = _fig(10, 4.4)
+    ys = list(range(len(bars)))
+    for yi, (_, mw, colour) in zip(ys, bars, strict=True):
+        ax.barh(yi, mw, height=0.6, color=colour)
+        ax.text(mw + 15, yi, f"{mw:,.0f} MW", va="center", fontsize=9, color=TEXT)
+    ax.set_yticks(ys, [b[0] for b in bars])
+    ax.invert_yaxis()
+    ax.set_xlim(0, max(b[1] for b in bars) * 1.15)
+    ax.set_xlabel(f"rated MW, cumulative from the start of {p['start_year']}", color=MUTED, fontsize=9.5)
+    fig.subplots_adjust(left=0.38, right=0.97)
+    expected = [e["expected_mw"] for e in y["editions"]]
+    title = (f"At least {y['observed_mw']:,.0f} MW of new conventional plant had arrived by the end of "
+             f"{y['year']}; the system operators' editions expected {min(expected):,.0f} to {max(expected):,.0f} MW")
+    open_year = next((o for o in p["years"] if not o["scored"] and o["editions"]), None)
+    needs = "" if open_year is None else (
+        f" By the end of {open_year['year']}, still open, the editions need "
+        f"{min(e['still_needs_mw'] for e in open_year['editions']):,.0f} to "
+        f"{max(e['still_needs_mw'] for e in open_year['editions']):,.0f} MW more.")
+    _frame(fig, title, "Each edition is scored only on years after its data freeze. Arrived is a floor: "
+           f"EirGrid's lists can't date a transmission connection.{needs}",
+           f"Source: EirGrid and SONI capacity statements and adequacy assessments; {LISTS_CREDIT}; lists to {p['as_of']}")
+    return fig
+
+
 CHARTS = {
     "technology": technology, "history": history, "flows": flows, "burndown": burndown,
     "map": grid_map, "counties": counties, "freshness": freshness, "left": left,
     "pace-dso": pace_dso, "pace-tso": pace_tso, "slippage": slippage, "funnel": funnel,
-    "external": external, "firm": firm, "plan": plan,
+    "external": external, "firm": firm, "plan": plan, "score": score,
 }
 
 

@@ -680,7 +680,7 @@ export function Dashboard({ report }: { report: Report }) {
               <Figure
                 id="fig-firm"
                 title={`Of the ${gw(f.applied_mw / 1000)} of the queue with a published factor, ${gw(f.totals.latest.low_mw / 1000)} to ${gw(f.totals.latest.high_mw / 1000)} counts as capacity in the ${f.latest_year} auction${gasText}`}
-                subtitle={`Share of each technology's contracted MW that the capacity auction counts, from the de-rating factors the system operators publish for the ${f.latest_year} auction, applied at each project's size. A battery's duration is not on the lists, so storage is shown for ${f.storage_hours.low} and ${f.storage_hours.high} hours. ${mw(f.left_alone_mw)}${f.left_alone_share === null ? "" : ` (${pct(f.left_alone_share)} of the queue)`} has no factor applied: hybrids such as solar with a battery, the interconnector to France (which the auction treats as outside it), combined heat and power, and smaller technologies. This is the auction's rule for what a megawatt is worth, not a forecast that a project connects and not what a megawatt delivers in an hour.`}
+                subtitle={`Share of each technology's contracted MW that the capacity auction counts, from the de-rating factors the system operators publish for the ${f.latest_year} auction, applied at each project's size. A battery's duration is not on the lists, so storage is shown for ${f.storage_hours.low} and ${f.storage_hours.high} hours. ${mw(f.left_alone_mw)}${f.left_alone_share === null ? "" : ` (${pct(f.left_alone_share)} of the queue)`} has no factor applied: hybrids such as solar with a battery, the interconnector to France and temporary emergency generation (both outside the auction), combined heat and power, and smaller technologies. This is the auction's rule for what a megawatt is worth, not a forecast that a project connects and not what a megawatt delivers in an hour.`}
                 footer={`Source: ${f.sources.map((x) => `${x.name}, read ${x.checked_on}`).join("; ")}; ${EIRGRID}; ${ESB}`}
                 table={{
                   headings: ["Technology", "Projects", "Contracted", `Counts, ${f.prior_year}`, `Counts, ${f.latest_year}`, `Share, ${f.latest_year}`],
@@ -723,7 +723,7 @@ export function Dashboard({ report }: { report: Report }) {
             const bars = [
               ...(q.gas
                 ? [
-                    { label: "Gas turbines on the contracted lists", value: q.gas.queue_mw, text: mw(q.gas.queue_mw) },
+                    { label: "Gas turbines on the contracted lists, without emergency generation", value: q.gas.queue_mw, text: mw(q.gas.queue_mw) },
                     { label: "New plant awarded in capacity auctions, not yet operating (the assessment)", value: q.gas.awarded_mw, text: mw(q.gas.awarded_mw) },
                     { label: "Of that, expected to deliver (the assessment)", value: q.gas.expected_mw, text: mw(q.gas.expected_mw) },
                   ]
@@ -747,6 +747,45 @@ export function Dashboard({ report }: { report: Report }) {
                 }}
               >
                 <BarChart title="Megawatts" subtitle="Contracted lists against what the assessment assumes" footer="" valueHeading="MW" bars={bars} />
+              </Figure>
+            );
+          })()}
+        </section>
+      )}
+
+      {report.plan_score && report.plan_score.years.some((y) => y.scored && y.editions.length > 0) && (
+        <section aria-labelledby="plan-score">
+          <h2 id="plan-score">Scoring the plan</h2>
+          {(() => {
+            const p = report.plan_score;
+            const scored = p.years.filter((y) => y.scored && y.editions.length > 0);
+            const y = scored[scored.length - 1];
+            const open = p.years.filter((o) => !o.scored && o.editions.length > 0).pop();
+            const expected = y.editions.map((e) => e.expected_mw);
+            const naive = y.editions.flatMap((e) => (e.naive_mw === null ? [] : [e.naive_mw]));
+            const signed = (x: number) => `${x > 0 ? "+" : ""}${mw(x)}`;
+            const bars = [
+              { label: `Arrived by the end of ${y.year} (a floor)`, value: y.observed_mw, text: mw(y.observed_mw) },
+              ...y.editions.map((e) => ({ label: `${e.edition} expected`, value: e.expected_mw, text: mw(e.expected_mw) })),
+              ...y.editions.flatMap((e) => (e.naive_mw === null ? [] : [{ label: `${e.edition}: everything awarded, on time`, value: e.naive_mw, text: mw(e.naive_mw) }])),
+            ];
+            return (
+              <Figure
+                id="fig-score"
+                title={`At least ${mw(y.observed_mw)} of new conventional plant had arrived by the end of ${y.year}; the system operators' editions expected ${mw(Math.min(...expected))} to ${mw(Math.max(...expected))}${naive.length > 0 ? `, and the auctions had awarded ${mw(Math.min(...naive))} to ${mw(Math.max(...naive))}` : ""}`}
+                subtitle={`Each edition of the capacity statement prints the new plant it expects by year. This scores them, cumulative from the start of ${p.start_year}, on years after each edition's data freeze, against the naive reading that everything awarded arrives on time. Arrived means ${mw(p.sourced_mw)} a later edition says is operating, plus ${p.dso_units.map((d) => `${d.name} (${mw(d.mw)}, ${d.energised_on})`).join(", ") || "nothing"} on ESB's energised list. EirGrid's lists can't date a transmission connection, so this is a floor. ${open ? `For the end of ${open.year}, still open, the lists to ${p.as_of} show ${mw(open.observed_mw)}, so the editions need ${mw(Math.min(...open.editions.map((e) => e.still_needs_mw)))} to ${mw(Math.max(...open.editions.map((e) => e.still_needs_mw)))} more. ` : ""}A few years over a few overlapping editions is a record, not a test of skill.`}
+                footer={`Source: ${p.sources.map((x) => `${x.name}, read ${x.checked_on}`).join("; ")}; ${EIRGRID}; ${ESB}`}
+                table={{
+                  headings: ["By the end of", "Edition", "Expected", "Against arrived", "Everything awarded", "Against arrived", "State"],
+                  rows: p.years.flatMap((o) => o.editions.map((e) => [
+                    o.year, e.edition, mw(e.expected_mw), signed(e.error_mw),
+                    e.naive_mw === null ? "not printed" : mw(e.naive_mw),
+                    e.naive_error_mw === null ? "" : signed(e.naive_error_mw),
+                    o.scored ? "scored" : "open",
+                  ])),
+                }}
+              >
+                <BarChart title={`New conventional plant by the end of ${y.year}`} subtitle="Rated megawatts, cumulative" footer="" valueHeading="MW" bars={bars} />
               </Figure>
             );
           })()}

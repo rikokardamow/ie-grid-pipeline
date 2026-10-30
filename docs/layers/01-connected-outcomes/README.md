@@ -19,7 +19,8 @@ any. (It said 87 and 4.59 GW until a bug in `flows.py` was fixed: see "A bug thi
 | reorganised into a project that connected (sourced: the parts add back exactly) | 2 | 0.05 |
 | not connected: planning refused (sourced) | 3 | 0.19 |
 | wind, on no connected list, nothing found | 5 | 0.18 |
-| unknown | 47 | 3.04 |
+| connected (sourced: a later adequacy assessment says it is operating) | 3 | 0.19 |
+| unknown | 42 | 2.71 |
 
 The three refused are Castletownmoor (An Bord Pleanála, June 2017, upheld in the High Court) and the two
 parts of Carrickaduff (An Bord Pleanála, March 2016). Both answers come from `src/iegrid/data/resolutions.csv`,
@@ -89,7 +90,7 @@ joined 1.68 to 1.53 GW; 2019 left 0.27 to 0.07 GW (TG71 alone was 199 MW), joine
 - Sibling matches rest on a name, not a ref or an MW check: lower confidence, a separate row.
 - (TG44 Barnadivane looked like a project that left in Dec 2018 and was first connected in Feb 2021.
   It was a bug in `flows.py`, not a gap: see below.)
-- Nothing about non-wind. That's 12.6 GW of the queue and 37 of the 47 unknowns.
+- Nothing about non-wind. That's 12.6 GW of the queue and 32 of the 42 unknowns.
 
 ## To bring it into the project
 

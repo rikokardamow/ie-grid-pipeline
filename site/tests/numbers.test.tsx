@@ -91,6 +91,7 @@ function variants(): [string, Report][] {
   bare.external = null;
   bare.firm_capacity = null;
   bare.queue_vs_plan = null;
+  bare.plan_score = null;
   later.runs = { ...later.runs, count: 1, failed: 1, latest: later.runs.latest.slice(0, 1) };
   const fewSlips = fixture();
   if (fewSlips.target_slippage) {
@@ -121,6 +122,15 @@ function variants(): [string, Report][] {
     noParts.queue_vs_plan.storage = null;
     noParts.queue_vs_plan.need.base_outside = [];
   }
+  const noOpenYear = fixture();
+  if (noOpenYear.plan_score) {
+    noOpenYear.plan_score.years = noOpenYear.plan_score.years.filter((y) => y.scored);
+    noOpenYear.plan_score.dso_units = [];
+  }
+  const nothingScored = fixture();
+  if (nothingScored.plan_score) {
+    nothingScored.plan_score.years = nothingScored.plan_score.years.map((y) => ({ ...y, scored: false }));
+  }
   const noPace = fixture();
   if (noPace.delivery_pace) {
     noPace.delivery_pace.distribution = { ...noPace.delivery_pace.distribution, annual: [], cover: [], fastest: [], backtest: { years: 0, methods: [] } };
@@ -136,6 +146,8 @@ function variants(): [string, Report][] {
     ["no errata", noErrata],
     ["total over the published one", over],
     ["no storage in the queue", noStorage],
+    ["no open year in the plan score", noOpenYear],
+    ["nothing scored yet", nothingScored],
     ["no gas or storage in the plan comparison", noParts],
     ["few matched targets", fewSlips],
   ];

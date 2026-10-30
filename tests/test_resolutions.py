@@ -20,10 +20,10 @@ def test_every_answer_has_a_known_status_and_a_source_to_check_it_against():
             assert not r["verdict"] and not r["source_url"], r["ref"]  # nothing claimed
 
 
-def test_only_settled_refused_or_reorganised_rows_decide_a_leavers_outcome():
+def test_only_settled_rows_with_a_verdict_decide_a_leavers_outcome():
     got = resolutions.for_leavers(resolutions.load())
     assert set(got) >= {"P230", "TG261", "TG301", "TG319", "TG22b"}
-    assert {r["verdict"] for r in got.values()} <= {"refused", "reorganised"}
+    assert {r["verdict"] for r in got.values()} <= {"refused", "reorganised", "connected"}
     assert "TG93" not in got and "TG103" not in got  # searched, nothing found: stay unresolved
 
 
