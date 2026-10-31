@@ -1,5 +1,7 @@
 # Layer 10: the queue against the system's own plan
 
+**In plain English.** EirGrid and SONI publish an official view of what the power system needs. This layer sets the queue beside that plan, to compare what is waiting with what the plan expects to be delivered. Figures in this file are from the date it states. Any chart comes from the latest weekly report, so it may be newer.
+
 **What it adds.** Layer 9 said how much of the queue counts as capacity. This layer sets the queue against
 the one official statement of what the system needs: EirGrid and SONI's *All-Island Resource Adequacy
 Assessment 2026-2035* (AIRAA, the successor to the Generation Capacity Statement). It says how much new gas

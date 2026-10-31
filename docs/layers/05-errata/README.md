@@ -1,5 +1,7 @@
 # Layer 5: where the lists disagree
 
+**In plain English.** The published lists sometimes disagree with themselves or with each other. This layer keeps a log of each disagreement and what would settle it, so anyone using the lists knows where to be careful.
+
 **What it adds.** A ledger of the places where a publisher's list disagrees with itself or
 with another publication, each with what disagrees and what would settle it. Today it has five
 rows, each with the answer found where one could be (layer 8). (It had six: the "gap" row for TG44

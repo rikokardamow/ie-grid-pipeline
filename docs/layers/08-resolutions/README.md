@@ -1,5 +1,7 @@
 # Layer 8: resolutions
 
+**In plain English.** Other layers ended with questions the lists couldn't answer. This layer records the answers found elsewhere, each with its source and the date it was read, so they can be checked.
+
 **What it adds.** Layers 1, 5 and 7 each ended with a list of things the data couldn't explain. This
 layer answers them where an answer exists, and keeps each answer as data with its source, the source's
 own words and the date it was read, so the page can show "answer found" next to the question and a

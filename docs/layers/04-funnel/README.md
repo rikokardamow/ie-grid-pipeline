@@ -1,5 +1,7 @@
 # Layer 4: the connection funnel
 
+**In plain English.** The lists only show projects that got far enough to sign. This layer looks one step earlier, at how many of the projects offered a connection ever reached a list, and where they are now.
+
 **What it adds.** The top of the funnel. Layers 1-3 say what happens to projects once they are
 on a list; this one says how many of the projects an ECP batch *offered* ever get there, and
 where the ones that did are now. It answers the question the g5 review parked ("offer totals per

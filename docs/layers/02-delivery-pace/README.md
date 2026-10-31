@@ -1,5 +1,7 @@
 # Layer 2: delivery pace and years of cover
 
+**In plain English.** A queue's size means little until you compare it with how fast projects actually connect. This layer divides the queue by the yearly pace to give a sense of scale. It isn't a forecast of when the queue will clear.
+
 **What it adds.** The contracted queue set against the pace at which capacity actually
 energises: *years of cover* = contracted MW ÷ the mean annual MW energised over a window of
 complete years. It answers the question every reader of a queue number asks next: "so how long

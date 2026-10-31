@@ -1,5 +1,7 @@
 # Layer 11: scoring the plan
 
+**In plain English.** The grid operators' reports say how much new plant they expect each year, which can be checked later. This layer compares those expectations with what actually arrived. Figures in this file are from the date it states. Any chart comes from the latest weekly report, so it may be newer.
+
 **What it adds.** Layer 10 ended on the claim that how much of the queue gets built matters more than its
 size. This layer tests the official view of that. Each edition of EirGrid and SONI's capacity statement prints
 the new conventional plant it expects by year, which makes it a dated forecast, and nobody scores it here or, as
