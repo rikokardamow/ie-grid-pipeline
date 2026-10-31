@@ -1,5 +1,7 @@
 # Layer 3: promise against delivery
 
+**In plain English.** Some old lists printed the month a wind project expected to connect. This layer checks those dates against what happened: 15 of the 16 projects that could be followed connected late.
+
 **What it adds.** When EirGrid printed a target connection month for a wind project, when did
 the project connect? One table and one chart; nothing extrapolated.
 

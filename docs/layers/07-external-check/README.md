@@ -1,5 +1,7 @@
 # Layer 7: against a published total
 
+**In plain English.** Most checks here compare the lists with themselves. This one compares them with an outside source, the published national wind total, and the two agree to within 3%.
+
 **What it adds.** The one check in the project that compares the record with something outside the
 lists. Every other check compares a list with itself (rows against printed totals) or with another list
 (offers against tags, EirGrid against ESB). This one adds up the two publishers' wind lists and sets the

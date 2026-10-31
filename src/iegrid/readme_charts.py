@@ -24,6 +24,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.dates
+import matplotlib.patheffects
 import matplotlib.pyplot as plt
 import matplotlib.ticker
 from matplotlib.patches import Polygon
@@ -125,8 +126,8 @@ def technology(rep):
     ax.text(tso[0] + dso[0] / 2, -0.55, "distribution (ESB Networks)", ha="center", fontsize=8.5,
             color=TEXT)
     fig.subplots_adjust(left=0.19, right=0.97)
-    _frame(fig, title, f"GW of maximum export capacity not yet energised. {finding} The "
-           "figures on the right split each bar into transmission and distribution.",
+    _frame(fig, title, f"GW signed but not yet connected. {finding} The figures on the right split "
+           "each bar into the large (transmission) and local (distribution) grids.",
            f"Source: {LISTS_CREDIT}. {_as_of(rep)}.")
     return fig
 
@@ -214,7 +215,7 @@ def burndown(rep):
     later = [r for r in rows[1:] if r["share_at"] is not None]
     title = f"Share of each connection batch energised {years} years after its results"
     finding = (f"{first['batch']} had {first['share_at']:.0%} of its distribution MW energised "
-               f"at that age; no later batch passed {max(r['share_at'] for r in later):.0%}.")
+               f"at that age; no later batch passed {max(r['share_at'] for r in later):.1%}.")
     fig, ax = _fig(10, 4.4)
     y = list(range(len(rows)))
     for yi, r in zip(y, rows, strict=True):
@@ -226,14 +227,15 @@ def burndown(rep):
             ax.text(r["share_at"] + 0.004, yi, f"{r['share_at']:.1%} of {r['projects']} projects",
                     va="center", fontsize=9.5, color=TEXT)
     ax.set_yticks(y, [f"{r['batch']}  ({r['results']})" for r in rows])
-    ax.invert_yaxis()
+    ax.set_ylim(len(rows) - 0.4, -0.6)
     ax.set_xlim(0, max(r["share_at"] or 0 for r in rows) * 1.9)
+    ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(0.05))
     ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_xlabel(f"share of the batch's distribution MW energised {years} years after results",
                   color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.22, right=0.97)
-    _frame(fig, title, f"By MW, distribution grid only. {finding} Comparing batches at the "
-           "same age means an older batch gets no credit for having had longer.",
+    _frame(fig, title, f"By MW, local (distribution) grid only. {finding} Every batch is measured "
+           "at the same age, so older batches get no extra credit for having had longer.",
            f"Source: ESB Networks DSO contracted and energised lists, © ESB Networks, used with "
            f"their permission. As of {fmt_date(_d(s['as_of']))}")
     return fig
@@ -272,7 +274,7 @@ def grid_map(rep):
     title = "Contracted capacity by connection substation"
     finding = (f"{g['far_gw']:.2f} GW waits at {g['far_nodes']} substations {g['far_km']} km or "
                f"more from the {kv} kV network.")
-    fig, ax = plt.subplots(figsize=(8.5, 10), dpi=150)
+    fig, ax = plt.subplots(figsize=(8.5, 11), dpi=150)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
     ax.set_axis_off()
@@ -294,10 +296,12 @@ def grid_map(rep):
                    edgecolors="white", linewidths=0.8, zorder=4)
     for n in nodes[:4]:
         ax.annotate(f"{n['node'].split(' ')[0]}  {n['mw']:.0f} MW", (n["lon"], n["lat"]),
-                    xytext=(6, 4), textcoords="offset points", fontsize=8, color=TEXT, zorder=6)
+                    xytext=(6, 4), textcoords="offset points", fontsize=8, color=TEXT, zorder=6,
+                    path_effects=[matplotlib.patheffects.withStroke(linewidth=2.5,
+                                                                    foreground="white")])
     ax.set_aspect(1 / 0.595)  # cos(53.5°): a kilometre is a kilometre in both directions
     ax.set_xlim(-10.8, -5.2)
-    ax.set_ylim(51.3, 55.5)
+    ax.set_ylim(50.5, 55.5)
     # in-plot key, top left
     kx, ky = -10.7, 55.35
     for i, (colour, label) in enumerate(((NAVY, f"substation under {g['far_km']} km from the backbone"),
@@ -308,9 +312,8 @@ def grid_map(rep):
     ax.text(kx + 0.12, ky - 0.34, "220, 275 and 400 kV lines", va="center", fontsize=9, color=TEXT)
     ax.plot([kx - 0.05, kx + 0.05], [ky - 0.51] * 2, color=BORDER, linewidth=0.7)
     ax.text(kx + 0.12, ky - 0.51, "110 kV lines", va="center", fontsize=9, color=TEXT)
-    ax.text(kx, ky - 0.72, "Circle area is MW waiting at the substation", fontsize=9, color=MUTED)
-    # distance bands, bottom right
-    bx, by = -7.9, 52.0
+    # distance bands, below the island
+    bx, by = -9.6, 51.15
     ax.text(bx, by, "GW waiting, by distance to the backbone", fontsize=9, color=TEXT)
     for i, b in enumerate(g["bands"]):
         ax.text(bx, by - 0.14 * (i + 1), f"{b['label']:<16}", fontsize=9, color=MUTED,
@@ -318,10 +321,9 @@ def grid_map(rep):
         ax.text(bx + 1.25, by - 0.14 * (i + 1), f"{b['gw']:.2f} GW at {b['nodes']} substations",
                 fontsize=9, color=TEXT)
     fig.subplots_adjust(left=0.02, right=0.98)
-    _frame(fig, title, f"Circle area is MW waiting at the substation, on OpenStreetMap's lines, "
-           f"all-island. {finding} {g['placed_gw']:.2f} GW ({g['placed_share']:.0%}) of the queue "
-           "is on the map; a station OpenStreetMap does not have yet is drawn at the existing "
-           "station its ECP results name, at a cited site, or at its townland.",
+    _frame(fig, title, f"A bigger circle means more MW waiting at that substation. {finding} "
+           f"{g['placed_gw']:.2f} GW ({g['placed_share']:.0%}) of the queue is on the map. A "
+           "substation not yet on OpenStreetMap is drawn at the nearest location the sources give.",
            f"Source: {LISTS_CREDIT}; lines and substations © OpenStreetMap contributors (ODbL), "
            f"fetched {g['osm_fetched_at'][:10]}. {_as_of(rep)}.", xlabel=False)
     return fig
@@ -373,9 +375,10 @@ def left(rep):
                r["outcome"].startswith("not connected") else NAVY for r in rows]
     ax.barh(y, [r["count"] for r in rows], height=0.62, color=colours)
     for yi, r in zip(y, rows, strict=True):
-        ax.text(r["count"] + 0.5, yi, f"{r['count']} projects · {r['gw'] * 1000:.0f} MW",
+        ax.text(r["count"] + 0.5, yi, f"{r['count']} project{'' if r['count'] == 1 else 's'} · {r['gw'] * 1000:,.0f} MW",
                 va="center", fontsize=9.5, color=TEXT)
-    ax.set_yticks(y, [r["outcome"].replace(" (sourced)", "") for r in rows])
+    ax.set_yticks(y, ["connected, from other sources" if r["outcome"] == "connected (sourced)"
+                      else r["outcome"].replace(" (sourced)", "") for r in rows])
     ax.invert_yaxis()
     ax.set_xlim(0, max(r["count"] for r in rows) * 1.45)
     ax.set_xlabel("projects", color=MUTED, fontsize=9.5)
@@ -406,7 +409,8 @@ def _pace(rep, key, grid_name, source):
     ax.bar(xs, [r["mw"] for r in rows], width=0.72, color=NAVY)
     for r in rows:
         ax.text(r["year"], r["mw"] + max(x["mw"] for x in rows) * 0.015, f"{r['mw']:.0f}",
-                ha="center", fontsize=8, color=TEXT)
+                ha="center", fontsize=8, color=TEXT, zorder=6,
+                bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.8})
     mean_label = f"{cover3['from']}–{cover3['to']} mean, {c_pace(cover3)} MW a year"
     fast_label = f"fastest three years, {c_pace(fastest)} MW a year"
     for c, colour, label in ((cover3, GREY, mean_label), (fastest, BLUE, fast_label)):
@@ -417,9 +421,8 @@ def _pace(rep, key, grid_name, source):
     ax.set_xlim(xs[0] - 0.6, xs[-1] + 0.6)
     ax.set_ylabel("MW energised", color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.07, right=0.72)
-    _frame(fig, title, f"MW, {xs[0]} to {p['through']}. {finding} Years of delivery is the "
-           "contracted MW divided by the mean pace of the window, not a forecast of when the "
-           "queue clears: most contracted MW never energises.",
+    _frame(fig, title, f"MW, {xs[0]} to {p['through']}. {finding} This is simple division for scale, not a "
+           "forecast: most contracted MW never gets built.",
            f"Source: {source}. As of {fmt_date(_d(p['as_of']))}")
     return fig
 
@@ -445,20 +448,21 @@ def slippage(rep):
     rows = sorted(s["rows"], key=lambda r: r["to_completion"])
     title = "Months from the target connection month to completion, wind projects"
     finding = (f"{s['late_to_completion']} of {s['matched']} projects with a published target "
-               f"connected after it, by a median of {s['median_to_completion']:.0f} months.")
+               f"connected after it, by a median of {s['median_to_completion']:.1f} months.")
     fig, ax = _fig(10, 6)
     y = list(range(len(rows)))
     months = [r["to_completion"] for r in rows]
     ax.hlines(y, 0, months, color=BORDER, linewidth=2)
     ax.scatter(months, y, s=56, color=NAVY, zorder=3, edgecolors="white", linewidths=1.5)
     ax.axvline(0, color=MUTED, linewidth=1)
-    ax.axvline(s["median_to_completion"], color=BLUE, linestyle="--", linewidth=1.5)
+    ax.axvline(s["median_to_completion"], color=BLUE, linestyle="--", linewidth=1.5, zorder=1)
     ax.text(s["median_to_completion"] + 0.6, -0.9, f"median {s['median_to_completion']:.1f} months",
             color=TEXT, fontsize=8.5)
     for yi, r in zip(y, rows, strict=True):
         ax.text(max(r["to_completion"], 0) + 1.2, yi,
                 f"{r['to_completion']:+d} months · {r['mw']:.0f} MW · target {r['target']}",
-                va="center", fontsize=8.5, color=TEXT)
+                va="center", fontsize=8.5, color=TEXT, zorder=5,
+                bbox={"facecolor": "white", "edgecolor": "none", "pad": 0.8})
     ax.set_yticks(y, [r["name"] for r in rows], fontsize=9)
     ax.invert_yaxis()
     lo, hi = min(months + [0]), max(months)
@@ -482,29 +486,29 @@ def funnel(rep):
     shares = [r["share_found_mw"] for r in rows]
     title = "Share of each connection batch's offers that reached a contracted list"
     finding = (f"{min(shares):.0%} to {max(shares):.0%} of what each batch offered has ever "
-               "appeared on a list, by MW.")
+               "appeared on a list, by MW, using the offer-by-offer count.")
     fig, ax = _fig(10, 4.8)
     y = list(range(len(rows)))
-    w = 0.36
-    ax.barh([yi - w / 2 - 0.01 for yi in y], [r["share_found_mw"] for r in rows], height=w,
-            color=NAVY)
-    ax.barh([yi + w / 2 + 0.01 for yi in y], [r["share_tagged"] for r in rows], height=w,
-            color=GREY)
     for yi, r in zip(y, rows, strict=True):
-        ax.text(r["share_found_mw"] + 0.01, yi - w / 2, f"{r['share_found_mw']:.0%} by MW, "
-                f"{r['found']} of {r['offered']} offers matched", va="center", fontsize=8.5,
+        a, b = r["share_found_mw"], r["share_tagged"]
+        ax.hlines(yi, min(a, b), max(a, b), color=BORDER, linewidth=3, zorder=1)
+        ax.text(min(a, b) - 0.015, yi, f"{min(a, b):.0%}", ha="right", va="center", fontsize=9,
                 color=TEXT)
-        ax.text(r["share_tagged"] + 0.01, yi + w / 2, f"{r['share_tagged']:.0%} by the lists' own "
-                "batch tags", va="center", fontsize=8.5, color=MUTED)
+        ax.text(max(a, b) + 0.015, yi, f"{max(a, b):.0%}", ha="left", va="center", fontsize=9,
+                color=TEXT)
+    ax.scatter([r["share_found_mw"] for r in rows], y, s=90, color=NAVY, zorder=3,
+               edgecolors="white", linewidths=1.5, label="matched offer by offer")
+    ax.scatter([r["share_tagged"] for r in rows], y, s=90, color=GREY, zorder=3,
+               edgecolors="white", linewidths=1.5, label="the lists' batch tags")
+    ax.legend(loc="lower left", frameon=False, fontsize=9, labelcolor=TEXT, handletextpad=0.3)
     ax.set_yticks(y, [f"{r['batch']}  ({r['results']})" for r in rows])
     ax.invert_yaxis()
-    ax.set_xlim(0, 1.0)
+    ax.set_xlim(0, 0.8)
     ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_xlabel("share of the batch's offers found on a list", color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.22, right=0.97)
-    _frame(fig, title, f"{finding} Two independent counts: matching each offer to a list row by "
-           "name and size (strict, so a lower bound), and the batch tags the lists print. ESB's "
-           "lists in the store start long after the early batches, so those are undercounted.",
+    _frame(fig, title, f"{finding} Offer by offer is strict, so it is a minimum. Early batches are "
+           "undercounted, because the ESB lists kept here start after those batches.",
            f"Source: ECP batch results publications; {LISTS_CREDIT} · "
            f"Report of {fmt_date(_d(rep['report_date']))}")
     return fig
@@ -536,7 +540,7 @@ def external(rep):
     ax.set_xlim(0, c["theirs_mw"] * 1.25)
     ax.set_xlabel("MW of installed wind capacity", color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.24, right=0.97)
-    _frame(fig, title, f"MW, {c['label'].lower()}, {fmt_date(_d(c['as_of']))}. {finding} The "
+    _frame(fig, title, f"MW, {c['label'][0].lower()}{c['label'][1:]}, {fmt_date(_d(c['as_of']))}. {finding} The "
            "published figure comes from SEAI, which draws on EirGrid and ESB data, so this checks "
            "our reading of the lists, not the lists themselves.",
            f"Source: EirGrid connected wind list ({c['tso_edition']}); ESB energised renewable list "
@@ -573,9 +577,9 @@ def firm(rep):
     ax.xaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=0))
     ax.set_xlabel("share of contracted MW that counts as firm capacity", color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.25, right=0.97)
-    _frame(fig, title, f"The de-rating factors the system operators publish, applied at each "
-           f"project's size. {finding} {f['left_alone_mw'] / 1000:.2f} GW "
-           f"({f['left_alone_share']:.0%} of the queue) has no factor: hybrids, the interconnector to France, emergency generation, "
+    _frame(fig, title, f"The capacity auction counts each MW only by how reliably it is available. "
+           f"{finding} {f['left_alone_mw'] / 1000:.2f} GW "
+           f"({f['left_alone_share']:.0%} of the queue) has no published rating: hybrids, the interconnector to France, emergency generation, "
            "combined heat and power and smaller technologies.",
            f"Source: {LISTS_CREDIT}; SEM capacity auction de-rating factors for {f['latest_year']} · "
            f"{_as_of(rep)}")
@@ -595,36 +599,40 @@ def plan(rep):
         (f"Storage added, {s['from_year']} to {s['to_year']}", s["added_mw"], BLUE),
     ]
     fig, ax = _fig(10, 4.2)
-    y = list(range(len(bars)))
+    y = [0, 1, 2, 3.5, 4.5]  # the gap separates gas from storage
     for yi, (_, mw, colour) in zip(y, bars, strict=True):
         ax.barh(yi, mw, height=0.6, color=colour)
         ax.text(mw + 25, yi, f"{mw:,.0f} MW", va="center", fontsize=9, color=TEXT)
     ax.set_yticks(y, [b[0] for b in bars])
     ax.invert_yaxis()
     ax.set_xlim(0, max(b[1] for b in bars) * 1.18)
-    ax.set_xlabel("MW (dark: the contracted lists; light: what the assessment assumes)", color=MUTED, fontsize=9.5)
+    ax.set_xlabel("MW (navy: on the contracted lists; blue: what the assessment assumes)", color=MUTED, fontsize=9.5)
     fig.subplots_adjust(left=0.40, right=0.97)
     title = (f"The adequacy assessment expects {g['expected_mw']:,.0f} MW of new gas and adds "
              f"{s['added_mw']:,.0f} MW of storage; the lists hold {g['queue_mw']:,.0f} MW and "
              f"{s['queue_mw']:,.0f} MW")
     _frame(fig, title,
-           f"Its stated secure-case deficit, around {n['deficit_start_mw']:,.0f} MW to over "
+           f"The shortfall in its cautious case, around {n['deficit_start_mw']:,.0f} MW to over "
            f"{n['deficit_end_mw']:,.0f} MW in {n['deficit_end_year']}, is {n['deficit_share_low']:.0%} to "
            f"{n['deficit_share_high']:.0%} of what the queue counts for. The assessment's deliveries come "
-           "from the same projects the lists hold, so the two are not additive.",
+           "from the same projects the lists hold, so the two should not be added.",
            f"Source: {q['source']['name']}, read {q['source']['checked_on']}; {LISTS_CREDIT} · {_as_of(rep)}")
     return fig
 
 
 # ---------------------------------------------------------------- scoring the plan
 
+def _edition(name: str) -> str:
+    return name.replace("GCS", "Capacity statement").replace("AIRAA", "Adequacy assessment")
+
+
 def score(rep):
     p = rep["plan_score"]
     scored = [y for y in p["years"] if y["scored"] and y["editions"]]
     y = scored[-1]
-    bars = [(f"Arrived by the end of {y['year']} (a floor)", y["observed_mw"], NAVY)]
-    bars += [(f"{e['edition']} expected", e["expected_mw"], BLUE) for e in y["editions"]]
-    bars += [(f"{e['edition']}: everything awarded, on time", e["naive_mw"], GREY)
+    bars = [(f"Arrived by the end of {y['year']} (a minimum)", y["observed_mw"], NAVY)]
+    bars += [(f"{_edition(e['edition'])} expected", e["expected_mw"], BLUE) for e in y["editions"]]
+    bars += [(f"{_edition(e['edition'])}: if all awards arrived on time", e["naive_mw"], GREY)
              for e in y["editions"] if e["naive_mw"] is not None]
     fig, ax = _fig(10, 4.4)
     ys = list(range(len(bars)))
@@ -635,17 +643,17 @@ def score(rep):
     ax.invert_yaxis()
     ax.set_xlim(0, max(b[1] for b in bars) * 1.15)
     ax.set_xlabel(f"rated MW, cumulative from the start of {p['start_year']}", color=MUTED, fontsize=9.5)
-    fig.subplots_adjust(left=0.38, right=0.97)
+    fig.subplots_adjust(left=0.42, right=0.97)
     expected = [e["expected_mw"] for e in y["editions"]]
     title = (f"At least {y['observed_mw']:,.0f} MW of new conventional plant had arrived by the end of "
-             f"{y['year']}; the system operators' editions expected {min(expected):,.0f} to {max(expected):,.0f} MW")
+             f"{y['year']}; the grid operators' reports expected {min(expected):,.0f} to {max(expected):,.0f} MW")
     open_year = next((o for o in p["years"] if not o["scored"] and o["editions"]), None)
     needs = "" if open_year is None else (
-        f" By the end of {open_year['year']}, still open, the editions need "
+        f" By the end of {open_year['year']}, still open, the reports need "
         f"{min(e['still_needs_mw'] for e in open_year['editions']):,.0f} to "
         f"{max(e['still_needs_mw'] for e in open_year['editions']):,.0f} MW more.")
-    _frame(fig, title, "Each edition is scored only on years after its data freeze. Arrived is a floor: "
-           f"EirGrid's lists can't date a transmission connection.{needs}",
+    _frame(fig, title, "Each report is scored only on years after it was written. Arrived is a minimum, "
+           f"because EirGrid's lists can't date a transmission connection.{needs}",
            f"Source: EirGrid and SONI capacity statements and adequacy assessments; {LISTS_CREDIT}; lists to {p['as_of']}")
     return fig
 

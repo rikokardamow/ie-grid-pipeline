@@ -1,5 +1,7 @@
 # Layer 6: ESB's 2017-2023 lists, read
 
+**In plain English.** ESB's older lists, from 2017 to 2023, had been saved but never read. This layer reads them and uses them to test some of the project's earlier claims.
+
 **What it adds.** The 23 archived ESB editions from before the current lists (contracted and
 energised, wind and non-wind, Sep 2017 to Apr 2023), unread since g3b, now read: 3,068 rows,
 each edition gated. It is infrastructure, but it earned its place by testing three of the

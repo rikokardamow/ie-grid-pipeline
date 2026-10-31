@@ -1,72 +1,101 @@
 # ie-grid-pipeline
 
-A record of Ireland's grid connection queue, kept from the PDF lists that EirGrid and ESB Networks publish: how much generation is waiting to connect, what moved, what is stuck, and where.
+Ireland has a long queue of power projects waiting to connect to the grid. This project keeps a record of that queue: how much is waiting, what moved, what is stuck, and where.
 
-The two grid companies each publish a list of projects that have signed a connection agreement but are not yet connected, EirGrid for the transmission grid and ESB Networks for the distribution grid. Each new edition replaces the last, so the history disappears unless somebody keeps it. This repository keeps it. Every edition is stored as published with the date it describes, the date it went up and the date it was fetched, and older editions back to 2015 are recovered from the Internet Archive. An edition is only accepted once it ties to itself: the same project references as the page text, and total MW within 1 MW of the printed total.
+The two grid companies, EirGrid and ESB Networks, publish lists of these projects as PDFs. Each new list replaces the last, so the history disappears unless somebody keeps it. This repository stores every list it can find, back to 2015, and turns them into a weekly report, a web page and the charts below. It only records what happened and makes no forecasts.
 
-From that store it builds a weekly report (PDF, JSON and a static web page) and the charts below. It does not forecast anything. The one "years of delivery" figure is a ratio and is labelled as one.
+## The main findings
 
-## What the lists say
+- **16.57 GW is waiting.** That is the capacity that has signed to connect but is not connected yet. Solar is a third of it.
+- **Being in the queue doesn't mean being built soon.** 15 of the 16 wind projects we could check connected after their target date.
+- **Only part of the queue counts towards keeping the lights on.** Under the capacity auction's rules, 2.0 to 2.1 GW of the 12.0 GW that has a published rating counts, and more than half of that is gas.
+- **So how much gets built matters more than the queue's size.** The grid operators' own reports have mostly expected more new plant than has arrived.
 
-Report of 29 October 2026, with lists as of 5 August 2026 (transmission) and 1 July 2026 (distribution). Each chart is drawn from the report with `uv run python -m iegrid.readme_charts`.
+Figures are from the report of 30 October 2026, using lists dated 5 August 2026 (EirGrid) and 1 October 2026 (ESB Networks). They change as new lists arrive.
 
-16.66 GW has signed to connect and is not yet energised. Solar is a third of it.
+## Words used below
+
+- **Contracted:** the project has signed a connection agreement but isn't connected yet.
+- **Energised:** the project is connected and can export power.
+- **Transmission and distribution:** the large national grid, run by EirGrid, and the local grid, run by ESB Networks.
+- **Connection batch (ECP):** a group of projects that applied together and got their offers together, such as ECP-1 or ECP-2.1.
+- **MW and GW:** units of capacity. 1 GW is 1,000 MW. The lists count the most power each project may export.
+
+## How much is waiting?
+
+Solar is the largest group, followed by gas and oil, wind, and hybrid projects.
 
 ![Generation contracted to connect, by technology](docs/img/technology.png)
 
+The transmission queue was small until about 2020, and nearly all its growth since has been non-wind. Wind stands at 2.05 GW and everything else at 12.64 GW.
+
 ![Contracted capacity on the transmission grid, every list since 2015](docs/img/history.png)
 
-2025 was the biggest year for joining the transmission lists.
+## What is moving?
+
+2025 was the biggest year for joining the transmission lists: 4.28 GW joined and 0.33 GW left.
 
 ![Capacity joining and leaving the transmission lists, by year](docs/img/flows.png)
 
-Compared at the same age, the oldest connection batch connected fastest, and no later batch has passed 1% three years after its results.
-
-![Share of each connection batch energised three years after its results](docs/img/burndown.png)
-
-Each circle below is a connection substation, sized by the MW waiting there, drawn on OpenStreetMap's lines. The blue ones are 20 km or more from the 220, 275 and 400 kV network.
-
-![Contracted capacity by connection substation](docs/img/map.png)
-
-![Contracted generation by county](docs/img/counties.png)
-
-EirGrid posts its lists about five days after the date they describe, ESB Networks about a month, so the distribution side of any weekly report runs a month behind.
-
-![Days from each list's as-of date to its publication](docs/img/freshness.png)
-
-86 projects have left the contracted lists for good. Where a connected list exists it says what happened to them; where it does not, the outcome is left as unknown rather than read as "not connected".
+86 projects have left the lists for good. 36 connected in some form and 42 are unknown. An unknown stays unknown here: it is never counted as "not connected".
 
 ![What became of the projects that left the contracted lists](docs/img/left.png)
 
-Dividing the contracted MW by the MW energised each year gives a sense of scale, not a forecast, because most contracted MW never energises.
+## What is stuck?
+
+Three years after their results, 9.5% of the oldest batch's MW on the local grid was connected. No later batch has passed 1.1%.
+
+![Share of each connection batch energised three years after its results](docs/img/burndown.png)
+
+Only part of each batch's offers ever reaches a list: 36% to 53% matching offer by offer, and 29% to 64% using the lists' own batch labels.
+
+![Share of each connection batch's offers that reached a contracted list](docs/img/funnel.png)
+
+## How fast does it get built?
+
+These two charts show how much connects each year. Dividing the queue by that pace gives a sense of scale. At recent rates it comes to 18.3 years on the local grid and 20.6 for wind on the national grid. This isn't a forecast, because most contracted capacity never gets built.
 
 ![MW energised each year, distribution](docs/img/pace-dso.png)
 
 ![MW energised each year, transmission wind](docs/img/pace-tso.png)
 
-Of the wind projects whose target connection month EirGrid printed, 15 of 16 connected after it.
+Of the 16 wind projects with a printed target month that we could follow, 15 connected late, by a median of 9.5 months.
 
 ![Months from the target connection month to completion](docs/img/slippage.png)
 
-Between a third and a half of what each connection batch offered has ever appeared on a contracted list, counted two independent ways.
+## Where is it?
 
-![Share of each connection batch's offers that reached a contracted list](docs/img/funnel.png)
+Each circle is a substation, sized by the capacity waiting there. The blue ones are 20 km or more from the main high-voltage network, and they hold 1.36 GW across 42 substations.
 
-As a check, the two publishers' wind lists add up to within 3% of the national total published for the end of 2022.
+![Contracted capacity by connection substation](docs/img/map.png)
 
-![Wind capacity on the lists against the published national total](docs/img/external.png)
+![Contracted generation by county](docs/img/counties.png)
 
-Under the capacity auction's de-rating factors, about 2.1 GW of the 12.1 GW with a published factor counts as firm capacity, and gas turbines make up 56% to 59% of that.
+## How much of it can be relied on?
+
+A wind or solar farm doesn't produce whenever it is needed, so the capacity auction counts it for less. Only a small share of wind, solar and battery capacity counts, compared with 77% of gas turbines. Gas makes up 56% to 59% of what counts.
 
 ![Share of contracted MW that counts as capacity](docs/img/firm.png)
 
-Against the system operator's own plan: EirGrid and SONI's resource adequacy assessment expects 1,900 MW of new gas and adds 660 MW of storage by 2029, while the contracted lists hold 1,524 MW of gas turbines (without emergency units) and 1,789 MW of batteries. Its stated deficit is a fifth or less of what the queue counts for, so how much of the queue gets built matters more than its size.
+The system's official plan, the adequacy assessment, expects 1,900 MW of new gas by 2030 and adds 660 MW of storage from 2026 to 2029. The lists hold 1,524 MW of gas turbines and 1,789 MW of batteries. The plan's shortfall in its cautious case is a fifth or less of what the queue counts for, so delivery is what matters.
 
 ![The queue against the adequacy assessment's assumptions](docs/img/plan.png)
 
-And scoring that plan: each edition prints what it expects by year. At least 307 MW of new conventional plant had arrived by the end of 2025, against 310 to 530 MW expected and 980 to 1,510 MW awarded in the auctions. The editions' discount on the auctions has been worth having, and most have still run ahead of delivery. For the end of 2026 they need 495 to 793 MW more.
+The grid operators' reports can be scored against what happened. At least 307 MW of new conventional plant had arrived by the end of 2025. They had expected 310 to 530 MW, while the auctions had awarded 980 to 1,510 MW. So their expectations were much closer than the auction totals, though most still ran ahead of delivery. For the end of 2026 they need 495 to 793 MW more.
 
 ![New conventional plant expected and arrived](docs/img/score.png)
+
+## Can these numbers be trusted?
+
+A list is only accepted once it agrees with itself: the same project references as the page text, and a total within 1 MW of the printed total. Every list keeps three dates: the date it describes, the date it went up and the date it was fetched.
+
+As an outside check, the two companies' wind lists add up to within 3% of the national total published for the end of 2022.
+
+![Wind capacity on the lists against the published national total](docs/img/external.png)
+
+EirGrid posts its lists about 5 days after the date they describe and ESB Networks about 28, so the local-grid side of any weekly report runs about a month behind.
+
+![Days from each list's as-of date to its publication](docs/img/freshness.png)
 
 ## Running it
 
@@ -96,5 +125,3 @@ Eleven further studies sit on top of the record in `docs/layers/`, each with its
 ## Data and licence
 
 The code is MIT. The lists belong to their publishers; ESB Networks and EirGrid have each confirmed permission to use them here, credit lines stay on every chart, and the full credits are in `NOTICE`. Grid lines and substations are © OpenStreetMap contributors (ODbL). The raw PDFs and the store are not redistributed.
-
-A few terms, since the lists use them: *contracted* means a signed connection agreement but not yet connected; *energised* means connected and exporting; an *ECP batch* is a group of projects that applied together under the Enduring Connection Policy (ECP-1, ECP-2.1 and so on) and got their offers together; *MEC* is maximum export capacity, the MW a project may export, which is what the lists add up.

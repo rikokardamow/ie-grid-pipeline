@@ -1,5 +1,7 @@
 # Layer 9: how much of the queue counts as capacity
 
+**In plain English.** Not every megawatt counts equally: a gas plant can run when needed, while a wind farm can't always. This layer applies the capacity auction's published ratings to the queue to show how much of it counts. Figures in this file are from the date it states. Any chart comes from the latest weekly report, so it may be newer.
+
 **What it adds.** 16.7 GW of contracted nameplate is the number every list prints. The Irish capacity
 auction counts a unit by a de-rated MW: its size times a de-rating factor the system operators publish for
 each auction. This layer counts the queue that way, from the factors themselves, so the page can say how

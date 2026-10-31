@@ -1,5 +1,7 @@
 # Layer 1: connected outcomes
 
+**In plain English.** When a project drops off the waiting lists, was it built, or did it give up? This layer checks each one against the lists of connected projects. If the records can't say, the answer stays "unknown" rather than being guessed.
+
 **What it adds.** For each project that left the contracted lists for good, it says what the
 connected lists show: connected, connected as a phase of another project, connected on the
 distribution grid, on no connected list, or unknown, with the reason. It replaces the page's
