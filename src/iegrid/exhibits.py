@@ -1,13 +1,14 @@
 """One exhibit per stone: what the data that stone added actually says.
 
-Drawn to the record's chart rules (energy-forecasting docs/CHARTS.md): the title
-states the finding and is computed from the data, the subtitle gives the units,
-and a footer names source, licence and as-of. Colours are the record's tokens
-(site/styles/tokens.css), light mode, since the same figure is exported as a PNG.
+Drawn in the paper format (src/iegrid/paper_style.py, docs/FIGURES.md): 7.0 in wide, serif
+type between 6 and 9 pt, a label with its unit on every axis, and no title, subtitle or footer
+on the image. The title (a finding computed from the data), the units, the source with its
+credit and the as-of date go into the LaTeX caption written beside each figure. The record's
+chart rules (energy-forecasting docs/CHARTS.md) still apply to what is drawn: the series are
+named where they are drawn, not in a legend box.
 
-Each function returns a matplotlib figure: a notebook shows it inline, and
-save() writes it to data/exhibits/<name>.png at 1650x840-odd pixels. No backend
-is forced here, so Jupyter's inline display works.
+Each function returns a matplotlib figure: a notebook shows it with paper_style.show, and
+save() writes data/exhibits/<name>.pdf, .png (300 dpi) and .tex.
 """
 
 from __future__ import annotations
@@ -17,15 +18,21 @@ from decimal import Decimal
 from pathlib import Path
 
 import matplotlib.dates
-import matplotlib.pyplot as plt
 
+from iegrid import paper_style as ps
 from iegrid import parse, store
 
+NAVY, BLUE, GREY = ps.PALETTE[0], ps.PALETTE[1], ps.PALETTE[2]
+TEXT, MUTED, BORDER = ps.TOKENS["text"], ps.TOKENS["text_muted"], ps.TOKENS["border"]
+# The names the weekly page (report.py) reads.
 TOKENS = {
-    "bg": "#FFFFFF", "border": "#DCE3EC", "text": "#0B1F3A", "muted": "#5B6878",
-    "series1": "#0F2A4A", "series3": "#7D8996", "accent": "#1F5FBF",
+    "bg": ps.TOKENS["bg"], "border": BORDER, "text": TEXT, "muted": MUTED,
+    "series1": NAVY, "series3": GREY, "accent": BLUE,
 }
-LICENCE = "not for publication: ESB Networks' terms (PARKING.md)"
+LISTS_CREDIT = ("EirGrid contracted lists, Supported by EirGrid Group Data; ESB Networks DSO "
+                "lists, \u00a9 ESB Networks, used with their permission")
+LABEL = 7.0  # the size of the value labels printed on the bars, in points
+SMALL = 6.5  # the smallest text the paper format allows on a chart
 
 # The lists use about 30 technology labels. These are the groups a reader knows.
 TECH_GROUP = {
@@ -47,27 +54,35 @@ def group(technology: str) -> str:
     return TECH_GROUP.get(technology, OTHER)
 
 
-def _style(fig, ax) -> None:
-    fig.patch.set_facecolor(TOKENS["bg"])
-    ax.set_facecolor(TOKENS["bg"])
-    for side in ("top", "right", "left"):
-        ax.spines[side].set_visible(False)
-    ax.spines["bottom"].set_color(TOKENS["border"])
-    ax.tick_params(colors=TOKENS["muted"], labelsize=10, length=0)
-    ax.grid(axis="x", color=TOKENS["border"], linewidth=0.8)
-    ax.set_axisbelow(True)
+def new_figure(height: float, *, bars: bool = False, width: float = ps.FULL):
+    """A paper-format figure and its one axes. `bars=True` puts the grid on the value (x) axis,
+    for horizontal bars; otherwise it is horizontal, as the paper style draws it."""
+    fig, axes = ps.figure(size=(width, height), sharex=False)
+    ax = axes[0][0]
+    if bars:
+        ax.grid(axis="y", visible=False)
+        ax.grid(axis="x", visible=True)
+    return fig, ax
 
 
-def _frame(fig, title: str, subtitle: str, footer: str) -> None:
-    from textwrap import fill
+def _extent_in(fig, labels, axis: int) -> float:
+    """The largest width (axis 0) or height (axis 1) of these tick labels, in inches."""
+    renderer = fig.canvas.get_renderer()
+    sizes = [(t.get_window_extent(renderer).width, t.get_window_extent(renderer).height)[axis]
+             for t in labels if t.get_text()]
+    return max(sizes, default=0.0) / fig.dpi
 
-    width_in = fig.get_size_inches()[0]
-    fig.text(0.02, 0.965, title, ha="left", va="top", fontsize=15, weight="bold",
-             color=TOKENS["text"])
-    fig.text(0.02, 0.905, fill(subtitle, int(width_in * 12.5)), ha="left", va="top",
-             fontsize=10.5, color=TOKENS["muted"], linespacing=1.4)
-    fig.text(0.02, 0.02, fill(footer, int(width_in * 16)), ha="left", va="bottom",
-             fontsize=8.5, color=TOKENS["muted"], linespacing=1.4)
+
+def frame_fit(fig, ax, *, title: str, source: str, asof: date | str, units: str,
+              xlabel: str, ylabel: str, subtitle: str | None = None, right: float = 0.15,
+              top: float = 0.12, bottom_extra: float = 0.0) -> None:
+    """Caption, axis labels and margins. The left margin follows the widest y tick label and
+    the bottom one the tallest x tick label, so a long category name never leaves the figure."""
+    fig.canvas.draw()
+    left = _extent_in(fig, ax.get_yticklabels(), 0) + 0.38
+    bottom = _extent_in(fig, ax.get_xticklabels(), 1) + 0.46 + bottom_extra
+    ps.frame(fig, title=title.rstrip("."), subtitle=subtitle, source=source, asof=asof,
+             units=units, xlabel=xlabel, ylabel=ylabel, margins=(left, right, top, bottom))
 
 
 def fmt_date(d: date) -> str:
@@ -75,13 +90,13 @@ def fmt_date(d: date) -> str:
 
 
 EXHIBITS = store.ROOT / "data" / "exhibits"
+FORMATS = ("pdf", "png", "tex")  # no svg: the repository has never committed one
 
 
 def save(fig, name: str, out_dir: Path = EXHIBITS) -> Path:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    path = out_dir / f"{name}.png"
-    fig.savefig(path, facecolor=fig.get_facecolor())
-    return path
+    """Write <name>.pdf, .png and .tex under out_dir; returns the PNG's path."""
+    written = ps.save(fig, Path(out_dir) / name, formats=FORMATS)
+    return next(p for p in written if p.suffix == ".png")
 
 
 def _span(values: list[int]) -> str:
@@ -112,26 +127,24 @@ def publication_lag(con):
     dso = [r[3] for r in rows if r[0].startswith("esb")]
     title = (f"EirGrid's lists go up {_span(tso)} days after their as-of date; "
              f"ESB's take {_span(dso)}")
-    fig, ax = plt.subplots(figsize=(11, 4.6), dpi=150)
-    _style(fig, ax)
+    fig, ax = new_figure(3.0, bars=True)
     labels = [r[0].split(".", 1)[1].replace("_", " ") for r in rows]
     y = range(len(rows))
-    ax.hlines(y, 0, lags, color=TOKENS["border"], linewidth=2)
-    ax.scatter(lags, y, s=64, color=TOKENS["series1"], zorder=3,
-               edgecolors=TOKENS["bg"], linewidths=2)
+    ax.hlines(y, 0, lags, color=BORDER, linewidth=1.4)
+    ax.scatter(lags, y, s=26, color=NAVY, zorder=3, edgecolors=ps.TOKENS["bg"], linewidths=1)
     for yi, r in zip(y, rows, strict=True):
-        ax.text(r[3] + 0.8, yi, f"{r[3]} days · as of {r[1]:%-d %b}, up {r[2]:%-d %b}",
-                va="center", fontsize=9, color=TOKENS["text"])
+        ax.text(r[3] + 0.8, yi, f"{r[3]} days \u00b7 as of {r[1]:%-d %b}, up {r[2]:%-d %b}",
+                va="center", fontsize=LABEL, color=TEXT)
     ax.set_yticks(list(y), labels)
     ax.invert_yaxis()
     ax.set_xlim(0, max(lags) * 1.6)
-    ax.set_xlabel("days from as-of date to publication", color=TOKENS["muted"], fontsize=9.5)
-    fig.subplots_adjust(left=0.24, right=0.97, top=0.82, bottom=0.2)
-    _frame(fig, title,
-           "So a weekly report built on these lists shows the distribution grid about a month "
-           "late. Publication = the server's Last-Modified time.",
-           f"Source: EirGrid connected and contracted generators; ESB Networks generator "
-           f"statistics · {LICENCE} · As of {fmt_date(max(r[2] for r in rows))}")
+    frame_fit(fig, ax, title=title,
+              subtitle="So a weekly report built on these lists shows the distribution grid about "
+                       "a month late. Publication is the server's Last-Modified time.",
+              source=f"EirGrid connected and contracted generators; ESB Networks generator "
+                     f"statistics; {LISTS_CREDIT}",
+              asof=max(r[2] for r in rows), units="days",
+              xlabel="Delay from as-of date to publication (days)", ylabel="List")
     return fig
 
 
@@ -167,36 +180,34 @@ def contracted_by_technology(con):
     share = sum(groups[top]) / total
     title = (f"{total / 1000:.1f} GW has signed to connect to Ireland's grid; "
              f"{top.lower()} is {share:.0%} of it")
-    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
-    _style(fig, ax)
+    fig, ax = new_figure(3.3, bars=True)
     y = list(range(len(order)))
     tso = [float(groups[g][0]) / 1000 for g in order]
     dso = [float(groups[g][1]) / 1000 for g in order]
-    ax.barh(y, tso, height=0.62, color=TOKENS["series1"])
-    ax.barh(y, dso, left=tso, height=0.62, color=TOKENS["series3"],
-            edgecolor=TOKENS["bg"], linewidth=2)  # 2px surface gap between the two parts
+    ax.barh(y, tso, height=0.62, color=NAVY)
+    ax.barh(y, dso, left=tso, height=0.62, color=GREY, edgecolor=ps.TOKENS["bg"], linewidth=1)
     for yi, g, t, d in zip(y, order, tso, dso, strict=True):
-        split = f"  {t:.2f} transmission · {d:.2f} distribution" if d >= 0.005 else ""
-        ax.text(t + d + 0.08, yi, f"{t + d:.1f} GW{split}", va="center", fontsize=9.5,
-                color=TOKENS["text"])
+        split = f"  {t:.2f} transmission \u00b7 {d:.2f} distribution" if d >= 0.005 else ""
+        ax.text(t + d + 0.08, yi, f"{t + d:.1f} GW{split}", va="center", fontsize=LABEL,
+                color=TEXT)
     ax.set_yticks(y, order)
     ax.invert_yaxis()
     ax.set_xlim(0, max(t + d for t, d in zip(tso, dso, strict=True)) * 1.75)
-    ax.set_xlabel("GW (maximum export capacity)", color=TOKENS["muted"], fontsize=9.5)
     # direct legend: name the two parts on the largest bar
-    ax.text(tso[0] / 2, -0.52, "transmission", ha="center", va="bottom", fontsize=9,
-            color=TOKENS["series1"])
-    ax.text(tso[0] + dso[0] / 2, -0.52, "distribution", ha="center", va="bottom", fontsize=9,
-            color=TOKENS["muted"])
-    fig.subplots_adjust(left=0.2, right=0.97, top=0.76, bottom=0.2)
+    ax.text(tso[0] / 2, -0.52, "transmission", ha="center", va="bottom", fontsize=LABEL,
+            color=NAVY)
+    ax.text(tso[0] + dso[0] / 2, -0.52, "distribution", ha="center", va="bottom",
+            fontsize=LABEL, color=MUTED)
     tso_mw, dso_mw = sum(g[0] for g in groups.values()), sum(g[1] for g in groups.values())
-    _frame(fig, title,
-           f"Signed connection agreements not yet energised: {tso_mw / 1000:.1f} GW on "
-           f"transmission (EirGrid) and {dso_mw / 1000:.1f} GW on distribution (ESB Networks). "
-           f"Other includes a 288 MW demand-side autoproducer.",
-           f"Source: EirGrid TSO contracted wind and non-wind lists, as of "
-           f"{fmt_date(as_of[True])}; ESB Networks DSO contracted renewable and non-renewable "
-           f"lists, as of {fmt_date(as_of[False])} · {LICENCE}")
+    frame_fit(fig, ax, title=title,
+              subtitle=f"Signed connection agreements not yet energised: {tso_mw / 1000:.1f} GW on "
+                       f"transmission (EirGrid) and {dso_mw / 1000:.1f} GW on distribution (ESB "
+                       f"Networks). Other includes a 288 MW demand-side autoproducer.",
+              source=f"EirGrid TSO contracted wind and non-wind lists, as of "
+                     f"{fmt_date(as_of[True])}; ESB Networks DSO contracted renewable and "
+                     f"non-renewable lists, as of {fmt_date(as_of[False])}; {LISTS_CREDIT}",
+              asof=max(as_of.values()), units="GW",
+              xlabel="Maximum export capacity (GW)", ylabel="Technology", top=0.28)
     return fig
 
 
@@ -246,39 +257,33 @@ def queue_growth(con):
     n0, n1 = nonwind[0], nonwind[-1]
     title = (f"Non-wind waiting to connect to the transmission grid: {n0[1]:.1f} GW in "
              f"{n0[0].year}, {n1[1]:.1f} GW now")
-    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
-    _style(fig, ax)
-    ax.grid(axis="x", visible=False)
-    ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
+    fig, ax = new_figure(3.6)
     for d, label in ecp_results(con):
-        ax.axvline(d, color=TOKENS["border"], linewidth=1, zorder=1)
-        ax.text(d, n1[1] * 1.04, label, ha="center", va="bottom", fontsize=8.5,
-                color=TOKENS["muted"])
-    for pts, color, name in ((nonwind, TOKENS["series1"], "non-wind"),
-                             (wind, TOKENS["series3"], "wind")):
+        ax.axvline(d, color=BORDER, linewidth=0.7, zorder=1)
+        ax.text(d, n1[1] * 1.04, label, ha="center", va="bottom", fontsize=SMALL, color=MUTED)
+    for pts, color, name, dash in ((nonwind, NAVY, "non-wind", "-"), (wind, GREY, "wind", "--")):
         xs, ys = [p[0] for p in pts], [p[1] for p in pts]
-        ax.plot(xs, ys, color=color, linewidth=2, zorder=3)
-        ax.scatter(xs, ys, s=14, color=color, zorder=4, edgecolors=TOKENS["bg"], linewidths=1)
-        ax.scatter(xs[-1:], ys[-1:], s=64, color=color, zorder=5, edgecolors=TOKENS["bg"],
-                   linewidths=2)
+        ax.plot(xs, ys, color=color, linewidth=1.2, linestyle=dash, zorder=3)
+        ax.scatter(xs, ys, s=5, color=color, zorder=4, edgecolors=ps.TOKENS["bg"], linewidths=0.4)
+        ax.scatter(xs[-1:], ys[-1:], s=22, color=color, zorder=5, edgecolors=ps.TOKENS["bg"],
+                   linewidths=1)
         ax.annotate(f"{name} {ys[-1]:.1f} GW", (xs[-1], ys[-1]),
-                    xytext=(8, 0), textcoords="offset points", va="center", fontsize=9.5,
-                    color=TOKENS["text"])
+                    xytext=(6, 0), textcoords="offset points", va="center", fontsize=LABEL,
+                    color=TEXT)
     ax.set_ylim(0, n1[1] * 1.12)
     ax.set_xlim(date(n0[0].year, 1, 1), date(n1[0].year + 3, 1, 1))
     ax.set_xticks([date(y, 1, 1) for y in range(n0[0].year + 1, n1[0].year + 1, 2)])
     ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-    ax.set_ylabel("GW contracted, not yet connected", color=TOKENS["muted"], fontsize=9.5)
-    ax.spines["left"].set_visible(False)
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.73, bottom=0.17)
     top = _top_groups(con, "eirgrid.tso_contracted_nonwind", 3)
-    _frame(fig, title,
-           f"Total maximum export capacity printed on each EirGrid contracted list: "
-           f"{len(nonwind)} non-wind and {len(wind)} wind editions from {n0[0]:%b %Y}. Each dot "
-           f"is one edition; rules mark the results of each connection batch (ECP). The largest "
-           f"non-wind groups now: {top}.",
-           f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
-           f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(n1[0])}")
+    frame_fit(fig, ax, title=title,
+              subtitle=f"Total maximum export capacity printed on each EirGrid contracted list: "
+                       f"{len(nonwind)} non-wind and {len(wind)} wind editions from "
+                       f"{n0[0]:%b %Y}. Each dot is one edition; rules mark the results of each "
+                       f"connection batch (ECP). The largest non-wind groups now: {top}.",
+              source="EirGrid TSO contracted wind and non-wind lists, read from the Internet "
+                     "Archive and eirgrid.ie; Supported by EirGrid Group Data",
+              asof=n1[0], units="GW", xlabel="List edition date (year)",
+              ylabel="Contracted, not yet connected (GW)", top=0.12)
     return fig
 
 
@@ -298,6 +303,8 @@ def contracted_by_county(con):
          and r.parser_version = {pv}
         where c.build_id = ? group by all
     """, [build]).fetchall()
+    asof = con.execute("select max(p.as_of) from project_county c join publication p "
+                       "using (publication_id) where c.build_id = ?", [build]).fetchone()[0]
     links = sum(r[4] for r in rows if r[3])
     gen = [r for r in rows if not r[3]]
     gen_total = sum(r[4] for r in gen)
@@ -312,36 +319,35 @@ def contracted_by_county(con):
     top3 = sum(sum(by[c]) for c in order[:3]) / placed
     title = (f"{order[0]} has the most generation waiting to connect, "
              f"{sum(by[order[0]]) / 1000:.1f} GW; three counties hold {top3:.0%} of it placed")
-    fig, ax = plt.subplots(figsize=(11, 8.4), dpi=150)
-    _style(fig, ax)
+    fig, ax = new_figure(6.4, bars=True)
     y = list(range(len(order)))
     tso = [float(by[c][0]) / 1000 for c in order]
     dso = [float(by[c][1]) / 1000 for c in order]
-    ax.barh(y, tso, height=0.66, color=TOKENS["series1"])
-    ax.barh(y, dso, left=tso, height=0.66, color=TOKENS["series3"],
-            edgecolor=TOKENS["bg"], linewidth=2)
+    ax.barh(y, tso, height=0.66, color=NAVY)
+    ax.barh(y, dso, left=tso, height=0.66, color=GREY, edgecolor=ps.TOKENS["bg"], linewidth=0.8)
     for yi, t, d in zip(y, tso, dso, strict=True):
-        ax.text(t + d + 0.03, yi, f"{t + d:.2f}", va="center", fontsize=8.5, color=TOKENS["text"])
-    ax.set_yticks(y, order, fontsize=9)
+        ax.text(t + d + 0.03, yi, f"{t + d:.2f}", va="center", fontsize=SMALL, color=TEXT)
+    ax.set_yticks(y, order, fontsize=SMALL)
     ax.invert_yaxis()
     ax.set_xlim(0, max(t + d for t, d in zip(tso, dso, strict=True)) * 1.2)
-    ax.set_xlabel("GW contracted, not yet connected", color=TOKENS["muted"], fontsize=9.5)
-    ax.text(tso[0] / 2, -0.75, "transmission", ha="center", fontsize=9, color=TOKENS["series1"])
+    ax.text(tso[0] / 2, -0.75, "transmission", ha="center", fontsize=LABEL, color=NAVY)
     if dso[0] > 0.05:
-        ax.text(tso[0] + dso[0] / 2, -0.75, "distribution", ha="center", fontsize=9,
-                color=TOKENS["muted"])
-    fig.subplots_adjust(left=0.13, right=0.97, top=0.82, bottom=0.11)
-    _frame(fig, title,
-           f"Newest contracted lists: {gen_total / 1000:.1f} GW of generation and storage, of "
-           f"which {placed / 1000:.2f} GW ({float(placed / gen_total):.1%}) is placed in a county "
-           f"(the three-county share is of this); "
-           f"{links / 1000:.1f} GW of interconnectors left out. Placed by name in an ECP results "
-           f"publication {float(share['name']):.0%}, from a cited planning or developer source "
-           f"{float(share['cited']):.0%}, by where the connection node's other projects are "
-           f"{float(share['node']):.0%}, by the node's substation in OpenStreetMap "
-           f"{float(share['osm-node']):.0%} (the substation's county).",
-           f"Source: EirGrid and ESB Networks contracted lists; ECP batch results publications; "
-           f"substations © OpenStreetMap contributors (ODbL) · {LICENCE}")
+        ax.text(tso[0] + dso[0] / 2, -0.75, "distribution", ha="center", fontsize=LABEL,
+                color=MUTED)
+    frame_fit(fig, ax, title=title,
+              subtitle=f"Newest contracted lists: {gen_total / 1000:.1f} GW of generation and "
+                       f"storage, of which {placed / 1000:.2f} GW ({float(placed / gen_total):.1%}) "
+                       f"is placed in a county (the three-county share is of this); "
+                       f"{links / 1000:.1f} GW of interconnectors left out. Placed by name in an "
+                       f"ECP results publication {float(share['name']):.0%}, from a cited planning "
+                       f"or developer source {float(share['cited']):.0%}, by where the connection "
+                       f"node's other projects are {float(share['node']):.0%}, by the node's "
+                       f"substation in OpenStreetMap {float(share['osm-node']):.0%} (the "
+                       f"substation's county).",
+              source=f"EirGrid and ESB Networks contracted lists; ECP batch results publications; "
+                     f"substations \u00a9 OpenStreetMap contributors (ODbL); {LISTS_CREDIT}",
+              asof=asof, units="GW", xlabel="Contracted, not yet connected (GW)",
+              ylabel="County", top=0.3)
     return fig
 
 
@@ -365,43 +371,39 @@ def queue_flows(con):
     y = full[-1]
     title = (f"{y}: {joined.get(y, (0, 0))[1]:.1f} GW joined the transmission queue, "
              f"{left.get(y, (0, 0))[1]:.1f} GW left it")
-    fig, ax = plt.subplots(figsize=(11, 5.6), dpi=150)
-    _style(fig, ax)
-    ax.grid(axis="x", visible=False)
-    ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
+    fig, ax = new_figure(3.4)
     xs = list(range(len(years)))
     w = 0.38
     jv = [joined.get(yr, (0, 0))[1] for yr in years]
     lv = [left.get(yr, (0, 0))[1] for yr in years]
-    ax.bar([x - w / 2 - 0.01 for x in xs], jv, width=w, color=TOKENS["series1"])
-    ax.bar([x + w / 2 + 0.01 for x in xs], lv, width=w, color=TOKENS["series3"])
+    ax.bar([x - w / 2 - 0.01 for x in xs], jv, width=w, color=NAVY)
+    ax.bar([x + w / 2 + 0.01 for x in xs], lv, width=w, color=GREY)
     for x, a, b in zip(xs, jv, lv, strict=True):
         if a:
-            ax.text(x - w / 2, a + 0.06, f"{a:.1f}", ha="center", fontsize=8, color=TOKENS["text"])
+            ax.text(x - w / 2, a + 0.06, f"{a:.1f}", ha="center", fontsize=SMALL, color=TEXT)
         if b:
-            ax.text(x + w / 2, b + 0.06, f"{b:.1f}", ha="center", fontsize=8, color=TOKENS["muted"])
+            ax.text(x + w / 2, b + 0.06, f"{b:.1f}", ha="center", fontsize=SMALL, color=MUTED)
     labels = [f"{yr}\nto {last_date:%b}" if yr == last_date.year else str(yr) for yr in years]
     ax.set_xticks(xs, labels)
-    ax.set_ylabel("GW (maximum export capacity)", color=TOKENS["muted"], fontsize=9.5)
-    ax.spines["left"].set_visible(False)
     top = max(jv + lv)
     ax.set_ylim(0, top * 1.18)
-    ax.text(xs[0] - w / 2, top * 1.1, "joined", color=TOKENS["series1"], fontsize=9)
-    ax.text(xs[0] + 0.6, top * 1.1, "left the list", color=TOKENS["muted"], fontsize=9)
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.76, bottom=0.14)
+    ax.text(xs[0] - w / 2, top * 1.1, "joined", color=NAVY, fontsize=LABEL)
+    ax.text(xs[0] + 0.6, top * 1.1, "left the list", color=MUTED, fontsize=LABEL)
     n_dates, n_ed = con.execute("""
         select count(distinct p.as_of), count(*) from publication p
         join parse_result r using (publication_id)
         where r.parser_version = ? and p.source_id like 'eirgrid.tso_contracted%'
     """, [parse.PARSER_VERSION]).fetchone()
-    _frame(fig, title,
-           f"Each EirGrid contracted list ({n_ed} editions on {n_dates} dates since {years[0]}) "
-           f"against its previous edition. Joined: newly listed. Left: no longer listed "
-           f"(connected, withdrawn or moved; the lists don't say which). A ref relabelled for the "
-           f"same project (D74 to D40d) is neither. Editions are irregular, so a year collects "
-           f"whatever changed since the one before.",
-           f"Source: EirGrid TSO contracted wind and non-wind lists, read from the Internet "
-           f"Archive and eirgrid.ie · {LICENCE} · As of {fmt_date(last_date)}")
+    frame_fit(fig, ax, title=title,
+              subtitle=f"Each EirGrid contracted list ({n_ed} editions on {n_dates} dates since "
+                       f"{years[0]}) against its previous edition. Joined: newly listed. Left: no "
+                       f"longer listed (connected, withdrawn or moved; the lists don't say which). "
+                       f"A ref relabelled for the same project (D74 to D40d) is neither. Editions "
+                       f"are irregular, so a year collects whatever changed since the one before.",
+              source="EirGrid TSO contracted wind and non-wind lists, read from the Internet "
+                     "Archive and eirgrid.ie; Supported by EirGrid Group Data",
+              asof=last_date, units="GW", xlabel="Year of list edition",
+              ylabel="Maximum export capacity (GW)")
     return fig
 
 
@@ -419,36 +421,39 @@ def batch_burndown(con):
     later = [b.share_at(at) for b in old[1:]]
     title = (f"At three years, {old[0].batch} had {old[0].share_at(at):.0%} of its distribution MW "
              f"energised; later batches {min(later):.0%}–{max(later):.0%}")
-    fig, ax = plt.subplots(figsize=(11, 5.8), dpi=150)
-    _style(fig, ax)
-    ax.grid(axis="x", visible=False)
-    ax.grid(axis="y", color=TOKENS["border"], linewidth=0.8)
-    ax.axvline(at, color=TOKENS["border"], linewidth=1, zorder=1)
-    ax.text(at, 51, "3 years", ha="center", fontsize=8.5, color=TOKENS["muted"])
+    fig, ax = new_figure(3.6)
+    ax.axvline(at, color=BORDER, linewidth=0.7, zorder=1)
+    ax.text(at, 51, "3 years", ha="center", fontsize=SMALL, color=MUTED)
+    low = []  # batches that have barely started: their lines lie on top of each other
     for i, b in enumerate(rows):
         xs = list(range(b.age_months + 1))
         ys = [b.share_at(m) * 100 for m in xs]
-        color = TOKENS["series1"] if i == 0 else TOKENS["series3"]
-        ax.step(xs, ys, where="post", color=color, linewidth=2 if i == 0 else 1.6, zorder=3)
-        ax.annotate(f"{b.batch} {ys[-1]:.0f}%", (xs[-1], ys[-1]), xytext=(5, 0),
-                    textcoords="offset points", va="center", fontsize=8.5,
-                    color=TOKENS["text"] if i == 0 else TOKENS["muted"])
+        color = NAVY if i == 0 else GREY
+        ax.step(xs, ys, where="post", color=color, linewidth=1.3 if i == 0 else 1.0, zorder=3)
+        label = f"{b.batch} {ys[-1]:.0f}%"
+        if ys[-1] < 8:
+            low.append(label)
+        else:
+            ax.annotate(label, (xs[-1], ys[-1]), xytext=(4, 0), textcoords="offset points",
+                        va="center", fontsize=SMALL, color=TEXT if i == 0 else MUTED)
+    if low:  # one note for the flat lines near zero, in the empty corner
+        ax.text(max(b.age_months for b in rows) + 1, 4, "barely started, flat near zero:\n"
+                + "\n".join(low), fontsize=SMALL, color=MUTED, ha="right", va="bottom", multialignment="left")
     ax.set_xlim(0, max(b.age_months for b in rows) + 14)
     ax.set_ylim(0, 54)
     ax.set_xticks(range(0, max(b.age_months for b in rows) + 1, 12),
                   [f"{m // 12}y" for m in range(0, max(b.age_months for b in rows) + 1, 12)])
-    ax.set_xlabel("time since the batch's first results publication", color=TOKENS["muted"],
-                  fontsize=9.5)
-    ax.set_ylabel("% of the batch's distribution MW energised", color=TOKENS["muted"],
-                  fontsize=9.5)
-    ax.spines["left"].set_visible(False)
-    fig.subplots_adjust(left=0.07, right=0.97, top=0.76, bottom=0.14)
     labels = "; ".join(f"{b.batch} {b.result.label()}" for b in rows)
-    _frame(fig, title,
-           f"Batch offers only (Non-Batch offers are processed as they come). MW on ESB's "
-           f"energised lists by energisation date, against MW still on its contracted lists; "
-           f"withdrawn projects are on neither, so this is a share of the projects still in "
-           f"the queue. Results: {labels}.",
-           f"Source: ESB Networks DSO energised and contracted lists, as of "
-           f"{fmt_date(metrics.latest_dso_as_of(con))}; ECP batch results publications · {LICENCE}")
+    as_of = metrics.latest_dso_as_of(con)
+    frame_fit(fig, ax, title=title,
+              subtitle=f"Batch offers only (Non-Batch offers are processed as they come). MW on "
+                       f"ESB's energised lists by energisation date, against MW still on its "
+                       f"contracted lists; withdrawn projects are on neither, so this is a share "
+                       f"of the projects still in the queue. Results: {labels}.",
+              source=f"ESB Networks DSO energised and contracted lists, as of {fmt_date(as_of)}; "
+                     f"ECP batch results publications; \u00a9 ESB Networks, used with their "
+                     f"permission",
+              asof=as_of, units="% of batch MW",
+              xlabel="Time since the batch's first results publication (years)",
+              ylabel="Distribution MW energised (% of batch)")
     return fig

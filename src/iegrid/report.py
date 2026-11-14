@@ -438,7 +438,8 @@ def render(rep: dict, path: Path) -> Path:
 
     from iegrid.exhibits import TOKENS
 
-    fig = plt.figure(figsize=(8.27, 11.69), dpi=150)
+    # An A4 status page, not a figure for a paper: its size is the page's.
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=150)  # paper-style: ok
     fig.patch.set_facecolor(TOKENS["bg"])
     y = 0.965
 

@@ -33,3 +33,7 @@ def test_generator_draws_every_chart(tmp_path):
     written = readme_charts.build_all(reports[-1], tmp_path)
     assert {p.name for p in written} == {f"{n}.png" for n in readme_charts.CHARTS}
     assert all(p.stat().st_size > 10_000 for p in written)
+    # the paper format also writes the vector original and the LaTeX caption beside each PNG
+    for n in readme_charts.CHARTS:
+        assert (tmp_path / f"{n}.pdf").stat().st_size > 1_000
+        assert (tmp_path / f"{n}.tex").read_text().startswith("% Written by paper_style.save")
