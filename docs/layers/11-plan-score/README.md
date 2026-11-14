@@ -9,6 +9,8 @@ far as this record has found, anywhere else. So this layer does.
 
 ![New conventional plant expected and arrived](../../img/score.png)
 
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (Ireland, rated MW, cumulative from the start of 2024; lists to 5 Aug 2026):
 
 | by the end of | arrived (a floor) | GCS 2022 | GCS 2023 | AIRAA 2025 | AIRAA 2026 | everything awarded, on time |

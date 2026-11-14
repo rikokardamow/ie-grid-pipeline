@@ -23,6 +23,8 @@ Figures are from the report of 30 October 2026, using lists dated 5 August 2026 
 
 ## How much is waiting?
 
+> **Credit for all charts.** Every chart below is drawn from the lists of EirGrid (Supported by EirGrid Group Data) and ESB Networks (© ESB Networks), both used with their permission; neither endorses this work. The images carry no credit text, so it is given here, and each chart's `.tex` caption in `docs/img/` repeats it with the as-of date.
+
 Solar is the largest group, followed by gas and oil, wind, and hybrid projects.
 
 ![Generation contracted to connect, by technology](docs/img/technology.png)
@@ -69,7 +71,11 @@ Each circle is a substation, sized by the capacity waiting there. The blue ones 
 
 ![Contracted capacity by connection substation](docs/img/map.png)
 
+*Grid lines, substations and county lookups: © OpenStreetMap contributors (ODbL).* *Lists: EirGrid Group Data and © ESB Networks, with permission.*
+
 ![Contracted generation by county](docs/img/counties.png)
+
+*Grid lines, substations and county lookups: © OpenStreetMap contributors (ODbL).* *Lists: EirGrid Group Data and © ESB Networks, with permission.*
 
 ## How much of it can be relied on?
 
@@ -124,4 +130,4 @@ Eleven further studies sit on top of the record in `docs/layers/`, each with its
 
 ## Data and licence
 
-The code is MIT. The lists belong to their publishers; ESB Networks and EirGrid have each confirmed permission to use them here, credit lines stay on every chart, and the full credits are in `NOTICE`. Grid lines and substations are © OpenStreetMap contributors (ODbL). The raw PDFs and the store are not redistributed.
+The code is MIT. The lists belong to their publishers; ESB Networks and EirGrid have each confirmed permission to use them here, the credit is given in the README next to the charts and in the `.tex` caption beside each image, and the full credits are in `NOTICE`. Grid lines and substations are © OpenStreetMap contributors (ODbL). The raw PDFs and the store are not redistributed.

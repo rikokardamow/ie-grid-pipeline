@@ -9,6 +9,8 @@ much of the queue would count and which technologies carry it.
 
 ![Share of contracted MW that counts](../../img/firm.png)
 
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (lists of 5 Aug and 1 Jul 2026, factors of the 2030/31 auction):
 
 | technology | contracted | counts, 2030/31 | share | counts, 2029/30 |

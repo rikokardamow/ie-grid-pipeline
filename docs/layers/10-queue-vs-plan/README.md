@@ -11,6 +11,8 @@ and the date it was read.
 
 ![The queue against the assessment's assumptions](../../img/plan.png)
 
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (lists of 5 Aug and 1 Jul 2026; assessment with its data freeze of 30 June 2025):
 
 | | the lists | the assessment |

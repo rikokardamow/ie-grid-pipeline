@@ -549,8 +549,9 @@ def external(rep):
                        f"{fmt_date(_d(c['as_of']))}. The published figure comes from SEAI, which "
                        "draws on EirGrid and ESB data, so this checks our reading of the lists, "
                        "not the lists themselves.",
-              source=f"EirGrid connected wind list ({c['tso_edition']}); ESB energised renewable "
-                     f"list ({c['dso_edition']}); {c['source']}. Checked {c['checked_on']}",
+              source=f"{LISTS_CREDIT}: EirGrid connected wind list ({c['tso_edition']}) and ESB "
+                     f"energised renewable list ({c['dso_edition']}); {c['source']}. "
+                     f"Checked {c['checked_on']}",
               asof=_d(c["checked_on"]), units="MW",
               xlabel="Installed wind capacity (MW)", ylabel="Source")
     return fig
