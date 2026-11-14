@@ -18,6 +18,7 @@ colour-blind and normal-vision checks (navy/grey dE 19, blue/grey 17).
 from __future__ import annotations
 
 import json
+import math
 import sys
 from datetime import date
 from pathlib import Path
@@ -98,7 +99,8 @@ def technology(rep):
                 color=TEXT)
     ax.set_yticks(y, [g["group"] for g in groups])
     ax.invert_yaxis()
-    ax.set_xlim(0, max(a + b for a, b in zip(tso, dso, strict=True)) * 1.6)
+    longest = max(a + b for a, b in zip(tso, dso, strict=True))
+    ax.set_xlim(0, longest * 1.6)  # provisional: widen until the margins are known
     ax.text(tso[0] / 2, -0.55, "transmission (EirGrid)", ha="center", fontsize=LABEL, color=TEXT)
     ax.text(tso[0] + dso[0] / 2, -0.55, "distribution (ESB Networks)", ha="center",
             fontsize=LABEL, color=TEXT)
@@ -109,6 +111,16 @@ def technology(rep):
               source=f"{LISTS_CREDIT}; {_as_of(rep)}", asof=_newest(rep), units="GW",
               xlabel="Generation contracted, not yet energised (GW)", ylabel="Technology",
               top=0.3)
+    # Now that the axes have their final width, end the value axis at the next whole GW
+    # past the longest bar's label, not at a fixed multiple of the longest bar.
+    # A label starting at x GW and w in wide fits when x + w * end / W <= end (W: the axes'
+    # width in inches, which the margins fix), that is end >= x / (1 - w / W); 3% to spare.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    axes_in = ax.get_window_extent(renderer).width / fig.dpi
+    need = max(t.get_position()[0] / (1 - t.get_window_extent(renderer).width / fig.dpi / axes_in)
+               for t in ax.texts if t.get_position()[1] >= 0)  # the bar labels, not the key
+    ax.set_xlim(0, math.ceil(max(need * 1.03, longest)))
     return fig
 
 
@@ -280,17 +292,19 @@ def grid_map(rep):
         ax.scatter([n["lon"] for n in group], [n["lat"] for n in group],
                    s=[n["mw"] * scale for n in group], color=colour, alpha=0.55,
                    edgecolors="white", linewidths=0.5, zorder=4)
-    # labels of the four largest, offset so that neighbours do not overprint (points; ha)
-    offsets = {"Cashla": (-6, 8, "right"), "Shannonbridge": (6, -11, "left"),
-               "Arklow": (-8, 6, "right")}
+    # labels of the four largest, set off their circles in open ground or sea with a thin
+    # leader line, so that no label is printed over a circle (points; ha)
+    offsets = {"Cashla": (-26, -16, "right"), "Kilpaddoge": (-24, -14, "right"),
+               "Shannonbridge": (-8, -30, "right"), "Arklow": (16, -26, "left")}
     for n in nodes[:4]:
         name = n["node"].split(" ")[0]
-        dx, dy, ha = offsets.get(name, (6, 4, "left"))
-        ax.annotate(f"{name}  {n['mw']:.0f} MW", (n["lon"], n["lat"]),
+        dx, dy, ha = offsets.get(name, (12, 12, "left"))
+        radius = (n["mw"] * scale) ** 0.5 / 2  # scatter size is the marker area in pt²
+        ax.annotate(f"{name}\n{n['mw']:.0f} MW", (n["lon"], n["lat"]),
                     xytext=(dx, dy), textcoords="offset points", fontsize=LABEL, color=TEXT,
-                    ha=ha, zorder=6,
-                    path_effects=[matplotlib.patheffects.withStroke(linewidth=2,
-                                                                    foreground="white")])
+                    ha=ha, va="center", linespacing=1.1, zorder=6, path_effects=ps.halo(),
+                    arrowprops={"arrowstyle": "-", "color": MUTED, "linewidth": 0.5,
+                                "shrinkA": 1, "shrinkB": radius})
     ax.set_aspect(1 / 0.595)  # cos(53.5 deg): a kilometre is a kilometre in both directions
     ax.set_xlim(-13.6, -5.2)
     ax.set_ylim(51.2, 55.5)
