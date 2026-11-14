@@ -1,13 +1,23 @@
 """paper_style: one file that makes a matplotlib figure fit a paper.
 
-Standard library plus matplotlib (PIL for the PNG size check and IPython for `show` are
-imported only when used). Python 3.9 and later. Copy this one file into any repository.
+Standard library plus matplotlib (PIL for the PNG size check, IPython for `show` and plotnine
+for `theme_paper` / `from_plotnine` are imported only when used). Python 3.9 and later. Copy
+this one file into any repository.
 
 A figure is drawn at the size it prints (3.4 in single column or 7.0 in full width), in a
-Times-compatible serif between 6 and 9 pt, and leaves the finding title, units, cadence,
-source, licence and as-of OUT of the image: they go into a LaTeX caption written next to
-the figure (`<name>.tex`). The PDF is the vector original for arXiv or a journal (TrueType,
-"Type 42" fonts, never Type 3); the 300 dpi PNG and the SVG are for a README or the web.
+sans-serif (Helvetica Neue, Helvetica, Arial, then DejaVu Sans) between 6 and 9 pt, and
+leaves the finding title, units, cadence, source, licence and as-of OUT of the image: they
+go into a LaTeX caption written next to the figure (`<name>.tex`). The PDF is the vector
+original for arXiv or a journal (TrueType, "Type 42" fonts, never Type 3); the 300 dpi PNG
+and the SVG are for a README or the web.
+
+THE LOOK (ggplot2 `theme_minimal` as the base, as in Nature, BBC, NYT and National
+Geographic figures): grey text (labels #333333, ticks #4D4D4D, notes #808080) on white; no
+box (only a light #B3B3B3 baseline at the bottom); faint horizontal major gridlines behind
+the data and nothing vertical; no y tick marks; bold left-aligned panel titles; 1.2 pt
+lines; light bands without edges (`band`); labels drawn by the helpers carry a white halo
+so they read over lines and fills. A plotnine plot gets the same look from `theme_paper()`
+and becomes a paper figure through `from_plotnine(p)`, then `frame` and `save` as usual.
 
     import paper_style as ps
 
@@ -23,9 +33,14 @@ ENFORCED by `lint()`, which `save()` runs (a figure that breaks a rule is not wr
        the same test as the PNG width in P5) and at most MAX_HEIGHT tall
   P2   no title, subtitle or footer is drawn on the image: they belong in the caption
   P3   every visible text is between MIN_FONT and MAX_FONT points
-  P4   serif text, and TrueType (Type 42) fonts in PDF and PS, so arXiv and journals accept the file
+  P4   the house sans-serif on every text, no character that none of a text's fonts can
+       draw (it would print as an empty box), and TrueType (Type 42) fonts in PDF and PS, so
+       arXiv and journals accept the file
   P5   the PNG is exactly width x height at 300 dpi; PDF, SVG, PNG and TEX are byte-stable
-  P6   no text runs off the edge of the figure
+  P6   no text runs off the edge of the figure, is cut at its panel edge, runs into another
+       panel (a label or note, a panel letter, a tick label or an axis title whose box
+       overlaps another panel's axes box), or prints over another text (a panel letter or
+       strip over a strip or axis title, a label in the axes over a tick label)
   P7   (only with `lint(fig, axis_labels=True)`) every data axis has a label
   P8   no visible text carries mathtext markup (`$\\mathdefault{10^{0}}$`, `$x$`): with maths
        parsing off it would print literally. A log axis needs `log_axis(ax)`.
@@ -57,8 +72,8 @@ permissive generic ones; the energy desk's house style is the strict setting of 
                  may only be written under .local/").
 
 NOT ENFORCED, so check by eye: that two series differ by more than colour (give them dashes
-or markers: `series_style(i)`), overlapping text inside the axes, and that each axis label
-carries its unit.
+or markers: `series_style(i)`), two labels inside the same axes on top of each other, text
+over lines or marks, and that each axis label carries its unit.
 
 Notes. Axes that sit exactly on top of another (twinx, twiny) are not panels: they get no
 panel letter and no automatic axis label, and `lint(axis_labels=True)` asks for their label.
@@ -79,7 +94,6 @@ from textwrap import fill
 
 # ------------------------------------------------------------------ switches
 
-# This repository has a source and an as-of date for every chart it draws: demand both.
 REQUIRE = ("title", "source", "asof")
 UNITS = None
 STRICT_DESK = False
@@ -109,8 +123,13 @@ TOKENS = {
     "bg": "#FFFFFF",
     "surface": "#F5F7FA",
     "border": "#DCE3EC",
-    "text": "#0B1F3A",
-    "text_muted": "#5B6878",
+    # Text at about 80% grey, as in ggplot2 and newsroom graphics: labels and annotations,
+    # tick labels, then guide or muted text (#808080 is 3.9:1 on white: notes, not data).
+    "text": "#333333",
+    "text_ticks": "#4D4D4D",
+    "text_muted": "#808080",
+    "rule": "#B3B3B3",  # the baseline (bottom spine) and the x tick marks
+    "grid": "#E5E5E5",  # faint horizontal gridlines
     "accent": "#1F5FBF",
     "state_hit": "#16707A",
     "state_miss": "#B23A2C",
@@ -192,18 +211,30 @@ def default_size(rows=1, width=FULL):
 
 SIZE = default_size()
 
-# Times-compatible serif first (matches LaTeX `mathptmx`/`newtxtext` and most arXiv
-# templates, and its maths matches matplotlib's STIX mathtext), then fonts that exist on
-# most machines. DejaVu Serif ships with matplotlib and has every glyph used here.
-_FONT_PREFERENCE = ("STIXGeneral", "Times New Roman", "Times")
+# Sans-serif, as in ggplot2 and Nature figures: Helvetica Neue, Helvetica, Arial, then
+# DejaVu Sans, which ships with matplotlib and has every glyph used here (matplotlib falls
+# back to it glyph by glyph, so a minus or an arrow missing from Helvetica still prints).
+_FONT_PREFERENCE = ("Helvetica Neue", "Helvetica", "Arial")
+FALLBACK_FONT = "DejaVu Sans"
 
 
 def _installed_fonts():
-    """Preferred serif fonts that exist on this machine, then DejaVu Serif."""
+    """Preferred sans-serif fonts that exist on this machine, then DejaVu Sans."""
     from matplotlib import font_manager
 
     have = {f.name for f in font_manager.fontManager.ttflist}
-    return [f for f in _FONT_PREFERENCE if f in have] + ["DejaVu Serif"]
+    return [f for f in _FONT_PREFERENCE if f in have] + [FALLBACK_FONT]
+
+
+def house_font():
+    """The first house sans-serif installed here (what `theme_paper` names first to plotnine)."""
+    return _installed_fonts()[0]
+
+
+def _family_list(family):
+    """A family name or list, followed by the rest of the house list, down to DejaVu Sans."""
+    names = [family] if isinstance(family, str) else list(family)
+    return names + [f for f in _installed_fonts() if f not in names]
 
 
 # rcParams that decide the file size or the text engine. A repository matplotlibrc, a style
@@ -248,42 +279,64 @@ def apply():
             # accepts but IEEE/ACM checkers reject and which does not select cleanly.
             "pdf.fonttype": 42,
             "ps.fonttype": 42,
-            "mathtext.fontset": "stix",
+            "mathtext.fontset": "dejavusans",
             "figure.facecolor": t["bg"],
             "figure.dpi": 100,
             "savefig.dpi": DPI,
             "axes.facecolor": t["bg"],
-            "axes.edgecolor": t["text_muted"],  # 5.7:1 on white
+            # No box: left, top and right spines off; a light baseline at the bottom.
+            "axes.edgecolor": t["rule"],
             "axes.linewidth": 0.6,
-            "axes.labelcolor": t["text"],
-            "axes.labelsize": 8,
-            "axes.titlesize": 8,
+            "axes.spines.left": False,
             "axes.spines.top": False,
             "axes.spines.right": False,
+            "axes.spines.bottom": True,
+            "axes.labelcolor": t["text"],
+            "axes.labelsize": 8,
+            "axes.labelpad": 4,
+            # Panel titles as ggplot2 facet strips: left, bold, 8 pt (one panel: no title, P2).
+            "axes.titlesize": 8,
+            "axes.titleweight": "bold",
+            "axes.titlelocation": "left",
+            "axes.titlecolor": t["text"],
+            "axes.titlepad": 5,
+            # Faint horizontal major gridlines only, behind the data.
             "axes.grid": True,
             "axes.grid.axis": "y",
+            "axes.grid.which": "major",
             "axes.axisbelow": True,  # grid lines run behind bars, not across them
             "axes.prop_cycle": cycler(color=list(CYCLE)),
-            "grid.color": t["border"],
-            "grid.linewidth": 0.4,
-            "xtick.color": t["text_muted"],
-            "ytick.color": t["text_muted"],
-            "xtick.labelcolor": t["text"],
-            "ytick.labelcolor": t["text"],
+            "grid.color": t["grid"],
+            "grid.linewidth": 0.5,
+            "grid.linestyle": "-",
+            "grid.alpha": 1.0,
+            # Short grey x ticks; no y tick marks (the gridlines carry the y values).
+            "xtick.color": t["rule"],
+            "ytick.color": t["rule"],
+            "xtick.labelcolor": t["text_ticks"],
+            "ytick.labelcolor": t["text_ticks"],
             "xtick.major.size": 2.5,
-            "ytick.major.size": 2.5,
+            "ytick.major.size": 0,
+            "xtick.minor.size": 1.5,
+            "ytick.minor.size": 0,
             "xtick.major.width": 0.6,
             "ytick.major.width": 0.6,
             "xtick.major.pad": 2.5,
-            "ytick.major.pad": 2.5,
+            "ytick.major.pad": 3,
+            "xtick.minor.visible": False,
+            "ytick.minor.visible": False,
             "xtick.labelsize": 7,
             "ytick.labelsize": 7,
             "font.size": 8,
             "text.color": t["text"],
-            "lines.linewidth": 1.0,
+            # Marks: 1.2 pt lines, 3.5 pt markers, bars and fills without edges.
+            "lines.linewidth": 1.2,
             "lines.markersize": 3.5,
+            "patch.linewidth": 0.0,
             "legend.frameon": False,
             "legend.fontsize": 7,
+            "legend.title_fontsize": 7,
+            "legend.labelcolor": t["text"],
             "axes.unicode_minus": True,
         }
     )
@@ -519,7 +572,7 @@ def frame(
     `ylabel` / `xlabel` label the data panels that have no label yet: a string goes on every
     first column (y) or bottom row (x); a list goes on the panels in reading order. Write
     them with units, "Demand (GW)", because a paper figure must read without its caption.
-    `margins` (left, right, top, bottom) in inches; default (0.6, 14% of width, 0.2, 0.5) with
+    `margins` (left, right, top, bottom) in inches; default (0.6, 18% of width, 0.2, 0.5) with
     the right margin left free for end labels.
 
     Fields named in REQUIRE must be given; every field that is given is validated.
@@ -541,16 +594,28 @@ def frame(
         if not given[name]:
             raise ValueError(f"{name} is required (paper_style.REQUIRE = {tuple(REQUIRE)})")
     _check_given(given)
+    from_gg = getattr(fig, "_ps_plotnine", False)
+    if from_gg and margins is not None:
+        raise ValueError(
+            "a plotnine figure keeps the layout plotnine computed: set its margins in the plot "
+            "(theme(plot_margin_right=0.14)), not with frame(margins=...)"
+        )
     fig._ps_frame = {k: given[k] for k in _FIELDS[:7]}
     if LEGACY_PREFIX:  # a repository whose own code reads fig._<prefix>_frame / _<prefix>_licence
         setattr(fig, f"_{LEGACY_PREFIX}_frame", fig._ps_frame)
         setattr(fig, f"_{LEGACY_PREFIX}_licence", given["licence"])
     _no_layout_engine(fig)
+    if from_gg:  # plotnine placed panels, strips and legend itself: moving the axes would split them
+        axis_labels(fig, xlabel, ylabel)
+        panel_letters(fig)
+        for ax in fig.axes:
+            _fit_bar_labels(ax)
+        return fig
     w, h = fig.get_size_inches()
     # Margins in inches so they mean the same on a column and a full-width figure.
     left, right, top, bottom = margins or (
         min(0.6, 0.17 * w),
-        min(1.0, 0.14 * w),
+        min(1.3, 0.18 * w),  # room for a sans end label: "Demand · 424.1 · Oct 30"
         0.2,
         0.5,
     )
@@ -559,7 +624,70 @@ def frame(
     )
     axis_labels(fig, xlabel, ylabel)
     panel_letters(fig)
+    _space_panels(fig)
+    for ax in fig.axes:  # the margins changed the axes size: bar labels may need more room
+        _fit_bar_labels(ax)
     return fig
+
+
+_GAP_PAD = 0.08  # inches of white between one panel's labels and the next panel
+_MIN_PANEL = 0.6  # inches: the gaps never squeeze a panel narrower or shorter than this
+
+
+def _space_panels(fig, rounds=2):
+    """Set wspace and hspace in inches, from what is drawn between the panels.
+
+    The gap between two columns holds the right panel's y tick labels and axis title (and
+    anything the left panel draws past its right edge: end labels, a twin's scale); the gap
+    between two rows holds the upper panel's x tick labels and title and the lower panel's
+    letter and title. A gap the caller set wider (`subplots_adjust(wspace=...)`) is kept.
+    Only figures whose panels sit on one grid (`figure`, `plt.subplots`) are spaced.
+    """
+    axes = [a for a in fig.axes if a.get_visible() and a.get_subplotspec() is not None]
+    grids = {id(a.get_subplotspec().get_gridspec()) for a in axes}
+    if len(grids) != 1:
+        return
+    gs = axes[0].get_subplotspec().get_gridspec()
+    nrows, ncols = gs.get_geometry()
+    if nrows == 1 and ncols == 1:
+        return
+    w, h = fig.get_size_inches()
+    for _ in range(rounds):
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        dpi = fig.dpi
+        need_l = need_r = need_t = need_b = 0.0  # inches past the axes, by side
+        for a in axes:
+            spec = a.get_subplotspec()
+            box = a.get_window_extent(r)
+            tight = a.get_tightbbox(r)
+            if tight is None:
+                continue
+            if spec.colspan.start > 0:
+                need_l = max(need_l, (box.x0 - tight.x0) / dpi)
+            if spec.colspan.stop < ncols:
+                need_r = max(need_r, (tight.x1 - box.x1) / dpi)
+            if spec.rowspan.start > 0:
+                need_t = max(need_t, (tight.y1 - box.y1) / dpi)
+            if spec.rowspan.stop < nrows:
+                need_b = max(need_b, (box.y0 - tight.y0) / dpi)
+        sp = fig.subplotpars
+        changed = {}
+        for key, n, span, space, need in (
+            ("wspace", ncols, (sp.right - sp.left) * w, sp.wspace, need_l + need_r),
+            ("hspace", nrows, (sp.top - sp.bottom) * h, sp.hspace, need_t + need_b),
+        ):
+            if n < 2:
+                continue
+            gap_now = space * span / (n + (n - 1) * space)
+            gap = max(gap_now, need + _GAP_PAD)
+            gap = min(gap, max(gap_now, (span - n * _MIN_PANEL) / (n - 1)))
+            changed[key] = gap / ((span - (n - 1) * gap) / n)
+        if not changed:
+            return
+        if all(abs(changed[k] - getattr(sp, k)) < 1e-3 for k in changed):
+            return
+        fig.subplots_adjust(**changed)
 
 
 def skip_panel(ax):
@@ -608,6 +736,23 @@ def axis_labels(fig, xlabel=None, ylabel=None):
     Panels whose axes are switched off (images) and twin axes are not labelled: set the
     label of a twin's own scale by hand (`ax2.set_ylabel`).
     """
+    gg = getattr(fig, "_ps_gg_titles", None)
+    if gg is not None:  # plotnine: one axis title per figure, drawn by plotnine; reword it
+        for name, label in (("x", xlabel), ("y", ylabel)):
+            if label is None:
+                continue
+            if not isinstance(label, str):
+                raise ValueError(
+                    f"a plotnine figure has one {name} axis title: pass a string, or write "
+                    f"labs({name}=...) in the plot"
+                )
+            if gg.get(name) is None:
+                raise ValueError(
+                    f"the plotnine figure draws no {name} axis title (is axis_title_{name} "
+                    f"blank?); write labs({name}=...) and keep the title"
+                )
+            gg[name].set_text(label)
+        return
     panels = _panels(fig)
     if not panels:
         return
@@ -631,18 +776,76 @@ def axis_labels(fig, xlabel=None, ylabel=None):
             ax.set_xlabel(name)
 
 
+def _top_strips(fig):
+    """plotnine facet strips above each axes: {axes: the topmost strip text over it}."""
+    from matplotlib.text import Text
+
+    out = {}
+    for t in fig.findobj(Text):  # plotnine adds strips as figure artists, not to fig.texts
+        info = getattr(t, "draw_info", None)
+        ax = getattr(info, "ax", None)
+        if ax is None or getattr(info, "position", None) != "top":
+            continue
+        if not hasattr(t, "_ps_strip"):
+            t._ps_strip = t.get_text()  # the facet name as plotnine wrote it
+        y = t.get_position()[1]
+        if ax not in out or y > out[ax].get_position()[1]:
+            out[ax] = t
+    return out
+
+
 def panel_letters(fig):
-    """Bold (a), (b), ... above the top-left corner of each panel of a multi-panel figure."""
+    """Bold (a), (b), ... above the top-left corner of each panel of a multi-panel figure.
+
+    On a plotnine figure the letter goes in front of the facet name in the strip above the
+    panel ("(a)  Dublin"), because plotnine leaves only a small gap between facets: a letter
+    in that gap would print over the strip of the facet to its left and over the y axis
+    title. A plotnine panel with no strip above it (the lower rows of `facet_grid`) gets the
+    letter inside its own top-left corner, with a white halo: plotnine leaves almost no gap
+    between rows, so a letter above the panel would print on the bottom of the panel above.
+    On a matplotlib figure the letter sits above the top-left corner and `frame` leaves room
+    for it between the rows. Lint P6 reports a letter that lands on other text or on another
+    panel.
+    """
     panels = _panels(fig)
     for ax in fig.axes:  # framing twice must not stack a second set of letters
         for t in list(ax.texts):
             if t.get_gid() in _gids("panel"):
                 t.remove()
+    from_gg = getattr(fig, "_ps_plotnine", False)
+    strips = _top_strips(fig) if from_gg else {}
+    for t in strips.values():
+        t.set_text(t._ps_strip)
+        t._ps_letter = None
     if len(panels) < 2:
         return
     for i, ax in enumerate(panels[:26]):
+        letter = f"({chr(ord('a') + i)})"
+        strip = strips.get(ax)
+        if strip is not None:
+            strip.set_text(f"{letter}  {strip._ps_strip}")
+            strip._ps_letter = letter
+            continue
+        if from_gg:  # no strip and no gap above: inside the panel's own top-left corner
+            ax.annotate(
+                letter,
+                xy=(0, 1),
+                xycoords="axes fraction",
+                xytext=(3, -3),
+                textcoords="offset points",
+                ha="left",
+                va="top",
+                fontsize=8,
+                fontweight="bold",
+                color=TOKENS["text"],
+                annotation_clip=False,
+                path_effects=halo(),
+                zorder=10,
+                gid=_gid("panel"),
+            )
+            continue
         ax.annotate(
-            f"({chr(ord('a') + i)})",
+            letter,
             xy=(0, 1),
             xycoords="axes fraction",
             xytext=(-1, 3),
@@ -930,11 +1133,26 @@ def latex_figure(fig, stem, *, warn=True):
 # -------------------------------------------------------------- annotations
 
 
+HALO_WIDTH = 2.5  # points: the white stroke behind helper text
+
+
+def halo(width=HALO_WIDTH, color=None):
+    """Path effects for a white halo behind text, so a label reads over lines and fills.
+
+    `ax.text(x, y, "label", path_effects=ps.halo())`. Every label the helpers below draw
+    (`end_label`, `note`, `ref_line`, `event_rule`, `provisional`, `bar_labels`) has one. In
+    plotnine: `geom_text(..., path_effects=ps.halo())`.
+    """
+    from matplotlib import patheffects
+
+    return [patheffects.withStroke(linewidth=width, foreground=color or TOKENS["bg"])]
+
+
 def end_label(ax, x, y, name, value_text, *, color=None, dy=0):
     """Direct label at a line's end with a dot: 'Brent \u00b7 84.1 \u00b7 Oct 2' (instead of a legend)."""
     c = color or TOKENS["series_1"]
     ax.plot([x], [y], "o", color=c, markersize=3.5, zorder=5)
-    ax.annotate(
+    return ax.annotate(
         f"{name} \u00b7 {value_text}",
         (x, y),
         xytext=(6, dy),
@@ -944,53 +1162,190 @@ def end_label(ax, x, y, name, value_text, *, color=None, dy=0):
         fontsize=7.5,
         color=c,
         annotation_clip=False,
+        path_effects=halo(),
+        zorder=6,
     )
 
 
 def ref_line(ax, y, words, *, side="right"):
     """Horizontal reference line that carries words ('recent low 18.6')."""
     t = TOKENS
-    ax.axhline(y, color=t["text_muted"], linewidth=0.9, linestyle=(0, (4, 3)), zorder=1)
+    ax.axhline(y, color=t["text_muted"], linewidth=0.8, linestyle=(0, (4, 3)), zorder=1)
     x, ha = (0.995, "right") if side == "right" else (0.005, "left")
-    ax.text(
+    return ax.text(
         x,
         y,
         words,
         transform=ax.get_yaxis_transform(),
         ha=ha,
         va="bottom",
-        fontsize=7.5,
+        fontsize=7,
         color=t["text_muted"],
+        path_effects=halo(),
+        zorder=6,
     )
 
 
 def event_rule(ax, x, label):
     """Thin vertical rule with a plain label. No boxes or arrows."""
     t = TOKENS
-    ax.axvline(x, color=t["text_muted"], linewidth=0.7, zorder=1)
-    ax.text(
+    ax.axvline(x, color=t["text_muted"], linewidth=0.6, zorder=1)
+    return ax.text(
         x,
         0.99,
         f" {label}",
         transform=ax.get_xaxis_transform(),
         ha="left",
         va="top",
-        fontsize=7.5,
+        fontsize=7,
         color=t["text_muted"],
+        path_effects=halo(),
+        zorder=6,
     )
 
 
 def note(ax, xy, text, xytext=(30, 25)):
     """The one on-chart note: typed text and a thin leader line."""
-    ax.annotate(
+    return ax.annotate(
         text,
         xy,
         xytext=xytext,
         textcoords="offset points",
         fontsize=7.5,
         color=TOKENS["text"],
-        arrowprops={"arrowstyle": "-", "color": TOKENS["text_muted"], "lw": 0.7},
+        arrowprops={"arrowstyle": "-", "color": TOKENS["text_muted"], "lw": 0.6},
+        path_effects=halo(),
+        zorder=6,
     )
+
+
+def provisional(ax, xs, ys, label="provisional", *, color=None):
+    """First prints and incomplete periods: hollow markers and a muted word under the last one."""
+    t = TOKENS
+    xs, ys = list(xs), list(ys)
+    ax.plot(
+        xs,
+        ys,
+        "o",
+        mfc=t["bg"],
+        mec=color or t["series_1"],
+        mew=0.8,
+        markersize=4.5,
+        zorder=6,
+        linestyle="none",
+    )
+    return ax.annotate(
+        label,
+        (xs[-1], ys[-1]),
+        xytext=(0, -10),
+        textcoords="offset points",
+        ha="center",
+        va="top",
+        fontsize=7,
+        color=t["text_muted"],
+        annotation_clip=False,
+        path_effects=halo(),
+        zorder=6,
+    )
+
+
+def band(ax, x, lower, upper, *, color=None, alpha=0.18, **kw):
+    """A light fill between `lower` and `upper` with no edge (a range or an interval)."""
+    kw.setdefault("zorder", 1.5)  # above the grid, below the lines
+    return ax.fill_between(
+        x, lower, upper, color=color or TOKENS["series_2"], alpha=alpha, linewidth=0, **kw
+    )
+
+
+def hbar_axes(ax):
+    """Turn the look for a horizontal bar chart: the value axis is x.
+
+    Vertical gridlines instead of horizontal ones, the baseline on the left (where the bars
+    start), no x tick marks, and categories on y without tick marks. Call after `ax.barh`.
+    """
+    t = TOKENS
+    ax.grid(False, axis="y")
+    ax.grid(True, axis="x", which="major", color=t["grid"], linewidth=0.5)
+    ax.spines["left"].set_visible(True)
+    ax.spines["left"].set_color(t["rule"])
+    ax.spines["bottom"].set_visible(False)
+    ax.tick_params(axis="x", length=0)
+    ax.tick_params(axis="y", length=0, pad=4)
+    return ax
+
+
+def bar_labels(ax, bars, fmt="{:.1f}", *, color=None):
+    """Value labels just past the ends of bars (vertical or horizontal), with a halo, 7 pt.
+
+    `bars` is what `ax.bar` / `ax.barh` returned; `fmt` is a format string or a function.
+    A negative value is written with a true minus sign.
+
+    The value axis is widened until every label sits inside the axes: otherwise the label of
+    the most negative bar of a horizontal chart lands on its category name and its halo
+    erases it. `frame` widens it again once the margins are final, so limits set between
+    this call and `frame` are widened too if the labels need it.
+    """
+    labels = ax.bar_label(
+        bars,
+        labels=[
+            (fmt(v) if callable(fmt) else fmt.format(v)).replace("-", MINUS) for v in bars.datavalues
+        ],
+        padding=3,
+        fontsize=7,
+        color=color or TOKENS["text"],
+    )
+    for lab in labels:
+        lab.set_path_effects(halo())
+    horizontal = getattr(bars, "orientation", None) == "horizontal"
+    ax._ps_bar_labels = getattr(ax, "_ps_bar_labels", []) + [(list(labels), horizontal)]
+    _fit_bar_labels(ax)
+    return labels
+
+
+def _fit_bar_labels(ax, pad=2.0):
+    """Widen the value axis of `ax` until the labels `bar_labels` drew fit inside it.
+
+    A label keeps its offset in points from its bar's end, so widening the limits moves it
+    inward less than the bar: a few rounds converge. Limits are only ever widened.
+    """
+    groups = getattr(ax, "_ps_bar_labels", None)
+    if not groups or ax.figure is None:
+        return
+    renderer = ax.figure.canvas.get_renderer()
+    for horizontal in (True, False):
+        texts = [
+            t
+            for labels, h in groups
+            if h == horizontal
+            for t in labels
+            if t.axes is ax and t.get_visible() and t.get_text().strip()
+        ]
+        if not texts:
+            continue
+        for _ in range(8):
+            box = ax.get_window_extent(renderer)
+            extents = [t.get_window_extent(renderer) for t in texts]
+            # pixels by which the labels (plus `pad`) stick out on the low and the high side
+            if horizontal:
+                lo = box.x0 - min(e.x0 for e in extents) + pad
+                hi = max(e.x1 for e in extents) - box.x1 + pad
+            else:
+                lo = box.y0 - min(e.y0 for e in extents) + pad
+                hi = max(e.y1 for e in extents) - box.y1 + pad
+            if lo <= 0.25 and hi <= 0.25:
+                break
+            lo, hi = max(lo, 0), max(hi, 0)
+            inv = ax.transData.inverted()
+            if horizontal:
+                y = box.y0
+                a = inv.transform((box.x0 - lo, y))[0]
+                b = inv.transform((box.x1 + hi, y))[0]
+                ax.set_xlim(a, b)
+            else:
+                x = box.x0
+                a = inv.transform((x, box.y0 - lo))[1]
+                b = inv.transform((x, box.y1 + hi))[1]
+                ax.set_ylim(a, b)
 
 
 def date_axis(ax):
@@ -1028,6 +1383,35 @@ def _log_text(v, style):
     return f"{sign}{lead}10{str(exp).translate(_SUPERSCRIPT)}"
 
 
+_PLAIN_DECADES = (-3, 4)  # 'auto' writes digits when every visible decade is in 10^-3 .. 10^4
+
+
+def _axis_log_style(axis, style):
+    """'plain' or 'power' for a whole axis: one notation on every tick, never a mix.
+
+    'auto' looks at the major ticks inside the view: if any of them (or, with none visible,
+    either end of the view) lies in a decade outside 10^-3 .. 10^4, every tick is written
+    as a power of ten; otherwise every tick is written in digits.
+    """
+    if style != "auto":
+        return style
+    lo, hi = sorted(axis.get_view_interval())
+    try:
+        locs = [v for v in axis.get_majorticklocs() if lo <= v <= hi and v != 0]
+    except Exception:  # a locator that cannot run yet: judge by the view alone
+        locs = []
+    if not locs:
+        locs = [v for v in (lo, hi) if v != 0 and math.isfinite(v)]
+    first, last = _PLAIN_DECADES
+    for v in locs:
+        exp = int(math.floor(math.log10(abs(v)) + 1e-9))
+        if abs(v) / 10.0 ** exp >= 10 - 1e-6:
+            exp += 1
+        if not first <= exp <= last:
+            return "power"
+    return "plain"
+
+
 def log_axis(ax, axis="both", *, style="auto"):
     """Plain tick labels on a log (or symlog) axis, in place of matplotlib's mathtext.
 
@@ -1038,7 +1422,8 @@ def log_axis(ax, axis="both", *, style="auto"):
         ax.semilogy(x, y); ps.log_axis(ax, "y")
 
     `axis` is "x", "y" or "both" (log axes only; "both" skips a linear one). `style`:
-      "auto"   100, 1000, 0.01 for decades 10^-3 to 10^4; 10\u2075, 10\u207b\u2074 outside that range
+      "auto"   one notation for the whole axis: digits (0.01, 100, 10000) when every visible
+               decade lies in 10^-3 to 10^4, else powers on every tick (10\u207b\u2075 ... 10\u2077)
       "plain"  always digits (100000, 0.00001)
       "power"  always 10\u207f (10\u2070, 10\u00b9, 10\u00b2)
     When the axis spans less than a decade or so, minor ticks are labelled too (2, 3, 5 ...), so
@@ -1059,8 +1444,8 @@ def log_axis(ax, axis="both", *, style="auto"):
                 raise ValueError(f"the {name} axis is not logarithmic: call set_{name}scale('log') first")
             continue
 
-        def major(v, pos=None, _style=style):
-            return _log_text(v, _style)
+        def major(v, pos=None, _style=style, _axis=ax_):
+            return _log_text(v, _axis_log_style(_axis, _style))
 
         def minor(v, pos=None, _style=style, _axis=ax_):
             lo, hi = sorted(abs(x) for x in _axis.get_view_interval())
@@ -1068,7 +1453,7 @@ def log_axis(ax, axis="both", *, style="auto"):
                 return ""
             lead = int(round(abs(v) / 10.0 ** math.floor(math.log10(abs(v)) + 1e-9)))
             keep = (2, 3, 5) if hi / lo > 10 else tuple(range(2, 10))
-            return _log_text(v, _style) if lead in keep else ""
+            return _log_text(v, _axis_log_style(_axis, _style)) if lead in keep else ""
 
         ax_.set_major_formatter(ticker.FuncFormatter(major))
         ax_.set_minor_formatter(ticker.FuncFormatter(minor))
@@ -1236,6 +1621,7 @@ def axis_label_problems(fig):
     (images) and axes that hide their tick labels do not.
     """
     fig.canvas.draw()
+    gg = getattr(fig, "_ps_gg_titles", None)  # plotnine: the figure-level axis titles
     out = []
     for ax in fig.axes:
         if not ax.get_visible() or not ax.axison:
@@ -1246,7 +1632,10 @@ def axis_label_problems(fig):
             if not axis.get_visible():
                 continue
             shown = any(t.get_visible() and t.get_text() for t in axis.get_ticklabels())
-            if shown and not axis.get_label().get_text().strip():
+            label = axis.get_label().get_text().strip()
+            if gg is not None and gg.get(name) is not None and gg[name].get_visible():
+                label = label or gg[name].get_text().strip()
+            if shown and not label:
                 out.append(f"P7 {name} axis has no label (write the quantity and its unit)")
     return out
 
@@ -1336,13 +1725,170 @@ def _paper_problems(fig):
         ):
             problems.append(f"P6 text runs off the figure edge: {t.get_text()[:40]!r}")
             break
+    problems += _placement_problems(fig, drawn, renderer)
     rc = mpl.rcParams
     if rc["pdf.fonttype"] != 42 or rc["ps.fonttype"] != 42:
         problems.append("P4 PDF/PS fonts must be Type 42 (paper_style.apply sets it)")
     if rc["text.usetex"]:
         problems.append("P4 text.usetex is on; paper_style.apply sets it off (it needs a TeX install)")
-    if list(rc["font.family"]) != _installed_fonts():
-        problems.append("P4 font family is not the paper serif (paper_style.apply sets it)")
+    house = _installed_fonts()
+    if list(rc["font.family"]) != house:
+        problems.append(
+            "P4 font family is not the house sans-serif (Helvetica Neue, Helvetica, Arial, "
+            "DejaVu Sans; paper_style.apply sets it)"
+        )
+    if rc["mathtext.fontset"] != "dejavusans":
+        problems.append("P4 mathtext.fontset is not dejavusans (paper_style.apply sets it)")
+    for t in drawn:  # a text may name its own family (ax.text(..., family="serif"), plotnine)
+        fam = t.get_fontfamily()
+        first = fam[0] if isinstance(fam, (list, tuple)) and fam else fam
+        if first not in house:
+            problems.append(
+                f"P4 text {t.get_text()[:30]!r} is set in {first!r}, not the house sans-serif"
+            )
+            break
+    for t in drawn:  # a glyph none of the text's fonts has prints as an empty box
+        missing = _missing_glyphs(t)
+        if missing:
+            problems.append(
+                f"P4 text {t.get_text()[:30]!r} has characters no font of its family draws "
+                f"({' '.join(f'U+{ord(c):04X}' for c in missing[:3])}): they print as empty "
+                "boxes; give the text the house font list (paper_style.apply, theme_paper)"
+            )
+            break
+    return problems
+
+
+_CHARMAPS = {}
+
+
+def _missing_glyphs(t):
+    """Characters of text `t` that none of the fonts its family list resolves to can draw."""
+    from matplotlib import font_manager
+
+    chars = sorted({c for c in t.get_text() if not c.isspace() and ord(c) > 0x7E})
+    if not chars:  # plain ASCII: every house font and DejaVu Sans have it
+        return []
+    props = t.get_fontproperties()
+    try:  # matplotlib 3.6+: the fonts of the family list, in fallback order
+        paths = font_manager.fontManager._find_fonts_by_props(props)
+    except Exception:
+        paths = [font_manager.findfont(props)]
+    have = set()
+    for path in paths:
+        key = str(path)
+        if key not in _CHARMAPS:
+            try:
+                _CHARMAPS[key] = set(font_manager.get_font(key).get_charmap())
+            except Exception:
+                _CHARMAPS[key] = None
+        if _CHARMAPS[key] is None:
+            return []  # a font we cannot read: do not guess
+        have |= _CHARMAPS[key]
+    return [c for c in chars if ord(c) not in have]
+
+
+def _overlap(a, b, tol=1.0):
+    """True if boxes a and b share more than `tol` pixels in both directions."""
+    return (
+        min(a.x1, b.x1) - max(a.x0, b.x0) > tol and min(a.y1, b.y1) - max(a.y0, b.y0) > tol
+    )
+
+
+def _placement_problems(fig, drawn, renderer):
+    """P6 beyond the figure edge: text cut at its panel, run into another panel, or on top of text.
+
+    Checked for the texts placed in or around a panel (labels in the axes, bar labels, notes,
+    geom_text, panel letters and plotnine strips) against every other drawn text: a tick label,
+    an axis title, a strip or a letter. Two texts inside the same axes may still overlap
+    (that is left to the eye, as before).
+    """
+    problems = []
+    boxes = {id(t): t.get_window_extent(renderer) for t in drawn}
+    in_axes = {id(t) for ax in fig.axes for t in ax.texts}
+    letters = {id(t) for t in drawn if t.get_gid() in _gids("panel")}
+    strips = {id(t) for t in drawn if getattr(t, "draw_info", None) is not None}
+    placed = [t for t in drawn if id(t) in in_axes or id(t) in strips]
+    # Cut: a text clipped to its axes that reaches past them prints only in part.
+    for t in drawn:
+        if not t.get_clip_on():
+            continue
+        clip = t.clipbox
+        if clip is None and t.get_clip_path() is not None:
+            clip = t.get_clip_path().get_fully_transformed_path().get_extents()
+        if clip is None:
+            continue
+        b = boxes[id(t)]
+        if b.x0 < clip.x0 - 1 or b.x1 > clip.x1 + 1 or b.y0 < clip.y0 - 1 or b.y1 > clip.y1 + 1:
+            problems.append(
+                f"P6 text is cut at the panel edge: {t.get_text()[:40]!r} (widen the axis "
+                "limits, or draw it with clip_on=False)"
+            )
+            break
+    # Into another panel: a text of one panel printed over the next one: a label or note in
+    # the axes, a panel letter, a tick label or an axis title (a y scale too wide for the gap
+    # between two columns puts the tick labels of the right panel on the left one).
+    panels = [
+        ax
+        for ax in fig.axes
+        if ax.get_visible() and (ax.axison or getattr(ax, "_ps_as_panel", False))
+    ]
+    extents = {id(ax): ax.get_window_extent(renderer) for ax in fig.axes}
+
+    def nested(a, b):  # one box inside the other: an inset and the panel that holds it
+        return (a.x0 >= b.x0 - 1 and a.x1 <= b.x1 + 1 and a.y0 >= b.y0 - 1 and a.y1 <= b.y1 + 1) or (
+            b.x0 >= a.x0 - 1 and b.x1 <= a.x1 + 1 and b.y0 >= a.y0 - 1 and b.y1 <= a.y1 + 1
+        )
+
+    def own_texts(ax):
+        yield from ax.texts
+        for axis in (ax.xaxis, ax.yaxis):
+            yield axis.label
+            for tick in axis.majorTicks + axis.minorTicks:
+                yield tick.label1
+                yield tick.label2
+
+    done = False
+    for ax in fig.axes:
+        if done:
+            break
+        key = tuple(round(v, 3) for v in ax.get_position().bounds)
+        for t in own_texts(ax):
+            if done or id(t) not in boxes:
+                continue
+            decor = t not in ax.texts  # a tick label or axis title, drawn outside the axes
+            for other in panels:
+                if tuple(round(v, 3) for v in other.get_position().bounds) == key:
+                    continue  # the same axes, or a twin on top of it
+                box = extents[id(other)]
+                if decor and nested(extents[id(ax)], box):
+                    continue  # an inset's scale inside the panel that holds it
+                if _overlap(boxes[id(t)], box):
+                    if id(t) in letters:
+                        fix = "leave room between the panels, or draw it inside its own panel"
+                    elif decor:
+                        fix = "widen the gap between the panels (wspace, hspace) or shorten it"
+                    else:
+                        fix = "widen its axis limits or shorten it"
+                    problems.append(
+                        f"P6 text runs into another panel: {t.get_text()[:40]!r} ({fix})"
+                    )
+                    done = True
+                    break
+    # On top of other text: a panel letter on a strip or an axis title, a bar label on a
+    # category name, a strip on the next strip.
+    for t in placed:
+        for u in drawn:
+            if u is t:
+                continue
+            both_labels = id(t) in in_axes and id(u) in in_axes
+            if both_labels and id(t) not in letters and id(u) not in letters:
+                continue
+            if _overlap(boxes[id(t)], boxes[id(u)]):
+                problems.append(
+                    f"P6 text {t.get_text()[:30]!r} prints over {u.get_text()[:30]!r}"
+                )
+                return problems
     return problems
 
 
@@ -1359,6 +1905,190 @@ def lint(fig, *, scored=False, axis_labels=False):
     if STRICT_DESK:
         problems += _desk_problems(fig, scored)
     return sorted(set(problems))
+
+
+# ------------------------------------------------------------------ plotnine
+#
+# plotnine is imported only inside these functions, so a repository without it still imports
+# paper_style. A plotnine plot becomes a paper figure in two steps:
+#
+#     p = ggplot(df, aes("x", "y")) + geom_line(size=ps.gg_size(1.2)) + ps.theme_paper()
+#     fig = ps.from_plotnine(p)                  # a matplotlib Figure at 7.0 x 4.2 in
+#     ps.frame(fig, title=..., xlabel=..., ylabel=...)
+#     ps.save(fig, "figures/name")               # never ggsave or p.save: the guard refuses them
+
+
+def _plotnine():
+    try:
+        import plotnine
+    except ImportError as exc:
+        raise ImportError(
+            "paper_style.theme_paper and from_plotnine need plotnine; add it to the plotting "
+            "group with `uv add --group <group> plotnine` (see VENDORING.md)"
+        ) from exc
+    return plotnine
+
+
+def gg_size(points):
+    """The plotnine `size` that draws a line `points` wide (plotnine scales size by sqrt(pi)).
+
+    `geom_line(size=ps.gg_size(1.2))` is the house 1.2 pt data line; `gg_size(0.6)` a rule.
+    """
+    return points / math.sqrt(math.pi)
+
+
+def theme_paper(base_size=8, *, legend=False, base_family=None):
+    """ggplot2 `theme_minimal` with the paper look, for plotnine.
+
+    `theme_minimal(base_size=8, base_family=<first installed house sans>)` plus: grey text
+    (#333333 labels, #4D4D4D ticks), faint horizontal major gridlines only, a #B3B3B3 baseline
+    and short x ticks, no y ticks, bold left-aligned strip text with no strip background, no
+    plot title, subtitle or caption (they belong in the LaTeX caption: `ps.frame`), and the
+    legend off (`legend=False`) or at the bottom without a title (`legend=True`).
+    Add it last, or add your own `theme(...)` after it to change one element.
+    """
+    p9 = _plotnine()
+    t = TOKENS
+    # One name: plotnine reads a list in element_text as one value per axis break (the tick
+    # labels would cycle through the fonts). `from_plotnine` gives every text in a house font
+    # the whole fallback list, so a glyph Helvetica lacks still prints (from DejaVu Sans).
+    fam = base_family or house_font()
+    blank = p9.element_blank()
+    return p9.theme_minimal(base_size=base_size, base_family=fam) + p9.theme(
+        text=p9.element_text(family=fam, color=t["text"], size=base_size),
+        axis_title=p9.element_text(size=8, color=t["text"]),
+        axis_text=p9.element_text(size=7, color=t["text_ticks"]),
+        legend_text=p9.element_text(size=7, color=t["text"]),
+        legend_title=blank,
+        legend_position="bottom" if legend else "none",
+        legend_key=blank,
+        panel_grid_major_x=blank,
+        panel_grid_minor=blank,
+        panel_grid_major_y=p9.element_line(color=t["grid"], size=0.5),
+        panel_background=blank,
+        plot_background=p9.element_rect(fill=t["bg"], color=t["bg"]),
+        axis_line_x=p9.element_line(color=t["rule"], size=0.6),
+        axis_line_y=blank,
+        axis_ticks_major_x=p9.element_line(color=t["rule"], size=0.6),
+        axis_ticks_major_y=blank,
+        axis_ticks_minor=blank,
+        axis_ticks_length_major_x=2.5,
+        axis_ticks_length_major_y=0,
+        strip_text=p9.element_text(size=8, weight="bold", ha="left", color=t["text"]),
+        strip_background=blank,
+        plot_title=blank,
+        plot_subtitle=blank,
+        plot_caption=blank,
+    )
+
+
+def _gg_text_fixes(fig):
+    """Two fixes to the texts plotnine drew; returns how many texts changed.
+
+    Fonts: a text set in one house font (a `theme(text=element_text(family="Helvetica Neue"))`
+    after `theme_paper`, or a plotnine that passes one name on) gets the whole fallback list,
+    so a glyph that font lacks (an arrow, a triangle from `delta`) comes from DejaVu Sans
+    instead of printing as an empty box.
+
+    Clipping: plotnine clips text to its panel, as ggplot2 does, so an end label that runs
+    past the last data point is cut at the panel edge however much margin the plot has. Text
+    inside a panel is drawn whole instead; lint P6 then reports one that runs off the figure,
+    into another panel or over other text.
+    """
+    from matplotlib.text import Text
+
+    house = _installed_fonts()
+    changed = 0
+    for t in fig.findobj(Text):
+        fam = t.get_fontfamily()
+        names = [fam] if isinstance(fam, str) else list(fam)
+        if len(names) == 1 and names[0] in house:
+            t.set_fontfamily(_family_list(names[0]))
+            changed += 1
+    for ax in fig.axes:
+        for t in ax.texts:
+            if t.get_clip_on():
+                t.set_clip_on(False)
+                changed += 1
+    return changed
+
+
+def from_plotnine(p, rows=1, width=FULL, height=None, size=None):
+    """Draw a plotnine plot at its printed size and return the matplotlib Figure.
+
+    The size follows `figure`: `width` is COLUMN or FULL, the height is 4.2 in plus 1.5 in per
+    extra row of facets (`rows`), or `height` in inches; `size=(w, h)` overrides both (lint P1
+    then judges it). plotnine lays the figure out once; its layout engine is then removed, so
+    `frame` keeps that layout (it adds axis labels and panel letters, not margins). Go on
+    exactly as for a matplotlib figure: `ps.frame(fig, ...)`, the annotation helpers on
+    `fig.axes`, then `ps.save(fig, path)`. A title, subtitle or caption the plot still draws
+    is reported by lint P2; use `theme_paper()`, which blanks them.
+
+    Two changes to what plotnine drew: every text in one house font gets the whole fallback
+    list (so an arrow or a `delta` triangle prints, not an empty box), and text inside a
+    panel (`geom_text`, `annotate`) is no longer clipped to it. An end label then prints
+    whole; give it room inside the panel by widening the x scale,
+    `scale_x_continuous(expand=(0, 0, 0.2, 0))`, which also works on facets, where the next
+    facet starts right after the panel. `theme(plot_margin_right=...)` only adds room to the
+    right of the last column. Lint P6 reports a label that runs into the next facet, off the
+    figure or over other text. Panel letters go in front of the facet names in the strips.
+    """
+    p9 = _plotnine()
+    if not isinstance(p, p9.ggplot):
+        raise TypeError(f"from_plotnine needs a plotnine ggplot, not {type(p).__name__}")
+    apply()
+    if size is None:
+        w, h = default_size(rows, width)
+        if height is not None:
+            h = float(height) + _EPS
+        size = (w, h)
+    p = p + p9.theme(figure_size=(float(size[0]), float(size[1])), dpi=100)
+    try:
+        fig = p.draw(show=False)
+    except TypeError:  # plotnine before 0.12: draw() has no `show`
+        fig = p.draw()
+    from matplotlib.backends.backend_agg import FigureCanvasAgg
+
+    if not isinstance(fig.canvas, FigureCanvasAgg):  # plotnine makes figures outside pyplot
+        FigureCanvasAgg(fig)
+    _gg_text_fixes(fig)  # before the layout, so it measures the text as it will print
+    engine = fig.get_layout_engine() if hasattr(fig, "get_layout_engine") else None
+    if engine is not None and type(engine).__name__ != "PlaceHolderLayoutEngine":
+        engine.execute(fig)  # place panels, strips and legend at the final size, once
+    fig.canvas.draw()
+    if _gg_text_fixes(fig):  # texts the first draw made (tick labels) get the same fixes
+        fig.canvas.draw()
+    _no_layout_engine(fig)
+    labels = getattr(p, "labels", None)
+
+    def label(name):
+        value = getattr(labels, name, None) if labels is not None else None
+        return value if isinstance(value, str) and value else None
+
+    free = [t for t in fig.texts if t.get_visible() and t.get_gid() is None]
+    # The axis titles: plotnine draws them as figure texts, x level and y turned 90 degrees.
+    titles = {}
+    for name, turned in (("x", False), ("y", True)):
+        want = label(name)
+        titles[name] = next(
+            (
+                t
+                for t in free
+                if want is not None
+                and t.get_text() == want
+                and (abs(t.get_rotation() % 180 - 90) < 1) == turned
+            ),
+            None,
+        )
+    fig._ps_gg_titles = titles
+    # The plot title, subtitle and caption, if still drawn, are marked so P2 reports them.
+    for name, kind in (("title", "title"), ("subtitle", "subtitle"), ("caption", "footer")):
+        want = label(name)
+        for t in free:
+            if want is not None and t.get_text() == want and t not in titles.values():
+                t.set_gid(_gid(kind))
+    fig._ps_plotnine = True
+    return fig
 
 
 # --------------------------------------------------------------------- output

@@ -44,7 +44,7 @@ EXEMPT = {
 # and brick B23A2C (a hard-coded copy of those would pass as a "result" colour unnoticed).
 TOKEN_HEX = re.compile(
     r"#(?:0F2A4A|1F5FBF|7D8996|DCE3EC|0B1F3A|5B6878|E69F00|56B4E9|CC79A7|F0E442"
-    r"|16707A|B23A2C|5E6B7D|8A5A00|F5F7FA|8FB3E6|D9B98C)\b",
+    r"|16707A|B23A2C|5E6B7D|8A5A00|F5F7FA|8FB3E6|D9B98C|333333|4D4D4D|808080|B3B3B3|E5E5E5)\b",
     re.IGNORECASE,
 )
 MIN_FONT, MAX_FONT = 6.0, 9.0
@@ -52,7 +52,10 @@ MIN_FONT, MAX_FONT = 6.0, 9.0
 WEB_FIGSIZE = re.compile(r"figsize\s*=\s*\(\s*(?:1[0-9]|[89])(?:\.[0-9]+)?\s*,")
 SCAN_NOTEBOOKS = True
 # Which checks run; switch one off for a repository that is not ready for it.
-CHECKS = {"savefig": True, "rcparams": True, "tokens": True, "fontsize": True, "figsize": True}
+CHECKS = {"savefig": True, "rcparams": True, "tokens": True, "fontsize": True, "figsize": True,
+          "plotnine": True}
+# Names a plotnine file may call .save( on: the style module (and a repository shim of it).
+SAVE_OK_NAMES = {"ps", "paper_style", "hs", "house_style"}
 
 # ------------------------------------------------------------------ end of CONFIG
 
@@ -60,6 +63,10 @@ SAVEFIG = re.compile(r"\.savefig\(")
 RCPARAMS = re.compile(r"rcParams\s*(?:\.update\(|\[[^\]]+\]\s*=[^=])|rc_context|plt\.style|mplstyle|matplotlib\.rc\(")
 FONT_SIZE = re.compile(r"\b(?:fontsize|labelsize)\s*=\s*([0-9]+(?:\.[0-9]+)?)")
 OK_MARK = "paper-style: ok"
+# plotnine writes its own files with ggsave, p.save and save_as_pdf_pages: at its own size, with
+# its own fonts and no caption. A plotnine plot goes through paper_style.from_plotnine and save.
+GGSAVE = re.compile(r"\b(?:ggsave|save_as_pdf_pages)\s*\(")
+DOT_SAVE = re.compile(r"([\w.)\]]*)\.save\s*\(")
 
 
 def find_root(start=None):
@@ -146,6 +153,7 @@ def violations(root, *, scan=None, savefig_ok=(), rcparams_ok=(), checks=None, n
     for p, rel in source_files(root, scan, notebooks):
         lines = list(code_lines(p))
         mentions = any("matplotlib" in t or "paper_style" in t or "plt." in t for _, t in lines)
+        uses_plotnine = any("plotnine" in t for _, t in lines)
         for where, line in lines:
             if checks.get("savefig") and SAVEFIG.search(line) and not _matches(rel, savefig_ok):
                 out.append(f"savefig: {rel}:{where} (write figures with paper_style.save)")
@@ -159,7 +167,26 @@ def violations(root, *, scan=None, savefig_ok=(), rcparams_ok=(), checks=None, n
                         out.append(f"fontsize: {rel}:{where} fontsize={m.group(1)} (6 to 9 pt)")
             if checks.get("figsize") and WEB_FIGSIZE.search(line):
                 out.append(f"figsize: {rel}:{where} (3.4 or 7.0 in wide: paper_style.figure)")
+            if checks.get("plotnine") and _plotnine_save(line, uses_plotnine):
+                out.append(
+                    f"plotnine: {rel}:{where} (draw with paper_style.from_plotnine, write with "
+                    "paper_style.save; never ggsave or p.save)"
+                )
     return out
+
+
+def _plotnine_save(line, uses_plotnine):
+    """True if the line writes a plotnine plot itself: ggsave anywhere, or `x.save(` in a file
+    that uses plotnine where x is not paper_style (`ps.save(fig, ...)` is the way)."""
+    if GGSAVE.search(line):
+        return True
+    if not uses_plotnine:
+        return False
+    for m in DOT_SAVE.finditer(line):
+        receiver = m.group(1).split(".")[-1] if m.group(1) else ""
+        if receiver not in SAVE_OK_NAMES:
+            return True
+    return False
 
 
 def _check(name):
@@ -190,6 +217,10 @@ def test_every_literal_font_size_is_on_the_paper_type_scale():
 
 def test_no_script_builds_a_figure_at_a_web_size():
     assert not _check("figsize"), "figures are 3.4 or 7.0 in wide (paper_style.figure)"
+
+
+def test_no_script_writes_a_plotnine_plot_itself():
+    assert not _check("plotnine"), "plotnine plots go through paper_style.from_plotnine and save"
 
 
 # ------------------------------------------------- the guard itself, on scratch repos
@@ -308,3 +339,23 @@ def test_a_hard_coded_scored_result_colour_is_found(tmp_path):
         (tmp_path / "plot.py").write_text(f"import matplotlib.pyplot as plt\nBAD = '{hexc}'\n")
         out = violations(tmp_path, checks={"tokens": True})
         assert any(v.startswith("tokens:") for v in out), hexc
+
+
+def test_ggsave_and_p_save_on_plotnine_objects_are_refused(tmp_path):
+    files = {
+        "a.py": "from plotnine import ggplot, ggsave\nggsave(p, 'a.png')\n",
+        "b.py": "import plotnine as p9\np = p9.ggplot(df) + p9.geom_line()\np.save('b.png', dpi=300)\n",
+        "c.py": "import plotnine as p9\n(p9.ggplot(df) + p9.geom_line()).save('c.pdf')\n",
+        "d.py": "from plotnine import save_as_pdf_pages\nsave_as_pdf_pages([p], 'd.pdf')\n",
+        "e.py": "import plotnine as p9\nfig = ps.from_plotnine(p)\nps.save(fig, 'e')\npaper_style.save(fig, 'e2')\n",
+        "f.py": "import plotnine as p9\nimg.save('x.png')  # paper-style: ok\n",
+        "g.py": "from PIL import Image\nimg.save('x.png')\n",  # no plotnine: not this check's business
+        "h.py": "import plotnine as p9\nfrom energy import house_style as hs\nhs.save(fig, 'h')\n",
+        "n.ipynb": _nb(("code", "import plotnine as p9\np.save('n.png')\n")),
+    }
+    for rel, text in files.items():
+        (tmp_path / rel).write_text(text, encoding="utf-8")
+    got = violations(tmp_path, checks={"plotnine": True})
+    flagged = {v.split()[1].split(":")[0] for v in got}
+    assert flagged == {"a.py", "b.py", "c.py", "d.py", "n.ipynb"}, got
+    assert all(v.startswith("plotnine:") for v in got)

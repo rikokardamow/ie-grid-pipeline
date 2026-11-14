@@ -1,4 +1,4 @@
-"""Every chart this repository draws is a paper figure: 3.4 or 7.0 in wide, serif type of
+"""Every chart this repository draws is a paper figure: 3.4 or 7.0 in wide, sans-serif type of
 6 to 9 pt, a label with its unit on each axis, nothing about the finding on the image, a PDF
 with Type 42 fonts, a 300 dpi PNG, and a LaTeX caption with the finding, units, source and
 as-of date. The checks are paper_style.lint with axis labels on (docs/FIGURES.md)."""

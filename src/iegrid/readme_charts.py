@@ -5,7 +5,7 @@
 
 Every number comes from the report JSON, the same file the dashboard reads, so
 the two never disagree. The figures are in the paper format (paper_style.py,
-docs/FIGURES.md): 7.0 in wide, serif type of 6 to 9 pt, a label with its unit on every
+docs/FIGURES.md): 7.0 in wide, sans-serif type of 6 to 9 pt, a label with its unit on every
 axis. Nothing about the finding is drawn on the image. For each chart three files are
 written: <name>.pdf (vector, Type 42 fonts, for a paper), <name>.png (300 dpi, for the
 README) and <name>.tex (a LaTeX figure whose caption holds the finding, units, source
@@ -173,8 +173,11 @@ def flows(rep):
     ax.set_xticks(xs, labels)
     top = max(jv + lv)
     ax.set_ylim(0, top * 1.2)
-    ax.text(xs[0] - w / 2, top * 1.1, "joined the list (navy)", color=TEXT, fontsize=LABEL)
-    ax.text(xs[0] + 1.6, top * 1.1, "left the list (grey)", color=TEXT, fontsize=LABEL)
+    joined = ax.text(xs[0] - w / 2, top * 1.1, "joined the list (navy)", color=TEXT,
+                     fontsize=LABEL, va="bottom")
+    # placed from the first label's right edge, so the gap holds whatever the font's width
+    ax.annotate("left the list (grey)", xy=(1, 0), xycoords=joined, xytext=(14, 0),
+                textcoords="offset points", va="bottom", color=TEXT, fontsize=LABEL)
     asof = _d(rep["queue"]["by_technology"]["transmission_as_of"])
     frame_fit(fig, ax, title=finding,
               subtitle=f"{topic}: GW, each EirGrid contracted list against the one before. "
@@ -341,7 +344,7 @@ def freshness(rep):
     for yi, r in zip(y, rows, strict=True):
         ax.text(r["days"] + 0.8, yi, f"{r['days']} days · as of {fmt_date(_d(r['as_of']))}, "
                 f"published {fmt_date(_d(r['published']))}", va="center", fontsize=LABEL,
-                color=TEXT)
+                color=TEXT, path_effects=ps.halo())  # reads across the gridlines
     ax.set_yticks(y, [r["list"] for r in rows])
     ax.invert_yaxis()
     ax.set_xlim(0, max(days) * 1.9)
@@ -453,6 +456,7 @@ def slippage(rep):
     ax.hlines(y, 0, months, color=BORDER, linewidth=1.4)
     ax.scatter(months, y, s=22, color=NAVY, zorder=3, edgecolors="white", linewidths=1)
     ax.axvline(0, color=MUTED, linewidth=0.8)
+    ax.spines["left"].set_visible(False)  # the rule at zero is the baseline; the axes start left of it
     ax.axvline(s["median_to_completion"], color=BLUE, linestyle="--", linewidth=1.1, zorder=1)
     ax.text(s["median_to_completion"] + 0.6, -0.9, f"median {s['median_to_completion']:.1f} months",
             color=TEXT, fontsize=LABEL)

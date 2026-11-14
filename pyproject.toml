@@ -18,6 +18,7 @@ dependencies = [
 dev = [
     "jupyterlab>=4.2",
     "nbstripout>=0.7",
+    "plotnine>=0.15.9",
     "pytest>=8.3",
     "ruff>=0.7",
 ]

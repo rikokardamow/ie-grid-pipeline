@@ -73,15 +73,17 @@ def test_source_is_python_39_syntax():
     assert "\nfrom zoneinfo" not in src and "\nimport zoneinfo" not in src  # only a lazy import
 
 
-def test_apply_forces_agg_and_sets_type_42_serif():
+def test_apply_forces_agg_and_sets_type_42_sans():
     import matplotlib as mpl
 
     ps.apply()
     assert mpl.get_backend().lower() == "agg"
     assert mpl.rcParams["pdf.fonttype"] == 42 and mpl.rcParams["ps.fonttype"] == 42
     fams = mpl.rcParams["font.family"]
-    assert fams[-1] == "DejaVu Serif"
-    assert fams[0] in ("STIXGeneral", "Times New Roman", "Times", "DejaVu Serif")
+    assert fams[-1] == "DejaVu Sans"
+    assert fams[0] in ("Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans")
+    assert fams[0] == ps.house_font()
+    assert mpl.rcParams["mathtext.fontset"] == "dejavusans"
 
 
 def test_font_list_has_only_installed_fonts(caplog):
@@ -200,15 +202,25 @@ def test_text_running_off_the_figure_edge_fails_and_hidden_ticks_do_not():
     assert ps.lint(fig2) == []  # tick labels beyond the axis limits are never drawn
 
 
-def test_serif_and_type_42_are_enforced(monkeypatch):
+def test_sans_and_type_42_are_enforced(monkeypatch):
     import matplotlib as mpl
 
     fig, _ = _good()
     monkeypatch.setitem(mpl.rcParams, "pdf.fonttype", 3)
     assert any(p.startswith("P4") for p in ps.lint(fig))
     monkeypatch.setitem(mpl.rcParams, "pdf.fonttype", 42)
-    monkeypatch.setitem(mpl.rcParams, "font.family", ["DejaVu Sans"])
-    assert any(p.startswith("P4") and "font family" in p for p in ps.lint(fig))
+    monkeypatch.setitem(mpl.rcParams, "font.family", ["DejaVu Serif"])
+    assert any(p.startswith("P4") and "sans-serif" in p for p in ps.lint(fig))
+    monkeypatch.setitem(mpl.rcParams, "font.family", ps._installed_fonts())
+    monkeypatch.setitem(mpl.rcParams, "mathtext.fontset", "stix")
+    assert any(p.startswith("P4") and "mathtext" in p for p in ps.lint(fig))
+
+
+def test_p4_finds_a_text_set_in_its_own_serif_family():
+    fig, ax = _good()
+    assert ps.lint(fig) == []
+    ax.text(0.5, 3, "a serif note", family="serif", fontsize=7)
+    assert any(p.startswith("P4") and "a serif note" in p for p in ps.lint(fig))
 
 
 def test_axis_label_rule_p7_is_opt_in():
@@ -447,7 +459,9 @@ def test_desk_rules_are_off_by_default():
     assert ps.STRICT_DESK is False
     fig, ax = _good()
     ax.plot([0, 1], [0, 1], color="red", label="x")
-    ax.twinx().plot([0, 1], [5, 6])
+    twin = ax.twinx()
+    twin.plot([0, 1], [5, 6])
+    twin.tick_params(labelright=False)  # its tick labels would sit under the end label (P6)
     ax.legend()
     fig.legend()
     ax.bar([0], [1], color=ps.TOKENS["state_miss"])
@@ -502,9 +516,9 @@ def test_strict_sees_red_in_text_spines_ticks_arrows_and_cmaps(strict):
     a = ax.text(0.5, 0.5, "x", color="red")
     assert any("red or green" in p for p in ps.lint(fig))
     a.remove()
-    ax.spines["left"].set_edgecolor("#00A000")
+    ax.spines["bottom"].set_edgecolor("#00A000")  # the baseline: the one visible spine
     assert any("red or green" in p for p in ps.lint(fig))
-    ax.spines["left"].set_edgecolor(ps.TOKENS["border"])
+    ax.spines["bottom"].set_edgecolor(ps.TOKENS["rule"])
     ax.tick_params(axis="y", labelcolor="#E03030")  # lint runs before any draw in save()
     assert any("red or green" in p for p in ps.lint(fig))
     ax.tick_params(axis="y", labelcolor=ps.TOKENS["text_muted"])
@@ -1106,7 +1120,7 @@ def test_constrained_layout_is_replaced_so_the_margins_apply(recwarn):
     fig.add_subplot().plot([0, 1], [0, 1])
     ps.frame(fig, title="Demand fell 4% in a year", xlabel="X (u)", ylabel="Y (u)")
     assert not [w for w in recwarn.list if issubclass(w.category, UserWarning)]
-    assert fig.subplotpars.right == pytest.approx(1 - min(1.0, 0.14 * 7.0001) / 7.0001)
+    assert fig.subplotpars.right == pytest.approx(1 - min(1.3, 0.18 * 7.0001) / 7.0001)
     assert ps.lint(fig) == []
 
 
@@ -1539,3 +1553,566 @@ def test_axis_off_helper_does_not_shift_the_letters_of_real_panels():
     ps.frame(fig, **FRAME)
     assert [t.get_text() for ax in axes[:, 0] for t in ax.texts] == ["(a)", "(b)"]
     assert len([t for ax in fig.axes for t in ax.texts]) == 2
+
+
+# ---------------------------------------------------------------- the look
+
+
+def test_the_look_rcparams():
+    import matplotlib as mpl
+
+    ps.apply()
+    rc = mpl.rcParams
+    t = ps.TOKENS
+    # no box: only a light baseline at the bottom
+    assert not rc["axes.spines.left"] and not rc["axes.spines.top"] and not rc["axes.spines.right"]
+    assert rc["axes.spines.bottom"] and rc["axes.edgecolor"].upper() == "#B3B3B3" == t["rule"]
+    assert rc["axes.linewidth"] == 0.6
+    # faint horizontal major gridlines only, behind the data
+    assert rc["axes.grid"] and rc["axes.grid.axis"] == "y" and rc["axes.grid.which"] == "major"
+    assert rc["grid.color"].upper() == "#E5E5E5" and rc["grid.linewidth"] == 0.5
+    assert rc["axes.axisbelow"] is True
+    # grey text: labels #333333, ticks #4D4D4D, muted #808080
+    assert t["text"] == "#333333" and t["text_ticks"] == "#4D4D4D" and t["text_muted"] == "#808080"
+    assert rc["text.color"] == rc["axes.labelcolor"] == "#333333"
+    assert rc["xtick.labelcolor"] == rc["ytick.labelcolor"] == "#4D4D4D"
+    assert rc["axes.facecolor"] == rc["figure.facecolor"] == "#FFFFFF"
+    # y tick marks off (labels stay), short grey x ticks
+    assert rc["ytick.major.size"] == 0 and rc["ytick.left"] and rc["ytick.labelleft"]
+    assert 0 < rc["xtick.major.size"] <= 3 and rc["xtick.color"].upper() == "#B3B3B3"
+    # panel titles: left, bold, 8 pt, #333333
+    assert rc["axes.titlelocation"] == "left" and rc["axes.titleweight"] == "bold"
+    assert rc["axes.titlesize"] == 8 and rc["axes.titlecolor"] == "#333333"
+    # marks
+    assert rc["lines.linewidth"] == 1.2 and rc["lines.markersize"] == 3.5
+
+
+def test_a_drawn_axes_has_the_look():
+    fig, ax = _good()
+    fig.canvas.draw()
+    assert [k for k, sp in ax.spines.items() if sp.get_visible()] == ["bottom"]
+    assert all(g.get_visible() for g in ax.get_ygridlines())
+    assert not any(g.get_visible() for g in ax.get_xgridlines())
+    assert all(tk.tick1line.get_markersize() == 0 for tk in ax.yaxis.get_major_ticks())
+    assert ax.lines[0].get_linewidth() == 1.2
+
+
+def test_panel_titles_are_left_bold_and_pass_on_a_two_panel_figure():
+    fig, axes = ps.figure(2, 1)
+    for i, row in enumerate(axes):
+        row[0].plot([0, 1], [i, i + 1])
+        row[0].set_title(f"Panel {i}")
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="Year", ylabel="Demand (GW)")
+    assert ps.lint(fig) == []
+    assert axes[0][0].get_title(loc="left") == "Panel 0"  # rcParams put it on the left
+    assert axes[0][0].get_title(loc="center") == ""
+    assert axes[0][0]._left_title.get_fontweight() in ("bold", 700)
+
+
+def _has_halo(text):
+    from matplotlib import patheffects
+
+    effects = text.get_path_effects()
+    return any(
+        isinstance(e, patheffects.withStroke)
+        and e._gc.get("linewidth") == ps.HALO_WIDTH
+        and e._gc.get("foreground") in ("#FFFFFF", "white", (1, 1, 1), (1.0, 1.0, 1.0, 1.0))
+        for e in effects
+    )
+
+
+def test_every_helper_label_has_a_white_halo():
+    fig, ax = ps.figure()
+    ax = ax[0][0]
+    ax.plot([0, 1, 2], [3, 2, 4])
+    texts = [
+        ps.end_label(ax, 2, 4, "Demand", "4.0"),
+        ps.note(ax, (1, 2), "largest drop since June"),
+        ps.ref_line(ax, 2.5, "recent low 18.6"),
+        ps.event_rule(ax, 1, "Outage"),
+        ps.provisional(ax, [1.5, 2], [3.5, 4]),
+    ]
+    assert all(_has_halo(t) for t in texts)
+    fig2, ax2 = ps.figure()
+    bars = ax2[0][0].barh(["a", "b"], [1.0, -2.0])
+    labels = ps.bar_labels(ax2[0][0], bars)
+    assert [lab.get_text() for lab in labels] == ["1.0", "\u22122.0"]
+    assert all(_has_halo(lab) for lab in labels)
+    assert ps.halo()[0]._gc["linewidth"] == 2.5
+
+
+def test_helpers_with_halos_save_byte_stable(tmp_path):
+    def make(name):
+        fig, ax = _good()
+        ps.ref_line(ax, 2.5, "recent low")
+        ps.provisional(ax, [2], [4])
+        return {p.suffix: p.read_bytes() for p in ps.save(fig, tmp_path / name)}
+
+    a, b = make("a"), make("b")
+    assert a[".pdf"] == b[".pdf"] and a[".png"] == b[".png"] and a[".svg"] == b[".svg"]
+
+
+def test_band_is_a_light_fill_without_edges():
+    fig, axes = ps.figure()
+    ax = axes[0][0]
+    poly = ps.band(ax, [0, 1, 2], [1, 1, 1], [2, 3, 2])
+    assert list(poly.get_linewidths()) in ([0], [0.0])
+    assert 0 < poly.get_alpha() < 0.5
+    ax.plot([0, 1, 2], [1.5, 2, 1.5])
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="Year", ylabel="Demand (GW)")
+    assert ps.lint(fig, axis_labels=True) == []
+
+
+def test_hbar_axes_turns_the_grid_and_the_baseline():
+    fig, axes = ps.figure()
+    ax = axes[0][0]
+    bars = ax.barh(["Wind", "Gas"], [5.1, 4.4])
+    ps.hbar_axes(ax)
+    ps.bar_labels(ax, bars)
+    ps.frame(fig, title="Wind supplied the most at the peak", xlabel="Capacity (GW)")
+    fig.canvas.draw()
+    assert ax.spines["left"].get_visible() and not ax.spines["bottom"].get_visible()
+    assert any(g.get_visible() for g in ax.get_xgridlines())
+    assert not any(g.get_visible() for g in ax.get_ygridlines())
+    assert ps.lint(fig) == []
+
+
+# ---------------------------------------------------------------- plotnine
+
+
+def test_paper_style_imports_without_plotnine():
+    import subprocess
+
+    code = (
+        "import sys; sys.modules['plotnine'] = None\n"  # importing plotnine now fails
+        "import paper_style as ps\n"
+        "fig, ax = ps.figure(); ax[0][0].plot([0, 1])\n"
+        "try:\n    ps.theme_paper()\nexcept ImportError as e:\n    assert 'uv add' in str(e); print('ok')\n"
+    )
+    out = subprocess.run(
+        [sys.executable, "-c", code], cwd=str(Path(ps.__file__).parent), capture_output=True, text=True
+    )
+    assert out.returncode == 0, out.stderr
+    assert out.stdout.strip() == "ok"
+
+
+def test_gg_size_turns_points_into_plotnine_sizes():
+    assert ps.gg_size(1.2) * math.sqrt(math.pi) == pytest.approx(1.2)
+
+
+def _gg(**theme_over):
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    df = pd.DataFrame({"week": list(range(1, 21)), "gw": [30 + (i % 7) * 0.8 for i in range(20)]})
+    band = df.assign(lo=df.gw - 2, hi=df.gw + 2)
+    p = (
+        p9.ggplot(df, p9.aes("week", "gw"))
+        + p9.geom_ribbon(p9.aes(ymin="lo", ymax="hi"), data=band, alpha=0.2, size=0)
+        + p9.geom_line(size=ps.gg_size(1.2), color=ps.PALETTE[0])
+        + p9.labs(x="Week of the year", y="Demand (GW)")
+        + ps.theme_paper()
+    )
+    if theme_over:
+        p = p + p9.theme(**theme_over)
+    return p9, p
+
+
+@pytest.mark.parametrize("width", [ps.FULL, ps.COLUMN])
+def test_a_plotnine_chart_goes_through_frame_and_save_and_passes_lint(tmp_path, width):
+    p9, p = _gg()
+    fig = ps.from_plotnine(p, width=width)
+    assert fig.get_size_inches()[0] == pytest.approx(width, abs=0.001)
+    ps.frame(fig, title="Demand fell 4% in a year", units="GW", source="Grid operator, table 4 (D-1)",
+             asof="2026-11-04")
+    assert ps.lint(fig, axis_labels=True) == []
+    written = ps.save(fig, tmp_path / "gg")
+    assert sorted(p.suffix for p in written) == [".pdf", ".png", ".svg", ".tex"]
+    from PIL import Image
+
+    with Image.open(tmp_path / "gg.png") as im:
+        assert im.size[0] == round(width * ps.DPI)
+    assert b"/Type3" not in (tmp_path / "gg.pdf").read_bytes()
+
+
+def test_a_plotnine_figure_has_the_look():
+    p9, p = _gg()
+    fig = ps.from_plotnine(p)
+    fig.canvas.draw()
+    ax = fig.axes[0]
+    assert ax.get_ygridlines() and all(g.get_color().upper() == "#E5E5E5" for g in ax.get_ygridlines() if g.get_visible())
+    assert not any(g.get_visible() for g in ax.get_xgridlines())
+    fams = {tuple(t.get_fontfamily()) if isinstance(t.get_fontfamily(), list) else (t.get_fontfamily(),)
+            for t in ps._drawn_texts(fig)}
+    assert all(f[0] == ps.house_font() for f in fams)
+    lw = [ln.get_linewidth() for ln in ax.lines if ln.get_linewidth() > 0]  # ribbon edges are 0
+    assert lw == [pytest.approx(1.2)]
+    assert fig.get_layout_engine() is None or type(fig.get_layout_engine()).__name__ == "PlaceHolderLayoutEngine"
+
+
+def test_plotnine_figures_are_byte_stable(tmp_path):
+    def make(name):
+        _, p = _gg()
+        fig = ps.from_plotnine(p)
+        ps.frame(fig, title="Demand fell 4% in a year")
+        return {q.suffix: q.read_bytes() for q in ps.save(fig, tmp_path / name)}
+
+    a, b = make("a"), make("b")
+    for ext in (".pdf", ".png", ".svg"):
+        assert a[ext] == b[ext], ext
+
+
+def test_plotnine_title_without_theme_paper_fails_p2_and_p4():
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    df = pd.DataFrame({"x": [0, 1, 2], "y": [1, 3, 2]})
+    p = p9.ggplot(df, p9.aes("x", "y")) + p9.geom_line() + p9.labs(title="Demand chart", x="X (u)", y="Y (u)")
+    fig = ps.from_plotnine(p)
+    ps.frame(fig, title="Demand fell 4% in a year")
+    problems = ps.lint(fig)
+    assert any(q.startswith("P2") for q in problems)
+    assert any(q.startswith("P4") for q in problems)  # theme_gray draws in plotnine's default family
+    # theme_paper blanks the title: the same plot then passes
+    fig2 = ps.from_plotnine(p + ps.theme_paper())
+    ps.frame(fig2, title="Demand fell 4% in a year")
+    assert ps.lint(fig2) == []
+
+
+def test_frame_rewords_plotnine_axis_titles_and_refuses_margins():
+    _, p = _gg()
+    fig = ps.from_plotnine(p)
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="Week (ISO)", ylabel="Load (GW)")
+    texts = {t.get_text() for t in fig.texts}
+    assert {"Week (ISO)", "Load (GW)"} <= texts and "Week of the year" not in texts
+    with pytest.raises(ValueError, match="plot_margin"):
+        ps.frame(ps.from_plotnine(p), title="Demand fell 4% in a year", margins=(1, 1, 1, 1))
+    with pytest.raises(ValueError, match="one y axis title"):
+        ps.frame(ps.from_plotnine(p), title="Demand fell 4% in a year", ylabel=["a", "b"])
+
+
+def test_from_plotnine_sizes_and_types():
+    p9, p = _gg()
+    assert tuple(ps.from_plotnine(p, rows=2).get_size_inches()) == pytest.approx(ps.default_size(2))
+    assert ps.from_plotnine(p, width=ps.COLUMN, height=2.5).get_size_inches()[1] == pytest.approx(2.5, abs=0.001)
+    assert tuple(ps.from_plotnine(p, size=(7.0, 3.0)).get_size_inches()) == pytest.approx((7.0, 3.0))
+    with pytest.raises(TypeError):
+        ps.from_plotnine("not a plot")
+
+
+def test_plotnine_facets_get_panel_letters_and_matplotlib_helpers_work_on_them(tmp_path):
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    df = pd.DataFrame({"x": list(range(10)) * 2, "y": list(range(10)) + list(range(10))[::-1],
+                       "zone": ["North"] * 10 + ["South"] * 10})
+    p = (p9.ggplot(df, p9.aes("x", "y")) + p9.geom_line(size=ps.gg_size(1.2)) + p9.facet_wrap("zone")
+         + p9.labs(x="Hour (h)", y="Load (GW)") + ps.theme_paper())
+    fig = ps.from_plotnine(p)
+    ps.ref_line(fig.axes[0], 5, "mean 5")
+    ps.frame(fig, title="North load rose as the south fell")
+    # the letters go in front of the facet names, not into the gap between the facets
+    assert sorted(t.get_text() for t in ps._top_strips(fig).values()) == ["(a)  North", "(b)  South"]
+    assert not [t for ax in fig.axes for t in ax.texts if t.get_gid() == "ps-panel"]
+    ps.frame(fig, title="North load rose as the south fell")  # framing twice: no second letter
+    assert sorted(t.get_text() for t in ps._top_strips(fig).values()) == ["(a)  North", "(b)  South"]
+    assert ps.lint(fig, axis_labels=True) == []
+    assert ps.save(fig, tmp_path / "facets")
+
+
+def _facets(p9, pd, names, expand=None, margin=None):
+    rows = [(n, k, d, (1.2 + 0.02 * d) if k == "Wind" else 0.9) for n in names
+            for k in ("Wind", "Solar") for d in range(60)]
+    df = pd.DataFrame(rows, columns=["region", "kind", "day", "gw"])
+    p = (p9.ggplot(df, p9.aes("day", "gw", color="kind")) + p9.geom_line(size=ps.gg_size(1.2))
+         + p9.geom_text(p9.aes(label="kind"), data=df[df.day == 59], ha="left", nudge_x=1.5, size=7,
+                        path_effects=ps.halo())
+         + p9.facet_wrap("region", ncol=2) + p9.labs(x="Day of the sample", y="Output (GW)")
+         + ps.theme_paper())
+    if expand is not None:
+        p = p + p9.scale_x_continuous(expand=(0, 0, expand, 0))
+    if margin is not None:
+        p = p + p9.theme(plot_margin_right=margin)
+    return p
+
+
+REGIONS = ["Dublin", "Midlands", "North-west and Donegal", "South"]
+
+
+@pytest.mark.parametrize("width,rows", [(ps.FULL, 1), (ps.COLUMN, 2)])
+def test_plotnine_facet_letters_do_not_land_on_strips_or_the_axis_title(width, rows):
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    fig = ps.from_plotnine(_facets(p9, pd, REGIONS, expand=0.22), rows=rows, width=width)
+    ps.frame(fig, title="Wind rose in every region")
+    strips = sorted(t.get_text() for t in ps._top_strips(fig).values())
+    assert strips == ["(a)  Dublin", "(b)  Midlands", "(c)  North-west and Donegal", "(d)  South"]
+    assert ps.lint(fig, axis_labels=True) == []
+    r = fig.canvas.get_renderer()
+    ytitle = fig._ps_gg_titles["y"].get_window_extent(r)
+    for t in ps._top_strips(fig).values():
+        assert not ps._overlap(t.get_window_extent(r), ytitle)
+
+
+def test_lint_reports_a_strip_too_long_for_its_column_and_a_corner_letter_on_text():
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    long = ["Dublin", "Midlands", "North-west, Donegal and the western seaboard", "South"]
+    fig = ps.from_plotnine(_facets(p9, pd, long, expand=0.22), rows=2, width=ps.COLUMN)
+    ps.frame(fig, title="Wind rose in every region")
+    assert any("P6" in q and "prints over" in q for q in ps.lint(fig))
+    # matplotlib: a letter at a corner that lands on another text is reported too
+    fig, axes = ps.figure(cols=2)
+    for ax in axes[0]:
+        ax.plot([0, 1], [0, 1])
+    ps.frame(fig, title="Both rose in a year", xlabel="Year", ylabel="Load (GW)")
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    letter = next(t for t in axes[0][1].texts if t.get_gid() == "ps-panel")
+    b = letter.get_window_extent(r)
+    fig.text(*fig.transFigure.inverted().transform(((b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2)),
+             "note", ha="center", va="center", fontsize=7)
+    assert any(q.startswith("P6 text '(b)' prints over 'note'") for q in ps.lint(fig))
+
+
+def test_plotnine_end_labels_are_not_clipped_and_lint_reports_one_in_the_next_facet():
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    # the route the review found broken: extra plot margin, labels past the panel edge
+    fig = ps.from_plotnine(_facets(p9, pd, ["North", "South"], margin=0.14))
+    ps.frame(fig, title="Wind rose in both regions")
+    labels = [t for ax in fig.axes for t in ax.texts if t.get_text() in ("Wind", "Solar")]
+    assert labels and not any(t.get_clip_on() for t in labels)  # drawn whole
+    assert any(q.startswith("P6 text runs into another panel") for q in ps.lint(fig))
+    # the documented route: room inside the panel from the x scale
+    fig = ps.from_plotnine(_facets(p9, pd, ["North", "South"], expand=0.22))
+    ps.frame(fig, title="Wind rose in both regions")
+    assert ps.lint(fig, axis_labels=True) == []
+    r = fig.canvas.get_renderer()
+    for ax in fig.axes:
+        for t in ax.texts:
+            if t.get_text() in ("Wind", "Solar"):
+                assert t.get_window_extent(r).x1 <= ax.bbox.x1 + 1
+
+
+def test_lint_reports_text_cut_at_the_panel_edge():
+    fig, ax = _good()
+    ax.text(1.9, 3, "a long label past the edge", clip_on=True)
+    assert any(q.startswith("P6 text is cut at the panel edge") for q in ps.lint(fig))
+
+
+def test_plotnine_texts_keep_the_glyph_fallback():
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    import warnings
+
+    df = pd.DataFrame({"week": list(range(20)), "gw": [i * 0.6 - 3 for i in range(20)],
+                       "g": ["Wind → grid ▲", "Solar ▼"] * 10})
+    p = (p9.ggplot(df, p9.aes("week", "gw")) + p9.geom_line()
+         + p9.annotate("text", x=5, y=5, label="▲ −3.2 GW →", size=7)
+         + p9.labs(x="Week", y="Flow (GW) →") + ps.theme_paper()
+         + p9.theme(text=p9.element_text(family=ps.house_font())) + p9.facet_wrap("g"))
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        fig = ps.from_plotnine(p)
+        ps.frame(fig, title="Flow rose all twenty weeks")
+        assert ps.lint(fig) == []
+    assert not [w for w in caught if "missing from font" in str(w.message)]
+    for t in ps._drawn_texts(fig):
+        assert list(t.get_fontfamily()) == ps._installed_fonts(), t.get_text()
+
+
+def test_lint_reports_a_glyph_no_font_can_draw():
+    fig, ax = _good()
+    ps.note(ax, (1, 3), "電 peak")  # a CJK character: no house font and not DejaVu Sans
+    with pytest.warns(UserWarning):  # matplotlib's own warning while lint draws
+        problems = ps.lint(fig)
+    assert any(q.startswith("P4") and "U+96FB" in q for q in problems)
+    assert ps._missing_glyphs(ax.texts[-1]) == ["電"]
+
+
+@pytest.mark.parametrize("width", [ps.COLUMN, ps.FULL])
+def test_bar_labels_of_negative_bars_stay_off_the_category_names(width):
+    fig, axes = ps.figure(width=width)
+    ax = axes[0][0]
+    bars = ax.barh(["Forties", "Bonny", "Mars", "Dubai", "Urals"], [3.2, -1.4, 0.8, 12.6, -18.9])
+    ps.hbar_axes(ax)
+    labels = ps.bar_labels(ax, bars)
+    ps.frame(fig, title="Urals discount widened to 18.9 dollars", xlabel="Differential (USD/bbl)")
+    assert ps.lint(fig) == []
+    r = fig.canvas.get_renderer()
+    box = ax.get_window_extent(r)
+    for lab in labels:
+        e = lab.get_window_extent(r)
+        assert box.x0 <= e.x0 and e.x1 <= box.x1, lab.get_text()
+        for tick in ax.get_yticklabels():
+            assert not ps._overlap(e, tick.get_window_extent(r)), (lab.get_text(), tick.get_text())
+    # vertical bars with a negative one: the label below it stays inside the axes
+    fig, axes = ps.figure(width=width)
+    ax = axes[0][0]
+    labels = ps.bar_labels(ax, ax.bar(["A", "B", "C"], [4.0, -9.5, 2.0]))
+    ps.frame(fig, title="B fell by 9.5 units", xlabel="Unit", ylabel="Change (GW)")
+    assert ps.lint(fig, axis_labels=True) == []
+    r = fig.canvas.get_renderer()
+    assert all(ax.bbox.y0 <= lab.get_window_extent(r).y0 for lab in labels)
+
+
+def test_lint_reports_a_bar_label_over_a_category_name():
+    fig, axes = ps.figure(width=ps.COLUMN)
+    ax = axes[0][0]
+    bars = ax.barh(["Forties", "Urals"], [3.2, -18.9])
+    ps.hbar_axes(ax)
+    ax.bar_label(bars, labels=["3.2", "−18.9"], padding=3, fontsize=7)  # no fitting
+    ps.frame(fig, title="Urals discount widened to 18.9 dollars", xlabel="Differential (USD/bbl)")
+    assert any("prints over 'Urals'" in q for q in ps.lint(fig))
+
+
+def test_theme_paper_legend_switch():
+    p9 = pytest.importorskip("plotnine")
+    off, on = ps.theme_paper(), ps.theme_paper(legend=True)
+    assert off.themeables["legend_position"].properties["value"] == "none"
+    assert on.themeables["legend_position"].properties["value"] == "bottom"
+    assert isinstance(on.themeables["legend_title"], p9.themes.themeable.legend_title)
+
+
+# ------------------------------------------------- fix round: letters, log notation, P6 scales
+
+
+def _ticks(axis):
+    return [t.get_text() for t in axis.get_ticklabels() if t.get_text()]
+
+
+def test_log_axis_auto_uses_one_notation_per_axis():
+    import numpy as np
+
+    fig, axes = ps.figure()
+    ax = axes[0][0]
+    xs = np.logspace(-5, 7, 60)
+    ax.loglog(xs, xs ** 0.7)
+    ps.log_axis(ax)
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="X (u)", ylabel="Y (u)")
+    fig.canvas.draw()
+    for axis in (ax.xaxis, ax.yaxis):
+        labels = _ticks(axis)
+        assert labels and all("10" in t and t[2:] and t[2] in "⁻⁰¹²³⁴⁵⁶⁷⁸⁹"
+                              for t in labels), labels
+    # a range inside 10^-3 .. 10^4 stays in digits on every tick
+    fig, axes = ps.figure()
+    ax = axes[0][0]
+    ax.semilogy(np.arange(10), np.logspace(-2, 3, 10))
+    ps.log_axis(ax, "y")
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="X (u)", ylabel="Y (u)")
+    fig.canvas.draw()
+    labels = _ticks(ax.yaxis)
+    assert labels and not any("×" in t or "⁻" in t or "10¹" in t for t in labels), labels
+    assert "0.01" in labels and "1000" in labels
+    assert ps.lint(fig, axis_labels=True) == []
+
+
+def test_log_axis_auto_switches_the_whole_axis_when_one_decade_is_outside():
+    import numpy as np
+
+    fig, axes = ps.figure()
+    ax = axes[0][0]
+    ax.semilogy(np.arange(10), np.logspace(-3, 5, 10))  # 10^5 is past 10^4: all powers
+    ps.log_axis(ax, "y")
+    ps.frame(fig, title="Demand fell 4% in a year", xlabel="X (u)", ylabel="Y (u)")
+    fig.canvas.draw()
+    labels = _ticks(ax.yaxis)
+    assert "10⁻³" in labels and "10⁵" in labels and "0.001" not in labels and "10" not in labels
+    # an explicit style is still honoured
+    ps.log_axis(ax, "y", style="plain")
+    fig.canvas.draw()
+    assert "100000" in _ticks(ax.yaxis)
+
+
+@pytest.mark.parametrize("width,cols", [(ps.COLUMN, 2), (ps.FULL, 3)])
+def test_frame_leaves_room_for_wide_y_scales_between_columns(width, cols, tmp_path):
+    fig, axes = ps.figure(1, cols, width=width, sharex=False)
+    for ax in axes[0]:
+        ax.plot([0, 1], [100000, 250000])
+    ps.frame(fig, title="Volumes rose 150% in the year", xlabel="Year fraction (yr)",
+             ylabel=["Volume (barrels)"] * cols)
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    for left, right in zip(axes[0][:-1], axes[0][1:]):
+        a = left.get_window_extent(r)
+        for t in [right.yaxis.label] + right.get_yticklabels():
+            if t.get_text():
+                assert t.get_window_extent(r).x0 >= a.x1, t.get_text()
+    assert ps.lint(fig, axis_labels=True) == []
+    assert ps.save(fig, tmp_path / "wide")
+
+
+def test_frame_keeps_a_wider_gap_the_caller_set():
+    fig, axes = ps.figure(1, 2, sharex=False)
+    for ax in axes[0]:
+        ax.plot([0, 1], [0, 1])
+    fig.subplots_adjust(wspace=0.8)
+    ps.frame(fig, title="Both rose in a year", xlabel="Year (yr)", ylabel="Load (GW)")
+    assert fig.subplotpars.wspace >= 0.8 - 1e-6
+
+
+def test_lint_reports_tick_labels_and_axis_titles_in_another_panel(tmp_path):
+    fig, axes = ps.figure(1, 2, width=ps.COLUMN, sharex=False)
+    for ax in axes[0]:
+        ax.plot([0, 1], [100000, 250000])
+    ps.frame(fig, title="Volumes rose 150% in the year", xlabel="Year fraction (yr)",
+             ylabel=["Volume (barrels)"] * 2)
+    fig.subplots_adjust(wspace=0.05)  # squeeze the gap after framing: (b)'s scale lands on (a)
+    problems = ps.lint(fig, axis_labels=True)
+    assert any(q.startswith("P6 text runs into another panel") and "wspace" in q for q in problems), problems
+    with pytest.raises(ValueError, match="P6"):
+        ps.save(fig, tmp_path / "squeezed")
+
+
+def test_lint_reports_a_panel_letter_on_another_panel():
+    fig, axes = ps.figure(2, 2, sharex=True)
+    for ax in axes.flat:
+        ax.plot([0, 1], [0, 1])
+    for ax in axes[:, 1]:
+        ax.tick_params(labelleft=False)  # the right column shares the left one's scale
+    ps.frame(fig, title="All rose in a year", xlabel="Year (yr)", ylabel="Load (GW)")
+    assert ps.lint(fig, axis_labels=True) == []
+    # no room between rows and columns: (d) prints on the bottom-right corner of (a)
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+    problems = ps.lint(fig)
+    assert any("'(d)'" in q and "another panel" in q for q in problems), problems
+
+
+def test_a_two_row_inset_keeps_its_scale_without_a_p6_report():
+    fig, axes = ps.figure(1, 2, sharex=False)
+    for ax in axes[0]:
+        ax.plot([0, 1], [0, 1])
+    inset = axes[0][0].inset_axes([0.55, 0.1, 0.4, 0.35])
+    inset.plot([0, 1], [1, 0])
+    inset.set_xlabel("Hour (h)")
+    inset.set_ylabel("Load (GW)")
+    ps.frame(fig, title="Both rose in a year", xlabel="Year (yr)", ylabel="Load (GW)")
+    assert not [q for q in ps.lint(fig) if "another panel" in q]
+
+
+def test_plotnine_facet_grid_letters_go_inside_the_lower_panels(tmp_path):
+    p9 = pytest.importorskip("plotnine")
+    pd = pytest.importorskip("pandas")
+    rows = [(h, s, w, 5 + ((w * 7 + len(h) + len(s)) % 11) * 0.3) for h in ("Great Britain", "Island of Ireland")
+            for s in ("East", "West") for w in range(1, 53)]
+    df = pd.DataFrame(rows, columns=["half", "sub", "week", "gw"])
+    p = (p9.ggplot(df, p9.aes("week", "gw")) + p9.geom_line(size=ps.gg_size(1.2), color=ps.PALETTE[0])
+         + p9.facet_grid("half ~ sub") + p9.labs(x="week", y="gw") + ps.theme_paper())
+    for width in (ps.COLUMN, ps.FULL):
+        fig = ps.from_plotnine(p, rows=2, width=width)
+        ps.frame(fig, title="Wind rose in every region", xlabel="Week of 2026", ylabel="Wind (GW)")
+        fig.canvas.draw()
+        r = fig.canvas.get_renderer()
+        panels = ps._panels(fig)
+        assert sorted(t.get_text() for t in ps._top_strips(fig).values()) == ["(a)  East", "(b)  West"]
+        for ax in panels[2:]:
+            (letter,) = [t for t in ax.texts if t.get_gid() == "ps-panel"]
+            b = letter.get_window_extent(r)
+            own = ax.get_window_extent(r)
+            assert own.x0 <= b.x0 and b.x1 <= own.x1 and own.y0 <= b.y0 and b.y1 <= own.y1 + 1
+            assert letter.get_path_effects()  # a halo, so it reads over a line
+            for other in panels:
+                if other is not ax:
+                    assert not ps._overlap(b, other.get_window_extent(r))
+        assert [t.get_text() for ax in panels[2:] for t in ax.texts if t.get_gid() == "ps-panel"] == ["(c)", "(d)"]
+        assert ps.lint(fig, axis_labels=True) == []
+        assert ps.save(fig, tmp_path / f"grid_{width}")

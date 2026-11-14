@@ -14,10 +14,10 @@ HERE = Path(__file__).resolve().parent
 EXPORTER_CANDIDATES = [
     HERE / "export_paper_figures.py",
     HERE.parent / "export_paper_figures.py",
+    HERE.parent / "ops" / "export_paper_figures.py",
     HERE.parent / "jobs" / "export_paper_figures.py",
     HERE.parent / "tools" / "export_paper_figures.py",
     HERE.parent / "scripts" / "export_paper_figures.py",
-    HERE.parent / "ops" / "export_paper_figures.py",
 ]
 
 from iegrid import paper_style as ps

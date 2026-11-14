@@ -1,6 +1,6 @@
 """One exhibit per stone: what the data that stone added actually says.
 
-Drawn in the paper format (src/iegrid/paper_style.py, docs/FIGURES.md): 7.0 in wide, serif
+Drawn in the paper format (src/iegrid/paper_style.py, docs/FIGURES.md): 7.0 in wide, sans-serif
 type between 6 and 9 pt, a label with its unit on every axis, and no title, subtitle or footer
 on the image. The title (a finding computed from the data), the units, the source with its
 credit and the as-of date go into the LaTeX caption written beside each figure. The record's
@@ -55,13 +55,13 @@ def group(technology: str) -> str:
 
 
 def new_figure(height: float, *, bars: bool = False, width: float = ps.FULL):
-    """A paper-format figure and its one axes. `bars=True` puts the grid on the value (x) axis,
-    for horizontal bars; otherwise it is horizontal, as the paper style draws it."""
+    """A paper-format figure and its one axes. `bars=True` turns the look round for horizontal
+    bars (ps.hbar_axes): the grid on the value (x) axis and the baseline on the left; otherwise
+    the grid is horizontal, as the paper style draws it."""
     fig, axes = ps.figure(size=(width, height), sharex=False)
     ax = axes[0][0]
     if bars:
-        ax.grid(axis="y", visible=False)
-        ax.grid(axis="x", visible=True)
+        ps.hbar_axes(ax)
     return fig, ax
 
 
@@ -134,7 +134,7 @@ def publication_lag(con):
     ax.scatter(lags, y, s=26, color=NAVY, zorder=3, edgecolors=ps.TOKENS["bg"], linewidths=1)
     for yi, r in zip(y, rows, strict=True):
         ax.text(r[3] + 0.8, yi, f"{r[3]} days \u00b7 as of {r[1]:%-d %b}, up {r[2]:%-d %b}",
-                va="center", fontsize=LABEL, color=TEXT)
+                va="center", fontsize=LABEL, color=TEXT, path_effects=ps.halo())
     ax.set_yticks(list(y), labels)
     ax.invert_yaxis()
     ax.set_xlim(0, max(lags) * 1.6)
