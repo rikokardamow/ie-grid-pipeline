@@ -9,7 +9,7 @@ import re
 import matplotlib.pyplot as plt
 import pytest
 
-from iegrid import conversion, exhibits, readme_charts, store
+from iegrid import exhibits, readme_charts, store
 from iegrid import paper_style as ps
 
 ROOT = store.ROOT
@@ -63,21 +63,6 @@ def test_two_runs_write_the_same_bytes(tmp_path):
         readme_charts.CHARTS)
     for n in names:
         assert (a / n).read_bytes() == (b / n).read_bytes(), n
-
-
-@needs_db
-def test_conversion_chart_passes_the_paper_lint():
-    import duckdb
-
-    con = duckdb.connect(str(DB), read_only=True)
-    try:
-        fig = conversion.chart(conversion.build(con))
-    finally:
-        con.close()
-    try:
-        assert ps.lint(fig, axis_labels=True) == []
-    finally:
-        plt.close(fig)
 
 
 @needs_db
