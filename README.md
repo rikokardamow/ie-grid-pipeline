@@ -109,7 +109,7 @@ Or step by step:
     uv run python -m iegrid.counties       # place projects in counties
     uv run python -m iegrid.grid           # OpenStreetMap lines and substations
     uv run python -m iegrid.report         # data/reports/<date>T<HHMM>.json and .pdf
-    uv run python -m iegrid.readme_charts  # the charts above, into docs/img/
+    uv run python -m iegrid.readme_charts  # the charts above, into docs/img/ (.png, .pdf, .tex)
     uv run pytest
 
 The dashboard is a static Next.js page built from the report and served locally:
