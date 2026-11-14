@@ -18,6 +18,7 @@ dependencies = [
 dev = [
     "jupyterlab>=4.2",
     "nbstripout>=0.7",
+    "plotnine>=0.15.9",
     "pytest>=8.3",
     "ruff>=0.7",
 ]
@@ -28,6 +29,14 @@ build-backend = "uv_build"
 
 [tool.ruff]
 line-length = 100
+# The vendored paper-format files (docs/FIGURES.md) are copied unchanged between repositories.
+extend-exclude = [
+    "src/iegrid/paper_style.py",
+    "ops/export_paper_figures.py",
+    "tests/test_paper_style.py",
+    "tests/test_paper_style_guard.py",
+    "tests/test_export_paper_figures.py",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

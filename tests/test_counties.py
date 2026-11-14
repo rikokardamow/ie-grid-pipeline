@@ -115,6 +115,7 @@ def test_a_second_parser_version_does_not_double_the_county_figures(con, monkeyp
     """g3b review: each parser version stores its own copy of the rows; joins from a
     build to its rows must use the version the build read."""
     from iegrid import checks, exhibits
+    from iegrid import paper_style as ps
 
     pid = add_contracted(con, [("TG1", "Ballymoneen Solar Park", "100", "Cashla"),
                                ("TG2", "Nowhere Solar", "5", "Atlantis")])
@@ -131,4 +132,4 @@ def test_a_second_parser_version_does_not_double_the_county_figures(con, monkeyp
     assert "Nowhere Solar" in checks.unplaced(con)
     assert checks.unplaced(con).count("Nowhere Solar") == 1
     fig = exhibits.contracted_by_county(con)
-    assert "0.1 GW" in fig.texts[0].get_text()  # Galway 100 MW, not 200
+    assert "0.1 GW" in ps.field(fig, "title")  # Galway 100 MW, not 200

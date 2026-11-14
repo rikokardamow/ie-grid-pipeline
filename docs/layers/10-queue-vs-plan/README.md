@@ -11,6 +11,10 @@ and the date it was read.
 
 ![The queue against the assessment's assumptions](../../img/plan.png)
 
+*Figure: The adequacy assessment expects 1,900 MW of new gas and adds 660 MW of storage; the lists hold 1,524 MW and 1,789 MW. Source: EirGrid and SONI, All-Island Resource Adequacy Assessment 2026-2035 (Ireland; data freeze 30 June 2025), read 2026-10-29; EirGrid contracted lists, Supported by EirGrid Group Data; ESB Networks DSO lists, © ESB Networks, used with their permission; transmission list as of 5 Aug 2026, distribution list as of 1 Oct 2026; as of 2026-10-01.*
+
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (lists of 5 Aug and 1 Jul 2026; assessment with its data freeze of 30 June 2025):
 
 | | the lists | the assessment |

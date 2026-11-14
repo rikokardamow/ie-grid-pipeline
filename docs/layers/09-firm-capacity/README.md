@@ -9,6 +9,10 @@ much of the queue would count and which technologies carry it.
 
 ![Share of contracted MW that counts](../../img/firm.png)
 
+*Figure: 2.00 to 2.11 GW of the queue counts, and gas turbines are 56% to 59% of that. Source: EirGrid contracted lists, Supported by EirGrid Group Data; ESB Networks DSO lists, © ESB Networks, used with their permission; SEM capacity auction de-rating factors for 2030/31; transmission list as of 5 Aug 2026, distribution list as of 1 Oct 2026; as of 2026-10-01.*
+
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (lists of 5 Aug and 1 Jul 2026, factors of the 2030/31 auction):
 
 | technology | contracted | counts, 2030/31 | share | counts, 2029/30 |

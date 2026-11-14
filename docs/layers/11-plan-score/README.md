@@ -9,6 +9,10 @@ far as this record has found, anywhere else. So this layer does.
 
 ![New conventional plant expected and arrived](../../img/score.png)
 
+*Figure: At least 307 MW of new conventional plant had arrived by the end of 2025; the grid operators' reports expected 310 to 530 MW. Source: EirGrid and SONI capacity statements and adequacy assessments; EirGrid contracted lists, Supported by EirGrid Group Data; ESB Networks DSO lists, © ESB Networks, used with their permission; lists to 2026-10-01; as of 2026-10-01.*
+
+*Credit: EirGrid Group Data and © ESB Networks lists, used with their permission; the full credit is in the main README and `NOTICE`.*
+
 **What it found** (Ireland, rated MW, cumulative from the start of 2024; lists to 5 Aug 2026):
 
 | by the end of | arrived (a floor) | GCS 2022 | GCS 2023 | AIRAA 2025 | AIRAA 2026 | everything awarded, on time |
